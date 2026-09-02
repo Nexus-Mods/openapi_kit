@@ -42,6 +42,12 @@ module Oapi
 
     sig { params(other: T.untyped).returns(T::Boolean) }
     def ==(other) = other.is_a?(Present) && T.unsafe(other).value == T.unsafe(self).value
+
+    sig { params(other: T.untyped).returns(T::Boolean) }
+    def eql?(other) = self == other
+
+    sig { returns(Integer) }
+    def hash = [Present, T.unsafe(self).value].hash
   end
 
   class Absent
@@ -59,5 +65,11 @@ module Oapi
 
     sig { params(other: T.untyped).returns(T::Boolean) }
     def ==(other) = other.is_a?(Absent)
+
+    sig { params(other: T.untyped).returns(T::Boolean) }
+    def eql?(other) = self == other
+
+    sig { returns(Integer) }
+    def hash = Absent.hash
   end
 end

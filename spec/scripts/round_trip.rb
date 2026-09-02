@@ -34,7 +34,13 @@ check("alias inlined to String") { mod.owner.value_or(nil)&.id.is_a?(String) }
 check("array items") { mod.tags == %w[a b] }
 check("inline object hoisted") { mod.meta&.note == "hi" }
 check("additionalProperties") { mod.extra == { "downloads" => 12 } }
-check("generated equality") { Demo::V1::Codecs::Mod.from_wire(WIRE) == mod }
+other = Demo::V1::Codecs::Mod.from_wire(WIRE)
+check("equality") { other == mod }
+check("eql? agrees with ==") { other.eql?(mod) }
+check("hash agrees with ==") { other.hash == mod.hash }
+check("usable as a hash key") { { mod => :found }[other] == :found }
+check("uniq collapses equal values") { [mod, other].uniq.size == 1 }
+check("differing values are unequal") { Demo::V1::Codecs::Mod.from_wire(WIRE.merge("id" => 8)) != mod }
 
 wire = Demo::V1::Codecs::Mod.to_wire(mod)
 check("dumped date-time") { wire["updatedAt"] == "2026-09-02T10:00:00Z" }

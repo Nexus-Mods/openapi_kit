@@ -21,13 +21,13 @@ module Demo
         const :friend, T.nilable(Demo::V1::Types::User)
 
         sig { params(other: T.untyped).returns(T::Boolean) }
-        def ==(other)
-          return false unless other.is_a?(User)
+        def ==(other) = other.instance_of?(User) && other.serialize == serialize
 
-          other.id == id &&
-          other.name == name &&
-          other.friend == friend
-        end
+        sig { params(other: T.untyped).returns(T::Boolean) }
+        def eql?(other) = self == other
+
+        sig { returns(::Integer) }
+        def hash = [self.class, serialize].hash
       end
 
       class ModMeta < T::Struct
@@ -36,11 +36,13 @@ module Demo
         const :note, T.nilable(::String)
 
         sig { params(other: T.untyped).returns(T::Boolean) }
-        def ==(other)
-          return false unless other.is_a?(ModMeta)
+        def ==(other) = other.instance_of?(ModMeta) && other.serialize == serialize
 
-          other.note == note
-        end
+        sig { params(other: T.untyped).returns(T::Boolean) }
+        def eql?(other) = self == other
+
+        sig { returns(::Integer) }
+        def hash = [self.class, serialize].hash
       end
 
       class Mod < T::Struct
@@ -60,22 +62,13 @@ module Demo
         const :extra, T.nilable(T::Hash[::String, ::Integer])
 
         sig { params(other: T.untyped).returns(T::Boolean) }
-        def ==(other)
-          return false unless other.is_a?(Mod)
+        def ==(other) = other.instance_of?(Mod) && other.serialize == serialize
 
-          other.id == id &&
-          other.name == name &&
-          other.status == status &&
-          other.updated_at == updated_at &&
-          other.deleted_at == deleted_at &&
-          other.summary == summary &&
-          other.bio == bio &&
-          other.page_size == page_size &&
-          other.owner == owner &&
-          other.tags == tags &&
-          other.meta == meta &&
-          other.extra == extra
-        end
+        sig { params(other: T.untyped).returns(T::Boolean) }
+        def eql?(other) = self == other
+
+        sig { returns(::Integer) }
+        def hash = [self.class, serialize].hash
       end
 
       class Cat < T::Struct
@@ -85,12 +78,13 @@ module Demo
         const :lives, T.nilable(::Integer)
 
         sig { params(other: T.untyped).returns(T::Boolean) }
-        def ==(other)
-          return false unless other.is_a?(Cat)
+        def ==(other) = other.instance_of?(Cat) && other.serialize == serialize
 
-          other.kind == kind &&
-          other.lives == lives
-        end
+        sig { params(other: T.untyped).returns(T::Boolean) }
+        def eql?(other) = self == other
+
+        sig { returns(::Integer) }
+        def hash = [self.class, serialize].hash
       end
 
       class Dog < T::Struct
@@ -100,12 +94,13 @@ module Demo
         const :breed, T.nilable(::String)
 
         sig { params(other: T.untyped).returns(T::Boolean) }
-        def ==(other)
-          return false unless other.is_a?(Dog)
+        def ==(other) = other.instance_of?(Dog) && other.serialize == serialize
 
-          other.kind == kind &&
-          other.breed == breed
-        end
+        sig { params(other: T.untyped).returns(T::Boolean) }
+        def eql?(other) = self == other
+
+        sig { returns(::Integer) }
+        def hash = [self.class, serialize].hash
       end
 
       Pet = T.type_alias { T.any(Demo::V1::Types::Cat, Demo::V1::Types::Dog) }

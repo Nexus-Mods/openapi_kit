@@ -143,23 +143,14 @@ module Oapi
 
       sig { params(buffer: Buffer, type: Ir::ObjectDef).void }
       def emit_equality(buffer, type)
-        readers = type.properties.map { |property| property.identifier.to_s }
-        readers << "additional_properties" if type.additional_properties
         buffer.line("sig { params(other: T.untyped).returns(T::Boolean) }")
-
-        if readers.empty?
-          buffer.line("def ==(other) = other.is_a?(#{type.name})")
-          return
-        end
-
-        buffer.nest("def ==(other)") do
-          buffer.line("return false unless other.is_a?(#{type.name})")
-          buffer.blank
-          readers.each_with_index do |reader, index|
-            last = index == readers.size - 1
-            buffer.line("other.#{reader} == #{reader}#{" &&" unless last}")
-          end
-        end
+        buffer.line("def ==(other) = other.instance_of?(#{type.name}) && other.serialize == serialize")
+        buffer.blank
+        buffer.line("sig { params(other: T.untyped).returns(T::Boolean) }")
+        buffer.line("def eql?(other) = self == other")
+        buffer.blank
+        buffer.line("sig { returns(::Integer) }")
+        buffer.line("def hash = [self.class, serialize].hash")
       end
 
       sig { params(schema: Ir::Schema).returns(String) }

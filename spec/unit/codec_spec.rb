@@ -113,6 +113,16 @@ RSpec.describe Oapi::Decode do
         .to eq(Oapi::Present.new(value: nil))
     end
 
+    it "hashes consistently with equality" do
+      one = Oapi::Present.new(value: 1)
+      other = Oapi::Present.new(value: 1)
+
+      expect(other.hash).to eq(one.hash)
+      expect(other).to eql(one)
+      expect([one, other].uniq.size).to eq(1)
+      expect({ Oapi::Absent.new => :x }[Oapi::Absent.new]).to eq(:x)
+    end
+
     it "is Present(value) for a value" do
       expect(described_class.tristate({ "bio" => "hi" }, "bio") { |v| Oapi::Codec::Scalar::String.from_wire(v) })
         .to eq(Oapi::Present.new(value: "hi"))
