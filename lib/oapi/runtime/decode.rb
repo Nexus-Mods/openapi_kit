@@ -13,7 +13,7 @@ module Oapi
     end
     def self.field(raw, key, &block)
       value = raw[key]
-      raise DecodeError.new("is required", pointer: "/#{key}") if value.nil?
+      raise DecodeError.new("is required", json_pointer: "/#{key}") if value.nil?
 
       at("/#{key}") { block.call(value) }
     end
@@ -74,7 +74,7 @@ module Oapi
     rescue DecodeError => e
       raise e.at(prefix)
     rescue ArgumentError, TypeError => e
-      raise DecodeError.new(e.message, pointer: prefix)
+      raise DecodeError.new(e.message, json_pointer: prefix)
     end
 
     sig { params(raw: T.untyped).returns(T::Hash[String, T.untyped]) }

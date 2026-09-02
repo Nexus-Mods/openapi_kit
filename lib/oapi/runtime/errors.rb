@@ -6,21 +6,21 @@ module Oapi
     extend T::Sig
 
     sig { returns(String) }
-    attr_reader :pointer
+    attr_reader :json_pointer
 
     sig { returns(String) }
     attr_reader :detail
 
-    sig { params(detail: String, pointer: String).void }
-    def initialize(detail, pointer: "")
+    sig { params(detail: String, json_pointer: String).void }
+    def initialize(detail, json_pointer: "")
       @detail = detail
-      @pointer = pointer
-      super(pointer.empty? ? detail : "#{pointer}: #{detail}")
+      @json_pointer = json_pointer
+      super(json_pointer.empty? ? detail : "#{json_pointer}: #{detail}")
     end
 
     sig { params(prefix: String).returns(DecodeError) }
     def at(prefix)
-      DecodeError.new(detail, pointer: "#{prefix}#{@pointer}")
+      DecodeError.new(detail, json_pointer: "#{prefix}#{@json_pointer}")
     end
   end
 end
