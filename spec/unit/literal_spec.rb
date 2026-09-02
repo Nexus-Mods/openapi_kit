@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Oapi::Emit::Ruby do
+RSpec.describe Oapi::Emit::Literal do
   describe ".string" do
     it "builds a plain literal" do
       expect(described_class.string("hello")).to eq(%("hello"))

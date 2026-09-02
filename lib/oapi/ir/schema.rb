@@ -19,9 +19,22 @@ module Oapi
     end
 
     module Schema
+      extend T::Sig
       extend T::Helpers
       include Kernel
       sealed!
+
+      sig { params(schema: Schema).returns(Meta) }
+      def self.meta(schema)
+        case schema
+        when Ref, StringSchema, IntegerSchema, NumberSchema, BooleanSchema, List, Freeform, Untyped
+          schema.meta
+        else T.absurd(schema)
+        end
+      end
+
+      sig { params(schema: Schema).returns(T::Boolean) }
+      def self.nullable?(schema) = meta(schema).nullable
     end
 
     class Ref < T::Struct
@@ -86,24 +99,6 @@ module Oapi
     class Untyped < T::Struct
       include Schema
       const :meta, Meta, factory: -> { Meta.new }
-    end
-
-    module Schemas
-      extend T::Sig
-
-      sig { params(schema: Schema).returns(Meta) }
-      def self.meta(schema)
-        case schema
-        when Ref, StringSchema, IntegerSchema, NumberSchema, BooleanSchema,
-             List, Freeform, Untyped
-          schema.meta
-        else
-          T.absurd(schema)
-        end
-      end
-
-      sig { params(schema: Schema).returns(T::Boolean) }
-      def self.nullable?(schema) = meta(schema).nullable
     end
   end
 end

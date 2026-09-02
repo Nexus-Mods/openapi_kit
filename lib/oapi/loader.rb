@@ -139,8 +139,8 @@ module Oapi
       return [] if node.nil?
 
       node.map do |raw_status, response|
-        status = Ir::Statuses.parse(raw_status.to_s)
-        scoped = "#{hint}#{Ir::Statuses.constant(status)}"
+        status = Ir::Status.parse(raw_status.to_s)
+        scoped = "#{hint}#{Ir::Status.constant(status)}"
         Ir::Response.new(
           status: status,
           contents: contents(response.content, hint: scoped),

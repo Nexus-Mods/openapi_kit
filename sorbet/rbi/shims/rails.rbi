@@ -16,7 +16,3 @@ module ActionDispatch
     end
   end
 end
-
-module Rack
-  class Request; end
-end

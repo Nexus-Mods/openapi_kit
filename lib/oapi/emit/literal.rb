@@ -3,7 +3,7 @@
 
 module Oapi
   module Emit
-    module Ruby
+    module Literal
       extend T::Sig
 
       class Expr < T::Struct

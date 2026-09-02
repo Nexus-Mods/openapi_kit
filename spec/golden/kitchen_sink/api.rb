@@ -3,6 +3,7 @@
 # frozen_string_literal: true
 
 require "oapi-runtime"
+require "oapi/rails"
 
 require_relative "types"
 require_relative "operations"

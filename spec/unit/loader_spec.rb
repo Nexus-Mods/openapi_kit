@@ -54,7 +54,7 @@ RSpec.describe Oapi::Loader do
             responses: { "204": { description: done } }
       YAML
 
-      schema = Oapi::Ir::Parameters.info(doc.operations.first.parameters.first).schema
+      schema = Oapi::Ir::Parameter.info(doc.operations.first.parameters.first).schema
       expect(schema.meta.default).to be_ir(Oapi::Ir::Default.new(value: 1))
       expect(schema.minimum).to eq(1)
     end
@@ -85,7 +85,7 @@ RSpec.describe Oapi::Loader do
               default: { description: fallback }
       YAML
 
-      constants = doc.operations.first.responses.map { |r| Oapi::Ir::Statuses.constant(r.status) }
+      constants = doc.operations.first.responses.map { |r| Oapi::Ir::Status.constant(r.status) }
       expect(constants).to eq(%w[Ok Status4xx Default])
     end
   end
@@ -213,7 +213,7 @@ RSpec.describe Oapi::Loader do
 
       parameter = doc.operations.first.parameters.first
       expect(parameter).to be_a(Oapi::Ir::PathParameter)
-      expect(Oapi::Ir::Parameters.required?(parameter)).to be(true)
+      expect(Oapi::Ir::Parameter.required?(parameter)).to be(true)
       expect(Oapi::Ir::PathParameter.props.keys).not_to include(:required)
     end
 
@@ -245,7 +245,7 @@ RSpec.describe Oapi::Loader do
             responses: { "204": { description: done } }
       YAML
 
-      expect(doc.operations.first.parameters.map { |p| Oapi::Ir::Parameters.info(p).name })
+      expect(doc.operations.first.parameters.map { |p| Oapi::Ir::Parameter.info(p).name })
         .to contain_exactly("id", "expand")
     end
   end

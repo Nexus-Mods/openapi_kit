@@ -6,7 +6,7 @@ module Oapi
     class Types
       extend T::Sig
 
-      sig { params(document: Ir::Document, registry: Oapi::Types::Registry, config: Config).void }
+      sig { params(document: Ir::Document, registry: TypeRegistry, config: Config).void }
       def initialize(document:, registry:, config:)
         @document = document
         @registry = registry
@@ -46,14 +46,14 @@ module Oapi
       sig { returns(T::Array[Ir::TypeDef]) }
       def ordered_types
         remaining = @document.types.grep_v(Ir::AliasDef)
-        by_name = remaining.to_h { |type| [Ir::TypeDefs.name(type), type] }
+        by_name = remaining.to_h { |type| [Ir::TypeDef.name_of(type), type] }
         ordered = T.let([], T::Array[Ir::TypeDef])
         placed = T.let(Set.new, T::Set[String])
         path = T.let([], T::Array[String])
 
         visit = T.let(nil, T.untyped)
         visit = lambda do |type|
-          name = Ir::TypeDefs.name(type)
+          name = Ir::TypeDef.name_of(type)
           next if placed.include?(name)
 
           raise SchemaError, cycle_message(path.drop(path.index(name).to_i) + [name]) if path.include?(name)
@@ -158,7 +158,7 @@ module Oapi
 
       sig { params(property: Ir::Property).returns(String) }
       def prop_line(property)
-        meta = Ir::Schemas.meta(property.schema)
+        meta = Ir::Schema.meta(property.schema)
         declaration = "const :#{property.identifier}, #{prop_type(property)}"
 
         default = meta.default
@@ -179,13 +179,13 @@ module Oapi
 
       sig { params(property: Ir::Property).returns(T::Boolean) }
       def tristate?(property)
-        meta = Ir::Schemas.meta(property.schema)
+        meta = Ir::Schema.meta(property.schema)
         !property.required && meta.nullable && meta.default.nil?
       end
 
       sig { params(property: Ir::Property).returns(String) }
       def prop_type(property)
-        meta = Ir::Schemas.meta(property.schema)
+        meta = Ir::Schema.meta(property.schema)
         base = @registry.sorbet_type(property.schema)
         return "::Oapi::Optional[T.nilable(#{base})]" if tristate?(property)
         return "T.nilable(#{base})" if meta.nullable || (!property.required && meta.default.nil?)
@@ -204,7 +204,7 @@ module Oapi
 
       sig { params(buffer: Buffer, type: Ir::TypeDef).void }
       def emit_codec(buffer, type)
-        name = Ir::TypeDefs.name(type)
+        name = Ir::TypeDef.name_of(type)
         buffer.nest("class #{name}Codec") do
           buffer.line("extend T::Sig")
           buffer.line("extend T::Generic")
@@ -269,8 +269,8 @@ module Oapi
       def emit_enum_from_wire(buffer, type)
         buffer.nest("def from_wire(value)") do
           buffer.line("#{qualified(type.name)}.try_deserialize(value) ||")
-          message = Ruby.string("expected one of ", Ruby.expr(%(VALUES.join(", "))),
-                                ", got ", Ruby.expr("value.inspect"))
+          message = Literal.string("expected one of ", Literal.expr(%(VALUES.join(", "))),
+                                   ", got ", Literal.expr("value.inspect"))
           buffer.indent { buffer.line("raise(::Oapi::DecodeError.new(#{message}))") }
         end
       end
@@ -298,7 +298,7 @@ module Oapi
 
       sig { params(property: Ir::Property).returns(String) }
       def decode_expr(property)
-        meta = Ir::Schemas.meta(property.schema)
+        meta = Ir::Schema.meta(property.schema)
         inner = @registry.from_wire_expr(property.schema, value: "v")
         key = property.name.inspect
         default = meta.default
@@ -324,7 +324,7 @@ module Oapi
 
       sig { params(buffer: Buffer, property: Ir::Property).void }
       def emit_property_to_wire(buffer, property)
-        meta = Ir::Schemas.meta(property.schema)
+        meta = Ir::Schema.meta(property.schema)
         key = property.name.inspect
         reader = property.identifier.to_s
 
@@ -372,8 +372,8 @@ module Oapi
           tag.mapping.each do |wire_value, name|
             buffer.line("when #{wire_value.inspect} then #{codec_for(name)}.from_wire(raw)")
           end
-          message = Ruby.string("expected #{tag.property_name} to be one of ",
-                                Ruby.expr(%(TAGS.join(", "))), ", got ", Ruby.expr("tag.inspect"))
+          message = Literal.string("expected #{tag.property_name} to be one of ",
+                                   Literal.expr(%(TAGS.join(", "))), ", got ", Literal.expr("tag.inspect"))
           buffer.line("else raise(::Oapi::DecodeError.new(#{message}))")
         end
       end

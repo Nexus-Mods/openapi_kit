@@ -54,7 +54,7 @@ Naming/FileName:
     - "lib/oapi-runtime.rb"
 Lint/UnusedMethodArgument:
   Exclude:
-    - "lib/oapi/runtime/optional.rb"
+    - "lib/oapi/optional.rb"
     - "spec/unit/container_spec.rb"
 RSpec/MultipleExpectations:
   Max: 6

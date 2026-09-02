@@ -32,7 +32,7 @@ module SpecBuilder
   end
 
   def type_named(document, name)
-    document.types.find { |t| Oapi::Ir::TypeDefs.name(t) == name }
+    document.types.find { |t| Oapi::Ir::TypeDef.name_of(t) == name }
   end
 
   def property(object_def, name)

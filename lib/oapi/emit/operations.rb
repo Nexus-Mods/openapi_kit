@@ -6,7 +6,7 @@ module Oapi
     class Operations
       extend T::Sig
 
-      sig { params(document: Ir::Document, registry: Oapi::Types::Registry, config: Config).void }
+      sig { params(document: Ir::Document, registry: TypeRegistry, config: Config).void }
       def initialize(document:, registry:, config:)
         @document = document
         @registry = registry
@@ -75,8 +75,8 @@ module Oapi
 
       sig { params(parameter: Ir::Parameter).returns(String) }
       def parameter_prop(parameter)
-        info = Ir::Parameters.info(parameter)
-        meta = Ir::Schemas.meta(info.schema)
+        info = Ir::Parameter.info(parameter)
+        meta = Ir::Schema.meta(info.schema)
         base = @registry.sorbet_type(info.schema)
         default = meta.default
 
@@ -85,7 +85,7 @@ module Oapi
           return "const :#{info.identifier}, #{base}, default: #{literal.inspect}"
         end
 
-        return "const :#{info.identifier}, #{base}" if Ir::Parameters.required?(parameter) && !meta.nullable
+        return "const :#{info.identifier}, #{base}" if Ir::Parameter.required?(parameter) && !meta.nullable
 
         "const :#{info.identifier}, T.nilable(#{base})"
       end
@@ -98,8 +98,7 @@ module Oapi
           groups(operation).each_key { |name| buffer.line("const :#{Naming.identifier(name)}, #{name}") }
           body = body_type(operation)
           buffer.line("const :body, #{body}") if body
-          framework = @config.framework
-          buffer.line("const :http, #{framework.request_type}") if framework
+          buffer.line("const :http, ::ActionDispatch::Request")
         end
       end
 
@@ -163,7 +162,7 @@ module Oapi
       sig { params(operation: Ir::Operation).returns(T::Array[Variant]) }
       def variants_for(operation)
         operation.responses.flat_map do |response|
-          base = Ir::Statuses.constant(response.status)
+          base = Ir::Status.constant(response.status)
           next [Variant.new(name: base, status: response.status, media_type: nil, schema: nil)] if
             response.contents.empty?
 

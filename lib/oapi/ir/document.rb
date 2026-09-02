@@ -42,9 +42,27 @@ module Oapi
     end
 
     module Parameter
+      extend T::Sig
       extend T::Helpers
       include Kernel
       sealed!
+
+      sig { params(parameter: Parameter).returns(ParameterInfo) }
+      def self.info(parameter)
+        case parameter
+        when PathParameter, QueryParameter, HeaderParameter, CookieParameter then parameter.info
+        else T.absurd(parameter)
+        end
+      end
+
+      sig { params(parameter: Parameter).returns(T::Boolean) }
+      def self.required?(parameter)
+        case parameter
+        when PathParameter then true
+        when QueryParameter, HeaderParameter, CookieParameter then parameter.required
+        else T.absurd(parameter)
+        end
+      end
     end
 
     class PathParameter < T::Struct
@@ -77,27 +95,6 @@ module Oapi
       const :explode, T::Boolean, default: true
     end
 
-    module Parameters
-      extend T::Sig
-
-      sig { params(parameter: Parameter).returns(ParameterInfo) }
-      def self.info(parameter)
-        case parameter
-        when PathParameter, QueryParameter, HeaderParameter, CookieParameter then parameter.info
-        else T.absurd(parameter)
-        end
-      end
-
-      sig { params(parameter: Parameter).returns(T::Boolean) }
-      def self.required?(parameter)
-        case parameter
-        when PathParameter then true
-        when QueryParameter, HeaderParameter, CookieParameter then parameter.required
-        else T.absurd(parameter)
-        end
-      end
-    end
-
     class Content < T::Struct
       const :media_type, String
       const :schema, T.nilable(Schema), default: nil
@@ -118,27 +115,10 @@ module Oapi
     end
 
     module Status
+      extend T::Sig
       extend T::Helpers
       include Kernel
       sealed!
-    end
-
-    class StatusCode < T::Struct
-      include Status
-      const :code, Integer
-    end
-
-    class StatusRange < T::Struct
-      include Status
-      const :hundreds, Integer
-    end
-
-    class DefaultStatus < T::Struct
-      include Status
-    end
-
-    module Statuses
-      extend T::Sig
 
       NAMES = T.let(
         {
@@ -160,8 +140,8 @@ module Oapi
       sig { params(status: Status).returns(String) }
       def self.constant(status)
         case status
-        when StatusCode    then NAMES[status.code] || "Status#{status.code}"
-        when StatusRange   then "Status#{status.hundreds}xx"
+        when StatusCode then NAMES[status.code] || "Status#{status.code}"
+        when StatusRange then "Status#{status.hundreds}xx"
         when DefaultStatus then "Default"
         else T.absurd(status)
         end
@@ -170,8 +150,8 @@ module Oapi
       sig { params(status: Status).returns(T::Boolean) }
       def self.error?(status)
         case status
-        when StatusCode    then status.code >= 400
-        when StatusRange   then status.hundreds >= 4
+        when StatusCode then status.code >= 400
+        when StatusRange then status.hundreds >= 4
         when DefaultStatus then false
         else T.absurd(status)
         end
@@ -189,6 +169,35 @@ module Oapi
       end
     end
 
+    module SecurityScheme
+      extend T::Sig
+      extend T::Helpers
+      include Kernel
+      sealed!
+
+      sig { params(scheme: SecurityScheme).returns(String) }
+      def self.name_of(scheme)
+        case scheme
+        when ApiKeyScheme, HttpScheme, OAuth2Scheme, OpenIdConnectScheme then scheme.name
+        else T.absurd(scheme)
+        end
+      end
+    end
+
+    class StatusCode < T::Struct
+      include Status
+      const :code, Integer
+    end
+
+    class StatusRange < T::Struct
+      include Status
+      const :hundreds, Integer
+    end
+
+    class DefaultStatus < T::Struct
+      include Status
+    end
+
     class Response < T::Struct
       const :status, Status
       const :contents, T::Array[Content]
@@ -202,12 +211,6 @@ module Oapi
 
       sig { returns(T::Boolean) }
       def anonymous? = schemes.empty?
-    end
-
-    module SecurityScheme
-      extend T::Helpers
-      include Kernel
-      sealed!
     end
 
     class ApiKeyLocation < T::Enum
@@ -246,18 +249,6 @@ module Oapi
       const :name, String
       const :url, String
       const :description, T.nilable(String), default: nil
-    end
-
-    module SecuritySchemes
-      extend T::Sig
-
-      sig { params(scheme: SecurityScheme).returns(String) }
-      def self.name(scheme)
-        case scheme
-        when ApiKeyScheme, HttpScheme, OAuth2Scheme, OpenIdConnectScheme then scheme.name
-        else T.absurd(scheme)
-        end
-      end
     end
 
     class Operation < T::Struct

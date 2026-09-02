@@ -27,9 +27,18 @@ module Oapi
     end
 
     module TypeDef
+      extend T::Sig
       extend T::Helpers
       include Kernel
       sealed!
+
+      sig { params(type_def: TypeDef).returns(String) }
+      def self.name_of(type_def)
+        case type_def
+        when ObjectDef, EnumDef, UnionDef, AliasDef then type_def.name
+        else T.absurd(type_def)
+        end
+      end
     end
 
     class ObjectDef < T::Struct
@@ -65,18 +74,6 @@ module Oapi
       const :name, String
       const :target, Schema
       const :meta, Meta, factory: -> { Meta.new }
-    end
-
-    module TypeDefs
-      extend T::Sig
-
-      sig { params(type_def: TypeDef).returns(String) }
-      def self.name(type_def)
-        case type_def
-        when ObjectDef, EnumDef, UnionDef, AliasDef then type_def.name
-        else T.absurd(type_def)
-        end
-      end
     end
   end
 end

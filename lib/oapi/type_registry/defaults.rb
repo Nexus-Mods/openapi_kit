@@ -2,8 +2,8 @@
 # frozen_string_literal: true
 
 module Oapi
-  module Types
-    module Builtins
+  class TypeRegistry
+    module Defaults
       extend T::Sig
 
       sig { params(type: T.any(T::Module[T.anything], String), codec: T.untyped).returns(RubyType) }
@@ -45,45 +45,36 @@ module Oapi
         T::Hash[String, T::Array[String]]
       )
 
-      DISTINCT = T.let(
+      FORMATS_WITH_OWN_TYPE = T.let(
         {
           "string:date-time" => entry(::Time, Oapi::Codec::Scalar::DateTime),
           "string:date" => entry(::Date, Oapi::Codec::Scalar::Date),
           "string:uuid" => entry(::String, Oapi::Codec::Scalar::Uuid),
           "string:byte" => entry(::String, Oapi::Codec::Scalar::Byte),
+          "string:binary" => RubyType.new(
+            type: "::ActionDispatch::Http::UploadedFile",
+            codec: "::Oapi::Rails::Codec::UploadedFile"
+          ),
           "string:decimal" => entry(::BigDecimal, Oapi::Codec::Scalar::Decimal),
           "number:decimal" => entry(::BigDecimal, Oapi::Codec::Scalar::Decimal)
         }.freeze,
         T::Hash[String, RubyType]
       )
 
-      DEFAULTS = T.let(
+      TABLE = T.let(
         BASES
           .merge(
             FORMATS_WITHOUT_OWN_TYPE.flat_map do |base, formats|
               formats.map { |format| ["#{base}:#{format}", T.must(BASES[base])] }
             end.to_h
           )
-          .merge(DISTINCT)
+          .merge(FORMATS_WITH_OWN_TYPE)
           .freeze,
         T::Hash[String, RubyType]
       )
 
-      REFUSED = T.let(
-        {
-          "string:binary" => "the Ruby type for binary content depends on your framework and " \
-                             "content type: Rails hands a multipart upload over as " \
-                             "ActionDispatch::Http::UploadedFile, while an octet-stream body is " \
-                             "just a String"
-        }.freeze,
-        T::Hash[String, String]
-      )
-
       sig { params(key: String).returns(T.nilable(RubyType)) }
-      def self.[](key) = DEFAULTS[key]
-
-      sig { params(key: String).returns(T.nilable(String)) }
-      def self.refusal(key) = REFUSED[key]
+      def self.[](key) = TABLE[key]
     end
   end
 end

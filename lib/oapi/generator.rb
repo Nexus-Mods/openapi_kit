@@ -17,7 +17,7 @@ module Oapi
     sig { returns(T::Array[Pathname]) }
     def generate
       document = Loader.new(config: @config).parse
-      registry = Types::Registry.for(document, @config)
+      registry = TypeRegistry.for(document, @config)
       writer = Writer.new(output: @config.output)
 
       rendered = {
@@ -43,8 +43,7 @@ module Oapi
       buffer.line("# frozen_string_literal: true")
       buffer.blank
       buffer.line("require \"oapi-runtime\"")
-      framework_require = @config.framework&.runtime_require
-      buffer.line("require #{framework_require.inspect}") if framework_require
+      buffer.line("require \"oapi/rails\"")
       buffer.blank
       names.each { |name| buffer.line("require_relative #{name.delete_suffix(".rb").inspect}") }
       buffer.to_s

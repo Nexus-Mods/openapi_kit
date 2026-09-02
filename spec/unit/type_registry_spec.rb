@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-RSpec.describe Oapi::Types::Registry do
+RSpec.describe Oapi::TypeRegistry do
   subject(:registry) do
-    described_class.new(namespace: "API::V3", type_mappings: Oapi::Types::Builtins::DEFAULTS.merge(mappings))
+    described_class.new(namespace: "API::V3", type_mappings: Oapi::TypeRegistry::Defaults::TABLE.merge(mappings))
   end
 
   let(:mappings) { {} }
@@ -90,22 +90,15 @@ RSpec.describe Oapi::Types::Registry do
 
   # An unrecognised `format` is spec-compliant to ignore, so we use the base type --
   # but never silently: the warning names the config line that would change it.
-  describe "formats it refuses to guess" do
-    it "explains why binary has no built-in type, and how to map it" do
-      expect { registry.sorbet_type(string("binary")) }
-        .to raise_error(Oapi::SchemaError,
-                        /does not guess a Ruby type for "string:binary".*depends on your framework/m)
+  describe "binary content" do
+    it "resolves to the Rails upload type" do
+      expect(registry.sorbet_type(string("binary"))).to eq("::ActionDispatch::Http::UploadedFile")
     end
 
-    it "still shows the config snippet" do
-      expect { registry.sorbet_type(string("binary")) }
-        .to raise_error(Oapi::SchemaError, /codec: "YourApp::YourTypeCodec"/)
-    end
-
-    it "is satisfied by mapping the format itself" do
+    it "is overridden by mapping the format itself" do
       mapped = described_class.new(
         namespace: "API::V3",
-        type_mappings: Oapi::Types::Builtins::DEFAULTS.merge(
+        type_mappings: Oapi::TypeRegistry::Defaults::TABLE.merge(
           "string:binary" => Oapi::RubyType.new(type: "::Tempfile", codec: "MyApp::UploadCodec")
         )
       )
@@ -113,16 +106,15 @@ RSpec.describe Oapi::Types::Registry do
       expect(mapped.sorbet_type(string("binary"))).to eq("::Tempfile")
     end
 
-    it "is not satisfied by mapping the base type, which would swallow binary into a String" do
+    it "is not affected by mapping the base string type" do
       mapped = described_class.new(
         namespace: "API::V3",
-        type_mappings: Oapi::Types::Builtins::DEFAULTS.merge(
+        type_mappings: Oapi::TypeRegistry::Defaults::TABLE.merge(
           "string" => Oapi::RubyType.new(type: "::Text", codec: "MyApp::TextCodec")
         )
       )
 
-      expect { mapped.sorbet_type(string("binary")) }
-        .to raise_error(Oapi::SchemaError, /does not guess a Ruby type for "string:binary"/)
+      expect(mapped.sorbet_type(string("binary"))).to eq("::ActionDispatch::Http::UploadedFile")
     end
   end
 

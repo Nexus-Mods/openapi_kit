@@ -4,7 +4,7 @@ require "open3"
 
 RSpec.describe Oapi::Generator do
   describe "the server schema" do
-    let(:result) { generate("server.yaml", modules: %w[Server], "container_prefix" => "v1", "framework" => "rails") }
+    let(:result) { generate("server.yaml", modules: %w[Server], "container_prefix" => "v1") }
 
     it "writes a file per concern plus an entry point" do
       expect(result[:dir].glob("*.rb").map { |f| f.basename.to_s }.sort)
@@ -23,7 +23,7 @@ RSpec.describe Oapi::Generator do
         .to include(%("v1.handlers.mods"), %("v1.handlers.system"))
     end
 
-    it "types the framework request rather than owning a request type" do
+    it "hands the handler Rails' own request rather than a wrapper of oapi's" do
       expect(result[:dir].join("operations.rb").read).to include("const :http, ::ActionDispatch::Request")
     end
   end
