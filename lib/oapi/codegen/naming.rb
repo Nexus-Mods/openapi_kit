@@ -32,8 +32,17 @@ module Oapi
       def self.pascal(string) = words(string).map(&:capitalize).join
 
       SHADOWED = T.let(
-        (Object.instance_methods + Kernel.instance_methods + T::Struct.instance_methods)
-          .to_set(&:to_s).freeze,
+        %w[
+          __id__ __send__ as_json class class_eval clone deep_dup define_singleton_method
+          deserialize display dup enum_for extend freeze gem hash inspect instance_eval
+          instance_exec instance_values instance_variable_get instance_variable_names
+          instance_variable_set instance_variables itself method methods object_id presence
+          presence_in pretty_inspect pretty_print pretty_print_cycle pretty_print_inspect
+          pretty_print_instance_variables private_methods protected_methods public_method
+          public_methods public_send remove_instance_variable send serialize singleton_class
+          singleton_method singleton_methods tap then to_enum to_json to_param to_query to_s
+          to_yaml try with with_options yield_self
+        ].to_set.freeze,
         T::Set[String]
       )
 

@@ -22,11 +22,10 @@ module Oapi
         writer = Writer.new(output: @config.output)
 
         files = emitters(document, registry).flat_map(&:render)
+        written = writer.write_all(files)
 
-        writer.clean!
-        files.each { |file| writer.write(file.path, file.contents) }
         @warnings = registry.warnings
-        writer.written
+        written
       end
 
       private

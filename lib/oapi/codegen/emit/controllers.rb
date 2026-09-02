@@ -180,8 +180,23 @@ module Oapi
           schema = T.must(body.contents.first).schema
           return "nil" if schema.nil?
 
-          inner = @registry.from_wire_expr(schema, value: "request.request_parameters")
-          body.required ? inner : "(#{inner} if request.request_parameters.present?)"
+          source = body_source(schema)
+          inner = @registry.from_wire_expr(schema, value: source)
+          body.required ? inner : "(#{inner} if #{body_present(schema)})"
+        end
+
+        # Rails' JSON parameter parser wraps a body that is not a JSON object as
+        # { _json: parsed }, so a top-level array or scalar arrives under that key.
+        sig { params(schema: Model::Schema).returns(String) }
+        def body_source(schema)
+          @registry.object?(schema) ? "request.request_parameters" : %(request.request_parameters["_json"])
+        end
+
+        sig { params(schema: Model::Schema).returns(String) }
+        def body_present(schema)
+          return "request.request_parameters.any?" if @registry.object?(schema)
+
+          %(request.request_parameters.key?("_json"))
         end
       end
     end

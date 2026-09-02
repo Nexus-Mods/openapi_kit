@@ -52,11 +52,14 @@ module Oapi
 
       sig { params(document: Model::Document, config: Config).returns(TypeRegistry) }
       def self.for(document, config)
-        new(
+        registry = new(
           namespace: config.namespace,
           type_mappings: DEFAULT_TYPE_MAPPINGS.merge(config.type_mappings),
           types: document.types.to_h { |type| [Model::TypeDef.name_of(type), type] }
         )
+
+        document.types.grep(Model::AliasDef).each { |type| registry.sorbet_type(type.target) }
+        registry
       end
 
       sig { returns(T::Array[String]) }
@@ -71,6 +74,7 @@ module Oapi
         @type_mappings = type_mappings
         @types = types
         @warnings = T.let(Set.new, T::Set[String])
+        @expanding = T.let(Set.new, T::Set[String])
       end
 
       sig { params(schema: Model::Schema).returns(String) }
@@ -78,7 +82,7 @@ module Oapi
         case schema
         when Model::Ref
           aliased = alias_target(schema)
-          return sorbet_type(aliased) if aliased
+          return while_expanding(schema.name) { sorbet_type(aliased) } if aliased
 
           union?(schema) ? "#{@namespace}::Types::#{schema.name}::Value" : "#{@namespace}::Types::#{schema.name}"
         when Model::List then "T::Array[#{sorbet_type(schema.items)}]"
@@ -97,7 +101,11 @@ module Oapi
         case schema
         when Model::Ref
           aliased = alias_target(schema)
-          aliased ? from_wire_expr(aliased, value: value) : "#{codec_for(schema)}.from_wire(#{value})"
+          if aliased
+            while_expanding(schema.name) { from_wire_expr(aliased, value: value) }
+          else
+            "#{codec_for(schema)}.from_wire(#{value})"
+          end
         when Model::List
           "Oapi::Decode.each(#{value}) { |item| #{from_wire_expr(schema.items, value: "item")} }"
         when Model::Freeform
@@ -127,12 +135,30 @@ module Oapi
         NATIVE_LITERALS.fetch(sorbet_type(schema), []).any? { |native| value.is_a?(native) }
       end
 
+      # Rails only hands back request_parameters verbatim for a JSON object; anything else it
+      # wraps under "_json". The emitters need to know which shape a body will arrive in.
+      sig { params(schema: Model::Schema).returns(T::Boolean) }
+      def object?(schema)
+        case schema
+        when Model::Ref then referent_object?(schema)
+        when Model::Freeform, Model::Untyped then true
+        when Model::List, Model::StringSchema, Model::IntegerSchema, Model::NumberSchema,
+             Model::BooleanSchema
+          false
+        else T.absurd(schema)
+        end
+      end
+
       sig { params(schema: Model::Schema, value: String).returns(String) }
       def to_wire_expr(schema, value:)
         case schema
         when Model::Ref
           aliased = alias_target(schema)
-          aliased ? to_wire_expr(aliased, value: value) : "#{codec_for(schema)}.to_wire(#{value})"
+          if aliased
+            while_expanding(schema.name) { to_wire_expr(aliased, value: value) }
+          else
+            "#{codec_for(schema)}.to_wire(#{value})"
+          end
         when Model::List
           inner = to_wire_expr(schema.items, value: "item")
           inner == "item" ? value : "#{value}.map { |item| #{inner} }"
@@ -157,10 +183,48 @@ module Oapi
       sig { params(schema: Model::Ref).returns(T::Boolean) }
       def union?(schema) = @types[schema.name].is_a?(Model::UnionDef)
 
+      sig { params(schema: Model::Ref).returns(T::Boolean) }
+      def referent_object?(schema)
+        found = @types[schema.name]
+        return true if found.nil?
+
+        case found
+        when Model::ObjectDef then true
+        when Model::EnumDef then false
+        when Model::UnionDef then found.members.all? { |member| object?(member) }
+        when Model::AliasDef then while_expanding(schema.name) { object?(found.target) }
+        else T.absurd(found)
+        end
+      end
+
       sig { params(schema: Model::Ref).returns(T.nilable(Model::Schema)) }
       def alias_target(schema)
         found = @types[schema.name]
-        found.is_a?(Model::AliasDef) ? found.target : nil
+        return nil unless found.is_a?(Model::AliasDef)
+
+        if @expanding.include?(schema.name)
+          raise SchemaError,
+                "#{schema.name} is defined in terms of itself, through " \
+                "#{@expanding.to_a.join(" -> ")} -> #{schema.name}. A schema that is only an " \
+                "alias for another cannot form a cycle: give one of them properties, or break " \
+                "the loop."
+        end
+
+        found.target
+      end
+
+      sig do
+        type_parameters(:Result)
+          .params(name: String, block: T.proc.returns(T.type_parameter(:Result)))
+          .returns(T.type_parameter(:Result))
+      end
+      def while_expanding(name, &block)
+        @expanding << name
+        begin
+          block.call
+        ensure
+          @expanding.delete(name)
+        end
       end
 
       sig { params(schema: Model::Schema).returns(RubyType) }

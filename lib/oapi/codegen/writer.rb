@@ -36,6 +36,16 @@ module Oapi
         prune_empty_directories
       end
 
+      sig { params(files: T::Array[Emit::SourceFile]).returns(T::Array[Pathname]) }
+      def write_all(files)
+        files.each { |file| verify_syntax!(file.path, file.contents) }
+        reject_duplicate_paths!(files)
+
+        clean!
+        files.each { |file| write(file.path, file.contents) }
+        written
+      end
+
       sig { params(name: String, content: String).returns(Pathname) }
       def write(name, content)
         verify_syntax!(name, content)
@@ -51,6 +61,17 @@ module Oapi
 
       sig { returns(Pathname) }
       attr_reader :output
+
+      sig { params(files: T::Array[Emit::SourceFile]).void }
+      def reject_duplicate_paths!(files)
+        duplicates = files.group_by(&:path).select { |_, group| group.size > 1 }
+        return if duplicates.empty?
+
+        raise Error,
+              "oapi generated more than one file for #{duplicates.keys.sort.join(", ")}. " \
+              "Two names in your document normalise to the same constant. " \
+              "Disambiguate them, or set name_overrides in your config."
+      end
 
       sig { void }
       def prune_empty_directories

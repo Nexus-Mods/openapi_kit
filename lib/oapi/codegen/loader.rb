@@ -43,11 +43,34 @@ module Oapi
 
       sig { params(document: T.untyped).returns(T::Array[Model::Operation]) }
       def build_operations(document)
-        document.paths.flat_map do |path, item|
+        operations = document.paths.flat_map do |path, item|
           VERBS.filter_map do |verb|
             node = item.public_send(verb)
             node && build_operation(node, path: path, verb: verb, item: item)
           end
+        end
+
+        reject_collisions!(
+          operations.map(&:id),
+          subject: "operationIds",
+          consequence: "each operation needs its own handler method, types and route"
+        )
+        reject_collisions!(
+          operations.map(&:tag),
+          subject: "tags",
+          consequence: "each tag needs its own handler interface and controller"
+        )
+        operations
+      end
+
+      sig { params(names: T::Array[String], subject: String, consequence: String).void }
+      def reject_collisions!(names, subject:, consequence:)
+        names.uniq.group_by { |name| Naming.snake(name) }.each do |normalised, originals|
+          next if originals.size == 1
+
+          raise SchemaError,
+                "#{subject} #{originals.sort.join(", ")} all generate the name #{normalised}. " \
+                "Rename all but one: #{consequence}."
         end
       end
 
@@ -210,15 +233,24 @@ module Oapi
         end
       end
 
-      sig { params(node: T.untyped, hint: String, nullable: T::Boolean).returns(Model::Schema) }
-      def schema_for(node, hint:, nullable: false)
+      sig do
+        params(node: T.untyped, hint: String, nullable: T::Boolean,
+               inherited: T.nilable(Model::Meta)).returns(Model::Schema)
+      end
+      def schema_for(node, hint:, nullable: false, inherited: nil)
         return Model::Untyped.new if node.nil?
 
         members = Array(node.all_of)
         if members.size == 1 && (node.properties.nil? || node.properties.empty?)
-          return schema_for(members.first, hint: hint, nullable: nullable || !!node.nullable?)
+          return schema_for(
+            members.first,
+            hint: hint,
+            nullable: nullable || !!node.nullable?,
+            inherited: merge_meta(inherited, meta_for(node, nullable: nullable))
+          )
         end
 
+        meta = merge_meta(inherited, meta_for(node, nullable: nullable))
         name = if node.name
                  rename(node.name)
                else
@@ -226,10 +258,26 @@ module Oapi
                end
         if name
           register(node, name: name)
-          return Model::Ref.new(name: name, meta: meta_for(node, nullable: nullable))
+          return Model::Ref.new(name: name, meta: meta)
         end
 
-        structural(node, hint: hint, nullable: nullable)
+        structural(node, hint: hint, meta: meta)
+      end
+
+      sig { params(over: T.nilable(Model::Meta), under: Model::Meta).returns(Model::Meta) }
+      def merge_meta(over, under)
+        return under if over.nil?
+
+        Model::Meta.new(
+          description: over.description || under.description,
+          nullable: over.nullable || under.nullable,
+          deprecated: over.deprecated || under.deprecated,
+          default: over.default || under.default,
+          read_only: over.read_only || under.read_only,
+          write_only: over.write_only || under.write_only,
+          extensions: under.extensions.merge(over.extensions),
+          ruby_type: over.ruby_type || under.ruby_type
+        )
       end
 
       sig { params(node: T.untyped).returns(T::Boolean) }
@@ -239,10 +287,8 @@ module Oapi
         !(node.properties.nil? || node.properties.empty?)
       end
 
-      sig { params(node: T.untyped, hint: String, nullable: T::Boolean).returns(Model::Schema) }
-      def structural(node, hint:, nullable: false)
-        meta = meta_for(node, nullable: nullable)
-
+      sig { params(node: T.untyped, hint: String, meta: Model::Meta).returns(Model::Schema) }
+      def structural(node, hint:, meta:)
         case node.type
         when "string"
           Model::StringSchema.new(format: node.format, min_length: node.min_length,
@@ -298,7 +344,8 @@ module Oapi
         return union_def(node, name: name) if node.one_of || node.any_of
         return object_def(node, name: name) if node.all_of&.any? || node.properties&.any?
 
-        Model::AliasDef.new(name: name, target: structural(node, hint: name), meta: meta_for(node))
+        Model::AliasDef.new(name: name, target: structural(node, hint: name, meta: meta_for(node)),
+                            meta: meta_for(node))
       end
 
       sig { params(node: T.untyped, name: String).returns(Model::TypeDef) }

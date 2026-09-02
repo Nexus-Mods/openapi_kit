@@ -50,6 +50,28 @@ RSpec.describe Oapi::Codegen::Writer do
     end
   end
 
+  describe "#write_all" do
+    def source(path, contents) = Oapi::Codegen::Emit::SourceFile.new(path: path, contents: contents)
+
+    it "refuses when two sources claim the same path, before deleting anything" do
+      stale = writer.write("stale.rb", "old")
+
+      expect { writer.write_all([source("a.rb", "class A; end"), source("a.rb", "class B; end")]) }
+        .to raise_error(Oapi::Error, /generated more than one file for a\.rb.*name_overrides/m)
+      expect(stale).to exist
+    end
+
+    # A Prism failure on the last file must not leave the previous output deleted.
+    it "leaves existing output untouched when any file fails to parse" do
+      stale = writer.write("stale.rb", "old")
+
+      expect { writer.write_all([source("a.rb", "class A; end"), source("b.rb", "class Broken")]) }
+        .to raise_error(Oapi::Error, /invalid Ruby in b\.rb/)
+      expect(stale).to exist
+      expect(@dir.join("out/a.rb")).not_to exist
+    end
+  end
+
   describe "#clean!" do
     it "removes files it previously generated" do
       stale = writer.write("stale.rb", "old")

@@ -37,6 +37,14 @@ RSpec.describe Oapi::Codegen::Naming do
       expect(described_class.identifier("end")).to eq(:end_)
     end
 
+    # The list is frozen rather than reflected over, so the same document generates the
+    # same names whether or not ActiveSupport is loaded in the generating process.
+    it "suffixes names ActiveSupport adds to Object, however the generator was loaded" do
+      expect(described_class.identifier("to_param")).to eq(:to_param_)
+      expect(described_class.identifier("presence")).to eq(:presence_)
+      expect(described_class.identifier("try")).to eq(:try_)
+    end
+
     # T::Struct refuses a prop whose accessor would shadow an existing method, and a
     # spec is entitled to name a property `method` or `hash`.
     it "suffixes names already defined on Object" do

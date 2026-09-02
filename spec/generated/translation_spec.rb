@@ -94,6 +94,22 @@ RSpec.describe "translating a document" do
       expect(generated.type("mod")).to include("const :id, ::Integer", "const :name, ::String")
     end
 
+    it "keeps a default declared beside an allOf ref" do
+      generated = schemas(<<~YAML)
+        Status: { type: string, enum: [live, hidden] }
+        Mod:
+          type: object
+          properties:
+            status:
+              description: current status
+              default: live
+              allOf: [{ $ref: "#/components/schemas/Status" }]
+      YAML
+
+      expect(generated.type("mod"))
+        .to include("const :status, Api::Types::Status, factory: -> { Api::Types::Status::CODEC.from_wire(\"live\") }")
+    end
+
     it "unwraps the nullable-allOf-ref idiom" do
       generated = schemas(<<~YAML)
         User: { type: object, properties: { name: { type: string } } }
@@ -199,6 +215,32 @@ RSpec.describe "translating a document" do
     expect(generated.paths).to eq(["api/types/mod.rb"])
   end
 
+  describe "shapes Rails hands over differently" do
+    def body(schema)
+      document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
+               "  /things:", "    post:", "      operationId: postThing", "      tags: [things]",
+               "      requestBody:", "        required: true", "        content:",
+               "          application/json: { schema: #{schema} }",
+               %(      responses: { "204": { description: done } }))
+    end
+
+    # Rails' JSON parameter parser wraps a body that is not an object as { _json: parsed },
+    # so decoding request_parameters directly fails on every valid request.
+    it "reads a top-level array body from the key Rails wraps it under" do
+      generated = body("{ type: array, items: { type: string } }")
+
+      expect(generated["api/things_controller.rb"]).to include(%(request.request_parameters["_json"]))
+    end
+
+    it "reads an object body from request_parameters itself" do
+      generated = body("{ type: object, properties: { a: { type: string } } }")
+
+      source = generated["api/things_controller.rb"]
+      expect(source).to include("from_wire(request.request_parameters)")
+      expect(source).not_to include("_json")
+    end
+  end
+
   describe "documents it refuses to generate" do
     def operation(body)
       document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:", *indent(body, 2))
@@ -215,6 +257,41 @@ RSpec.describe "translating a document" do
     it "requires an enum's values to be all one type" do
       expect { schemas("Mixed: { type: string, enum: [a, 1] }") }
         .to raise_error(Oapi::SchemaError, /Enum Mixed has values of type Integer, String/)
+    end
+
+    it "refuses two operationIds that normalise to the same name" do
+      expect { operation(<<~YAML) }.to raise_error(Oapi::SchemaError, /operationIds getMods, get_mods/)
+        /a:
+          get:
+            operationId: getMods
+            responses: { "204": { description: done } }
+        /b:
+          get:
+            operationId: get_mods
+            responses: { "204": { description: done } }
+      YAML
+    end
+
+    it "refuses two tags that normalise to the same name" do
+      expect { operation(<<~YAML) }.to raise_error(Oapi::SchemaError, /tags Mods, mods/)
+        /a:
+          get:
+            operationId: opA
+            tags: [mods]
+            responses: { "204": { description: done } }
+        /b:
+          get:
+            operationId: opB
+            tags: [Mods]
+            responses: { "204": { description: done } }
+      YAML
+    end
+
+    it "refuses a schema defined in terms of itself, naming the cycle" do
+      expect { schemas(<<~YAML) }.to raise_error(Oapi::SchemaError, /A is defined in terms of itself.*A -> B -> A/m)
+        A: { type: array, items: { $ref: "#/components/schemas/B" } }
+        B: { type: array, items: { $ref: "#/components/schemas/A" } }
+      YAML
     end
 
     it "refuses a parameter style it cannot decode" do
