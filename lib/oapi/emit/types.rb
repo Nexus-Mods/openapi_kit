@@ -269,10 +269,9 @@ module Oapi
       def emit_enum_from_wire(buffer, type)
         buffer.nest("def from_wire(value)") do
           buffer.line("#{qualified(type.name)}.try_deserialize(value) ||")
-          buffer.indent do
-            buffer.line("raise(::Oapi::DecodeError.new(\"expected one of \#{VALUES.join(\", \")}, " \
-                        "got \#{value.inspect}\"))")
-          end
+          message = Ruby.string("expected one of ", Ruby.expr(%(VALUES.join(", "))),
+                                ", got ", Ruby.expr("value.inspect"))
+          buffer.indent { buffer.line("raise(::Oapi::DecodeError.new(#{message}))") }
         end
       end
 
@@ -373,8 +372,9 @@ module Oapi
           tag.mapping.each do |wire_value, name|
             buffer.line("when #{wire_value.inspect} then #{codec_for(name)}.from_wire(raw)")
           end
-          buffer.line("else raise(::Oapi::DecodeError.new(\"expected #{tag.property_name} to be one of " \
-                      "\#{TAGS.join(\", \")}, got \#{tag.inspect}\"))")
+          message = Ruby.string("expected #{tag.property_name} to be one of ",
+                                Ruby.expr(%(TAGS.join(", "))), ", got ", Ruby.expr("tag.inspect"))
+          buffer.line("else raise(::Oapi::DecodeError.new(#{message}))")
         end
       end
 

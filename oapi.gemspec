@@ -34,4 +34,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "oapi-runtime", Oapi::VERSION
   spec.add_dependency "openapi3_parser", "~> 0.10.0"
+  spec.add_dependency "prism", "~> 1.0"
 end

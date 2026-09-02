@@ -3,6 +3,7 @@
 
 require "fileutils"
 require "pathname"
+require "prism"
 
 module Oapi
   class Writer
@@ -38,12 +39,28 @@ module Oapi
 
     sig { params(name: String, content: String).returns(Pathname) }
     def write(name, content)
+      verify_syntax!(name, content)
       path = output.join(name)
       FileUtils.mkdir_p(path.dirname)
       body = content.end_with?("\n") ? content : "#{content}\n"
       path.write("#{MARKER}\n#{body}")
       @written << path
       path
+    end
+
+    private
+
+    sig { params(name: String, content: String).void }
+    def verify_syntax!(name, content)
+      result = Prism.parse(content)
+      return if result.success?
+
+      error = T.must(result.errors.first)
+      line = error.location.start_line
+      raise Error,
+            "oapi generated invalid Ruby in #{name} at line #{line}: #{error.message}\n  " \
+            "#{content.lines[line - 1]&.strip}\n" \
+            "This is a bug in oapi, not in your schema. Please report it."
     end
   end
 end

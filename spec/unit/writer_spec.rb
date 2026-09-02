@@ -23,6 +23,33 @@ RSpec.describe Oapi::Writer do
     expect(writer.write("a/b/types.rb", "x").read).to include("x")
   end
 
+  # typify cannot emit unparseable Rust because quote! yields a TokenStream. Ruby has no
+  # equivalent, so the writer parses instead: an escaping mistake in an emitter fails at
+  # generation time rather than reaching a golden file.
+  describe "syntax checking" do
+    it "refuses to write Ruby that does not parse, and points at the line" do
+      broken = <<~RUBY
+        def from_wire(value)
+          raise("expected one of "live", got")
+        end
+      RUBY
+
+      expect { writer.write("types.rb", broken) }.to raise_error(
+        Oapi::Error, /oapi generated invalid Ruby in types\.rb at line 2.*This is a bug in oapi/m
+      )
+    end
+
+    it "writes nothing when the syntax check fails" do
+      expect { writer.write("types.rb", "class Broken") }.to raise_error(Oapi::Error)
+      expect(writer.written).to be_empty
+      expect(@dir.join("out/types.rb")).not_to exist
+    end
+
+    it "accepts valid Ruby" do
+      expect { writer.write("types.rb", "class Fine; end") }.not_to raise_error
+    end
+  end
+
   describe "#clean!" do
     it "removes files it previously generated" do
       stale = writer.write("stale.rb", "old")
