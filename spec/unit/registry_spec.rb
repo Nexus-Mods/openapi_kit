@@ -39,54 +39,50 @@ RSpec.describe Oapi::Types::Registry do
 
   describe "#load_expr / #dump_expr" do
     it "calls the coder for a built-in scalar" do
-      expect(registry.load_expr(string("date-time"), value: "v", pointer: '"/at"'))
+      expect(registry.load_expr(string("date-time"), value: "v"))
         .to eq("Oapi::Coders::DateTime.load(v)")
       expect(registry.dump_expr(string("date-time"), value: "at"))
         .to eq("Oapi::Coders::DateTime.dump(at)")
     end
 
-    it "calls from_openapi / to_openapi for a ref" do
+    it "calls the generated type's nested coder for a ref" do
       ref = Oapi::Ir::Ref.new(name: "Mod")
-      expect(registry.load_expr(ref, value: "v", pointer: '"/mod"'))
-        .to eq('API::V3::Types::Mod.from_openapi(v, "/mod")')
-      expect(registry.dump_expr(ref, value: "mod")).to eq("mod.to_openapi")
+      expect(registry.load_expr(ref, value: "v"))
+        .to eq("API::V3::Types::Mod::Coder.load(v)")
+      expect(registry.dump_expr(ref, value: "mod")).to eq("API::V3::Types::Mod::Coder.dump(mod)")
     end
 
     it "maps over a list, and stays identity when the element needs no conversion" do
       list = Oapi::Ir::List.new(items: Oapi::Ir::Ref.new(name: "Mod"))
-      expect(registry.load_expr(list, value: "v", pointer: '"/mods"'))
-        .to eq('Oapi::Decode.each(v, "/mods") { |item, item_pointer| ' \
-               "API::V3::Types::Mod.from_openapi(item, item_pointer) }")
-      expect(registry.dump_expr(list, value: "mods")).to eq("mods.map { |item| item.to_openapi }")
+      expect(registry.load_expr(list, value: "v"))
+        .to eq("Oapi::Decode.each(v) { |item| API::V3::Types::Mod::Coder.load(item) }")
+      expect(registry.dump_expr(list, value: "mods"))
+        .to eq("mods.map { |item| API::V3::Types::Mod::Coder.dump(item) }")
       expect(registry.dump_expr(Oapi::Ir::Untyped.new, value: "x")).to eq("x")
     end
 
     describe "custom types" do
       let(:mappings) do
         {
-          "string:money" => Oapi::TypeMapping.new(type: "::Money"),
-          "string:legacy" => Oapi::TypeMapping.new(type: "::Legacy", coder: "MyApp::LegacyCoder")
+          "string:money" => Oapi::RubyType.new(type: "::Money", coder: "MyApp::MoneyCoder"),
+          "string:legacy" => Oapi::RubyType.new(type: "::Legacy", coder: "MyApp::LegacyCoder")
         }
       end
 
-      it "uses the Codable protocol for a class you own" do
+      it "routes every custom type through its coder" do
         expect(registry.sorbet_type(string("money"))).to eq("::Money")
-        expect(registry.load_expr(string("money"), value: "v", pointer: '""'))
-          .to eq("::Money.from_openapi(v)")
-        expect(registry.dump_expr(string("money"), value: "price")).to eq("price.to_openapi")
-      end
-
-      it "uses an external coder for a type you do not own" do
-        expect(registry.sorbet_type(string("legacy"))).to eq("::Legacy")
-        expect(registry.load_expr(string("legacy"), value: "v", pointer: '""'))
-          .to eq("MyApp::LegacyCoder.load(v)")
-        expect(registry.dump_expr(string("legacy"), value: "l")).to eq("MyApp::LegacyCoder.dump(l)")
+        expect(registry.load_expr(string("money"), value: "v")).to eq("MyApp::MoneyCoder.load(v)")
+        expect(registry.dump_expr(string("money"), value: "price")).to eq("MyApp::MoneyCoder.dump(price)")
       end
 
       it "honours an x-ruby-type override on the schema itself" do
-        schema = Oapi::Ir::StringSchema.new(meta: Oapi::Ir::Meta.new(ruby_type: "::Token"))
+        schema = Oapi::Ir::StringSchema.new(
+          meta: Oapi::Ir::Meta.new(
+            ruby_type: Oapi::RubyType.new(type: "::Token", coder: "MyApp::TokenCoder")
+          )
+        )
         expect(registry.sorbet_type(schema)).to eq("::Token")
-        expect(registry.load_expr(schema, value: "v", pointer: '""')).to eq("::Token.from_openapi(v)")
+        expect(registry.load_expr(schema, value: "v")).to eq("MyApp::TokenCoder.load(v)")
       end
     end
   end
@@ -98,13 +94,12 @@ RSpec.describe Oapi::Types::Registry do
       expect(registry.sorbet_type(Oapi::Ir::IntegerSchema.new(format: "unix-time"))).to eq("::Integer")
     end
 
-    it "warns, showing both the Codable and the coder form" do
+    it "warns, naming the config that would change it" do
       registry.sorbet_type(Oapi::Ir::IntegerSchema.new(format: "unix-time"))
 
       expect(registry.warnings.join("\n"))
         .to match(/"integer:unix-time" has no Ruby type mapped, so it is treated as "integer"/)
-      expect(registry.warnings.join("\n"))
-        .to match(/including Oapi::Codable.*extending Oapi::Coder/m)
+      expect(registry.warnings.join("\n")).to match(/coder: "YourApp::YourTypeCoder"/)
     end
 
     it "reports each unmapped format once, however many times it appears" do

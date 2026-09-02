@@ -5,33 +5,6 @@ require "yaml"
 require "pathname"
 
 module Oapi
-  class TypeMapping < T::Struct
-    extend T::Sig
-
-    const :type, String
-    const :coder, T.nilable(String), default: nil
-
-    sig { params(key: String, value: T.untyped).returns(TypeMapping) }
-    def self.parse(key, value)
-      return new(type: value.to_s) if value.is_a?(String)
-
-      unless value.is_a?(Hash) && value["type"]
-        raise ConfigError,
-              "type_mappings[#{key.inspect}] must be a Ruby class name, or a mapping with " \
-              "`type` and optionally `coder`."
-      end
-
-      unknown = value.keys.map(&:to_s) - %w[type coder]
-      unless unknown.empty?
-        raise ConfigError,
-              "type_mappings[#{key.inspect}] has unknown key#{"s" if unknown.size > 1} " \
-              "#{unknown.sort.join(", ")}. Valid keys: type, coder."
-      end
-
-      new(type: value["type"].to_s, coder: value["coder"]&.to_s)
-    end
-  end
-
   class Config < T::Struct
     extend T::Sig
 
@@ -40,7 +13,7 @@ module Oapi
     const :modules, T::Array[String]
     const :route_prefix, String, default: ""
     const :container_prefix, String, default: ""
-    const :type_mappings, T::Hash[String, TypeMapping], default: {}
+    const :type_mappings, T::Hash[String, RubyType], default: {}
     const :security_schemes, T::Hash[String, String], default: {}
     const :name_overrides, T::Hash[String, String], default: {}
     const :templates, T.nilable(Pathname), default: nil
@@ -91,7 +64,11 @@ module Oapi
         modules: modules,
         route_prefix: raw.fetch("route_prefix", "").to_s,
         container_prefix: raw.fetch("container_prefix", "").to_s,
-        type_mappings: (raw["type_mappings"] || {}).to_h { |k, v| [k.to_s, TypeMapping.parse(k.to_s, v)] },
+        type_mappings: (raw["type_mappings"] || {})
+                       .to_h do |k, v|
+          [k.to_s,
+           RubyType.parse("type_mappings[#{k.to_s.inspect}]", v)]
+        end,
         security_schemes: stringify(raw["security_schemes"]),
         name_overrides: stringify(raw["name_overrides"]),
         templates: raw["templates"] && base.join(raw["templates"].to_s).expand_path

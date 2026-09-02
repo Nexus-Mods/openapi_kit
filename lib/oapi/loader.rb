@@ -376,7 +376,7 @@ module Oapi
         read_only: !!node.read_only?,
         write_only: !!node.write_only?,
         extensions: extensions(node),
-        ruby_type: data["x-ruby-type"]
+        ruby_type: ruby_type_for(data)
       )
     end
 
@@ -384,6 +384,22 @@ module Oapi
     def type_key(node)
       location = node.node_context.source_location
       "#{location.source.source_input.path}#{location.pointer}"
+    end
+
+    sig { params(data: T::Hash[String, T.untyped]).returns(T.nilable(RubyType)) }
+    def ruby_type_for(data)
+      type = data["x-ruby-type"]
+      coder = data["x-ruby-coder"]
+      return nil if type.nil? && coder.nil?
+
+      if type.nil? || coder.nil?
+        raise SchemaError,
+              "x-ruby-type and x-ruby-coder must be given together (found only " \
+              "#{type.nil? ? "x-ruby-coder" : "x-ruby-type"}). `x-ruby-type` is what appears in " \
+              "signatures, `x-ruby-coder` is the module extending Oapi::Coder that converts it."
+      end
+
+      RubyType.new(type: type.to_s, coder: coder.to_s)
     end
 
     sig { params(name: String).returns(String) }

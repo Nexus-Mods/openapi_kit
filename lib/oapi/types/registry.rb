@@ -3,22 +3,6 @@
 
 module Oapi
   module Types
-    module ScalarBinding
-      extend T::Helpers
-      sealed!
-    end
-
-    class CoderBinding < T::Struct
-      include ScalarBinding
-      const :type, String
-      const :coder, String
-    end
-
-    class CodableBinding < T::Struct
-      include ScalarBinding
-      const :type, String
-    end
-
     class Registry
       extend T::Sig
 
@@ -58,18 +42,10 @@ module Oapi
         T::Hash[String, [String, String]]
       )
 
-      sig { params(binding: ScalarBinding).returns(String) }
-      def self.binding_type(binding)
-        case binding
-        when CoderBinding, CodableBinding then binding.type
-        else T.absurd(binding)
-        end
-      end
-
       sig { returns(T::Array[String]) }
       attr_reader :warnings
 
-      sig { params(namespace: String, type_mappings: T::Hash[String, TypeMapping]).void }
+      sig { params(namespace: String, type_mappings: T::Hash[String, RubyType]).void }
       def initialize(namespace:, type_mappings: {})
         @namespace = namespace
         @type_mappings = type_mappings
@@ -86,32 +62,25 @@ module Oapi
           "T::Hash[::String, #{values ? sorbet_type(values) : "T.untyped"}]"
         when Ir::Untyped then "T.untyped"
         when Ir::StringSchema, Ir::IntegerSchema, Ir::NumberSchema, Ir::BooleanSchema
-          Registry.binding_type(scalar(schema))
+          scalar(schema).type
         else T.absurd(schema)
         end
       end
 
-      sig { params(schema: Ir::Schema, value: String, pointer: String).returns(String) }
-      def load_expr(schema, value:, pointer:)
+      sig { params(schema: Ir::Schema, value: String).returns(String) }
+      def load_expr(schema, value:)
         case schema
-        when Ir::Ref then "#{@namespace}::Types::#{schema.name}.from_openapi(#{value}, #{pointer})"
+        when Ir::Ref then "#{coder_for(schema)}.load(#{value})"
         when Ir::List
-          inner = load_expr(schema.items, value: "item", pointer: "item_pointer")
-          "Oapi::Decode.each(#{value}, #{pointer}) { |item, item_pointer| #{inner} }"
+          "Oapi::Decode.each(#{value}) { |item| #{load_expr(schema.items, value: "item")} }"
         when Ir::Freeform
           values = schema.values
-          return "Oapi::Decode.object(#{value}, #{pointer})" if values.nil?
+          return "Oapi::Decode.object(#{value})" if values.nil?
 
-          inner = load_expr(values, value: "item", pointer: "#{pointer_join(pointer)}key")
-          "Oapi::Decode.object(#{value}, #{pointer}).to_h { |key, item| [key, #{inner}] }"
+          "Oapi::Decode.values(#{value}) { |item| #{load_expr(values, value: "item")} }"
         when Ir::Untyped then value
         when Ir::StringSchema, Ir::IntegerSchema, Ir::NumberSchema, Ir::BooleanSchema
-          binding = scalar(schema)
-          case binding
-          when CoderBinding then "#{binding.coder}.load(#{value})"
-          when CodableBinding then "#{binding.type}.from_openapi(#{value})"
-          else T.absurd(binding)
-          end
+          "#{scalar(schema).coder}.load(#{value})"
         else T.absurd(schema)
         end
       end
@@ -119,7 +88,7 @@ module Oapi
       sig { params(schema: Ir::Schema, value: String).returns(String) }
       def dump_expr(schema, value:)
         case schema
-        when Ir::Ref then "#{value}.to_openapi"
+        when Ir::Ref then "#{coder_for(schema)}.dump(#{value})"
         when Ir::List
           inner = dump_expr(schema.items, value: "item")
           inner == "item" ? value : "#{value}.map { |item| #{inner} }"
@@ -131,37 +100,27 @@ module Oapi
           inner == "item" ? value : "#{value}.transform_values { |item| #{inner} }"
         when Ir::Untyped then value
         when Ir::StringSchema, Ir::IntegerSchema, Ir::NumberSchema, Ir::BooleanSchema
-          binding = scalar(schema)
-          case binding
-          when CoderBinding then "#{binding.coder}.dump(#{value})"
-          when CodableBinding then "#{value}.to_openapi"
-          else T.absurd(binding)
-          end
+          "#{scalar(schema).coder}.dump(#{value})"
         else T.absurd(schema)
         end
       end
 
+      sig { params(schema: Ir::Ref).returns(String) }
+      def coder_for(schema) = "#{@namespace}::Types::#{schema.name}::Coder"
+
       private
 
-      sig { params(pointer: String).returns(String) }
-      def pointer_join(pointer)
-        pointer.start_with?('"') && pointer.end_with?('"') ? "#{pointer[0..-2]}/" : "#{pointer} + \"/\" + "
-      end
-
-      sig { params(schema: Ir::Schema).returns(ScalarBinding) }
+      sig { params(schema: Ir::Schema).returns(RubyType) }
       def scalar(schema)
         override = Ir::Schemas.meta(schema).ruby_type
-        return CodableBinding.new(type: override) if override
+        return override if override
 
         type, format = kind(schema)
         keys = format ? ["#{type}:#{format}", type] : [type]
 
         keys.each do |key|
           mapping = @type_mappings[key]
-          next if mapping.nil?
-
-          coder = mapping.coder
-          return coder ? CoderBinding.new(type: mapping.type, coder: coder) : CodableBinding.new(type: mapping.type)
+          return mapping if mapping
         end
 
         keys.each_with_index do |key, index|
@@ -169,7 +128,7 @@ module Oapi
           next if builtin.nil?
 
           warn_unrecognised_format(T.must(keys.first), key) if index.positive?
-          return CoderBinding.new(type: T.must(builtin[0]), coder: T.must(builtin[1]))
+          return RubyType.new(type: T.must(builtin[0]), coder: T.must(builtin[1]))
         end
 
         raise SchemaError, unmapped_message(T.must(keys.first))
@@ -179,19 +138,12 @@ module Oapi
       def warn_unrecognised_format(requested, used)
         message = <<~MESSAGE.strip
           #{requested.inspect} has no Ruby type mapped, so it is treated as #{used.inspect}
-          (#{Registry.binding_type(CoderBinding.new(type: T.must(T.must(BUILTINS[used])[0]),
-                                                    coder: T.must(T.must(BUILTINS[used])[1])))}).
-          If that is wrong, map it:
-
-            type_mappings:
-              #{requested.inspect}: "::YourType"          # a class including Oapi::Codable
-
-          or, for a type you do not own:
+          (#{T.must(T.must(BUILTINS[used])[0])}). If that is wrong, map it:
 
             type_mappings:
               #{requested.inspect}:
                 type: "::YourType"
-                coder: "YourApp::YourTypeCoder"     # a module extending Oapi::Coder
+                coder: "YourApp::YourTypeCoder"   # a module extending Oapi::Coder
         MESSAGE
         @warnings << message unless @warnings.include?(message)
       end
@@ -213,14 +165,9 @@ module Oapi
           No Ruby type is mapped for #{key.inspect}. Add one to your config:
 
             type_mappings:
-              #{key.inspect}: "::YourType"          # a class including Oapi::Codable
-
-          or, for a type you do not own:
-
-            type_mappings:
               #{key.inspect}:
                 type: "::YourType"
-                coder: "YourApp::YourTypeCoder"     # a module extending Oapi::Coder
+                coder: "YourApp::YourTypeCoder"   # a module extending Oapi::Coder
         MESSAGE
       end
     end

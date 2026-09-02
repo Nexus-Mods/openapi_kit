@@ -18,11 +18,9 @@ module Oapi
       super(pointer.empty? ? detail : "#{pointer}: #{detail}")
     end
 
-    sig { params(pointer: String).returns(DecodeError) }
-    def at(pointer)
-      return self unless @pointer.empty?
-
-      DecodeError.new(detail, pointer: pointer)
+    sig { params(prefix: String).returns(DecodeError) }
+    def at(prefix)
+      DecodeError.new(detail, pointer: "#{prefix}#{@pointer}")
     end
   end
 end

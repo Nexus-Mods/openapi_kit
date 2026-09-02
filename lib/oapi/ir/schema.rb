@@ -15,7 +15,7 @@ module Oapi
       const :read_only, T::Boolean, default: false
       const :write_only, T::Boolean, default: false
       const :extensions, T::Hash[String, T.untyped], default: {}
-      const :ruby_type, T.nilable(String), default: nil
+      const :ruby_type, T.nilable(RubyType), default: nil
     end
 
     module Schema

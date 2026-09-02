@@ -5,6 +5,7 @@ require "sorbet-runtime"
 
 require "oapi/version"
 require "oapi/errors"
+require "oapi/ruby_type"
 require "oapi/naming"
 require "oapi/ir/schema"
 require "oapi/ir/type_def"

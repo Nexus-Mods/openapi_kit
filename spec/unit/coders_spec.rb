@@ -1,5 +1,15 @@
 # frozen_string_literal: true
 
+class Money
+  attr_reader :cents
+
+  def initialize(cents)
+    @cents = cents
+  end
+
+  def ==(other) = other.is_a?(Money) && other.cents == cents
+end
+
 RSpec.describe Oapi::Coders do
   describe "Integer" do
     it "accepts an integer and the string form a query parameter arrives as" do
@@ -68,90 +78,83 @@ end
 RSpec.describe Oapi::Decode do
   describe ".field" do
     it "decodes a present value" do
-      expect(described_class.field({ "id" => "7" }, "id", "") { |v| Oapi::Coders::Integer.load(v) }).to eq(7)
+      expect(described_class.field({ "id" => "7" }, "id") { |v| Oapi::Coders::Integer.load(v) }).to eq(7)
     end
 
     it "attaches the pointer to a failure raised without one" do
-      expect { described_class.field({ "id" => "x" }, "id", "/mods/0") { |v| Oapi::Coders::Integer.load(v) } }
-        .to raise_error(Oapi::DecodeError, "/mods/0/id: expected an integer, got \"x\"")
+      expect { described_class.field({ "id" => "x" }, "id") { |v| Oapi::Coders::Integer.load(v) } }
+        .to raise_error(Oapi::DecodeError, "/id: expected an integer, got \"x\"")
     end
 
     it "reports a missing required key" do
-      expect { described_class.field({}, "id", "/mods/0") { |v| v } }
-        .to raise_error(Oapi::DecodeError, "/mods/0/id: is required")
+      expect { described_class.field({}, "id") { |v| v } }
+        .to raise_error(Oapi::DecodeError, "/id: is required")
     end
   end
 
   describe ".optional" do
     it "is nil for a missing key" do
-      expect(described_class.optional({}, "name", "") { |v| v }).to be_nil
+      expect(described_class.optional({}, "name") { |v| v }).to be_nil
     end
 
     it "is nil for an explicit null" do
-      expect(described_class.optional({ "name" => nil }, "name", "") { |v| v }).to be_nil
+      expect(described_class.optional({ "name" => nil }, "name") { |v| v }).to be_nil
     end
   end
 
   # The only case where nil is genuinely ambiguous: optional AND nullable.
   describe ".tristate" do
     it "is Absent when the key is missing" do
-      expect(described_class.tristate({}, "bio", "") { |v| v }).to eq(Oapi::Absent::INSTANCE)
+      expect(described_class.tristate({}, "bio") { |v| v }).to eq(Oapi::Absent::INSTANCE)
     end
 
     it "is Present(nil) for an explicit null" do
-      expect(described_class.tristate({ "bio" => nil }, "bio", "") { |v| v })
+      expect(described_class.tristate({ "bio" => nil }, "bio") { |v| v })
         .to eq(Oapi::Present.new(value: nil))
     end
 
     it "is Present(value) for a value" do
-      expect(described_class.tristate({ "bio" => "hi" }, "bio", "") { |v| Oapi::Coders::String.load(v) })
+      expect(described_class.tristate({ "bio" => "hi" }, "bio") { |v| Oapi::Coders::String.load(v) })
         .to eq(Oapi::Present.new(value: "hi"))
     end
   end
 
   describe ".each" do
     it "numbers the pointer by index" do
-      expect { described_class.each(%w[1 x], "/tags") { |v, p| Oapi::Decode.at(p) { Oapi::Coders::Integer.load(v) } } }
+      expect { described_class.field({ "tags" => %w[1 x] }, "tags") { |v| described_class.each(v) { |i| Oapi::Coders::Integer.load(i) } } }
         .to raise_error(Oapi::DecodeError, "/tags/1: expected an integer, got \"x\"")
     end
   end
 
   describe ".object" do
     it "refuses a non-object" do
-      expect { described_class.object([], "/body") }
-        .to raise_error(Oapi::DecodeError, %r{/body: expected an object, got Array})
+      expect { described_class.object([]) }
+        .to raise_error(Oapi::DecodeError, /expected an object, got Array/)
     end
   end
 end
 
-RSpec.describe Oapi::Codable do
-  # The whole protocol a custom type has to implement: two methods, one argument.
-  let(:money) do
-    Class.new do
-      extend T::Sig
-      include Oapi::Codable
+module MoneyCoder
+  extend T::Sig
+  extend Oapi::Coder
 
-      sig { returns(Integer) }
-      attr_reader :cents
+  sig { override.params(value: Oapi::Wire).returns(Money) }
+  def self.load(value) = Money.new(Oapi::Coders::Integer.load(value))
 
-      sig { params(cents: Integer).void }
-      def initialize(cents)
-        @cents = cents
-      end
+  sig { override.params(value: Money).returns(Oapi::Wire) }
+  def self.dump(value) = value.cents
+end
 
-      sig { override.params(value: Oapi::Wire).returns(T.attached_class) }
-      def self.from_openapi(value) = new(Oapi::Coders::Integer.load(value))
+RSpec.describe Oapi::Coder do
+  it "converts a type it does not own, with nothing mixed into that type" do
+    expect(Money.ancestors.map(&:to_s).grep(/Oapi/)).to be_empty
+    expect(MoneyCoder.load("500")).to eq(Money.new(500))
+    expect(MoneyCoder.dump(Money.new(500))).to eq(500)
+  end
 
-      sig { override.returns(Oapi::Wire) }
-      def to_openapi = cents
+  it "is the one contract every coder implements, built-in or yours" do
+    [Oapi::Coders::DateTime, Oapi::Coders::Decimal, MoneyCoder].each do |coder|
+      expect(coder.singleton_class.ancestors).to include(described_class)
     end
-  end
-
-  it "round trips through a user defined type" do
-    expect(money.from_openapi("500").to_openapi).to eq(500)
-  end
-
-  it "reports the type as the class, not untyped" do
-    expect(money.from_openapi(1)).to be_a(money)
   end
 end
