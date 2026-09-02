@@ -13,6 +13,8 @@ module Oapi
         new(out: out, err: err).run(argv)
       end
 
+      private_class_method :new
+
       sig { params(out: T.any(IO, StringIO), err: T.any(IO, StringIO)).void }
       def initialize(out:, err:)
         @out = out

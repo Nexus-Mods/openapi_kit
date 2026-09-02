@@ -30,6 +30,7 @@ module Oapi
         def self.escape(text)
           text.gsub("\\", "\\\\\\\\").gsub('"', '\\"').gsub("#", "\\#")
         end
+        private_class_method :escape
       end
     end
   end

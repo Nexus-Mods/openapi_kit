@@ -8,8 +8,8 @@ module Server
 
     sig { void }
     def list_mods
-      path_params = request.path_parameters.transform_keys(&:to_s)
-      query_params = request.query_parameters
+      path_params = ::Oapi::Decode.gather(["gameDomain"]) { |name| request.path_parameters[name.to_sym] }
+      query_params = ::Oapi::Decode.gather(["page", "status"]) { |name| request.query_parameters[name] }
       header_params = ::Oapi::Decode.gather(["Application-Name"]) { |name| request.headers[name] }
 
       decoded = Server::Operations::ListMods::Request.new(
@@ -36,7 +36,7 @@ module Server
 
     sig { void }
     def create_mod
-      path_params = request.path_parameters.transform_keys(&:to_s)
+      path_params = ::Oapi::Decode.gather(["gameDomain"]) { |name| request.path_parameters[name.to_sym] }
 
       decoded = Server::Operations::CreateMod::Request.new(
         path: Server::Operations::CreateMod::Path.new(

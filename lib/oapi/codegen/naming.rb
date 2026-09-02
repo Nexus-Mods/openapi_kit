@@ -25,16 +25,13 @@ module Oapi
           .reject(&:empty?)
       end
 
+      private_class_method :words
+
       sig { params(string: String).returns(String) }
       def self.snake(string) = words(string).map(&:downcase).join("_")
 
       sig { params(string: String).returns(String) }
       def self.pascal(string) = words(string).map(&:capitalize).join
-
-      sig { params(string: String).returns(String) }
-      def self.camel(string)
-        pascal(string).then { |name| name.empty? ? name : "#{name[0].to_s.downcase}#{name[1..]}" }
-      end
 
       SHADOWED = T.let(
         (Object.instance_methods + Kernel.instance_methods + T::Struct.instance_methods)
@@ -69,9 +66,6 @@ module Oapi
         else constant(value.to_s)
         end
       end
-
-      sig { params(string: String).returns(String) }
-      def self.file_name(string) = "#{snake(string)}.rb"
     end
   end
 end

@@ -14,9 +14,6 @@ module Oapi
           @config = config
         end
 
-        sig { params(tag: String).returns(String) }
-        def key_for(tag) = @config.container_key("handlers", Naming.snake(tag))
-
         sig { override.returns(T::Array[SourceFile]) }
         def render
           return [] if @document.operations.empty?
@@ -26,6 +23,9 @@ module Oapi
         end
 
         private
+
+        sig { params(tag: String).returns(String) }
+        def key_for(tag) = @config.container_key("handlers", Naming.snake(tag))
 
         sig { params(buffer: Buffer).void }
         def emit_body(buffer)

@@ -40,16 +40,6 @@ module Oapi
           line("end")
         end
 
-        sig { params(headers: T::Array[String], block: T.proc.void).returns(Buffer) }
-        def nest_all(headers, &block)
-          if headers.empty?
-            block.call
-            return self
-          end
-
-          nest(T.must(headers.first)) { nest_all(T.must(headers[1..]), &block) }
-        end
-
         sig { params(subject: String, block: T.proc.void).returns(Buffer) }
         def case_of(subject, &block)
           line("case #{subject}")
@@ -62,11 +52,20 @@ module Oapi
           nest_all(names.map { |name| "module #{name}" }, &block)
         end
 
-        sig { returns(T::Boolean) }
-        def empty? = @lines.empty?
-
         sig { returns(String) }
         def to_s = "#{@lines.join("\n").rstrip}\n"
+
+        private
+
+        sig { params(headers: T::Array[String], block: T.proc.void).returns(Buffer) }
+        def nest_all(headers, &block)
+          if headers.empty?
+            block.call
+            return self
+          end
+
+          nest(T.must(headers.first)) { nest_all(T.must(headers[1..]), &block) }
+        end
       end
     end
   end

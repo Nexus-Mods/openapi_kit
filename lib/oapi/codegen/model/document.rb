@@ -148,16 +148,6 @@ module Oapi
           end
         end
 
-        sig { params(status: Status).returns(T::Boolean) }
-        def self.error?(status)
-          case status
-          when StatusCode then status.code >= 400
-          when StatusRange then status.hundreds >= 4
-          when DefaultStatus then false
-          else T.absurd(status)
-          end
-        end
-
         sig { params(raw: String).returns(Status) }
         def self.parse(raw)
           return DefaultStatus.new if raw == "default"

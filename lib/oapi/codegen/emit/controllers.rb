@@ -117,18 +117,19 @@ module Oapi
         def source_line(group, parameters)
           names = parameters.map { |parameter| Model::Parameter.info(parameter).name }
 
-          case group
-          when "Path" then "path_params = request.path_parameters.transform_keys(&:to_s)"
-          when "Query" then "query_params = request.query_parameters"
-          when "Headers" then gather_line("header_params", "request.headers", names)
-          when "Cookies" then gather_line("cookie_params", "request.cookie_jar", names)
-          else raise SchemaError, "unknown parameter group #{group}"
-          end
+          "#{T.must(SOURCES[group])} = ::Oapi::Decode.gather(#{names.inspect}) " \
+            "{ |name| #{lookup(group)} }"
         end
 
-        sig { params(local: String, source: String, names: T::Array[String]).returns(String) }
-        def gather_line(local, source, names)
-          "#{local} = ::Oapi::Decode.gather(#{names.inspect}) { |name| #{source}[name] }"
+        sig { params(group: String).returns(String) }
+        def lookup(group)
+          case group
+          when "Path" then "request.path_parameters[name.to_sym]"
+          when "Query" then "request.query_parameters[name]"
+          when "Headers" then "request.headers[name]"
+          when "Cookies" then "request.cookie_jar[name]"
+          else raise SchemaError, "unknown parameter group #{group}"
+          end
         end
 
         sig { params(operation: Model::Operation).returns(T::Hash[String, T::Array[Model::Parameter]]) }

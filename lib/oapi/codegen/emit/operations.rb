@@ -156,6 +156,7 @@ module Oapi
           const :media_type, T.nilable(String)
           const :schema, T.nilable(Model::Schema)
         end
+        private_constant :Variant
 
         sig { params(operation: Model::Operation).returns(T::Array[Variant]) }
         def variants_for(operation)

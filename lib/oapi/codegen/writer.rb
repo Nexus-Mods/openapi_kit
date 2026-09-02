@@ -10,9 +10,6 @@ module Oapi
     class Writer
       extend T::Sig
 
-      sig { returns(Pathname) }
-      attr_reader :output
-
       sig { returns(T::Array[Pathname]) }
       attr_reader :written
 
@@ -51,6 +48,9 @@ module Oapi
       end
 
       private
+
+      sig { returns(Pathname) }
+      attr_reader :output
 
       sig { void }
       def prune_empty_directories

@@ -33,9 +33,6 @@ module Oapi
           else T.absurd(schema)
           end
         end
-
-        sig { params(schema: Schema).returns(T::Boolean) }
-        def self.nullable?(schema) = meta(schema).nullable
       end
 
       class Ref < T::Struct
