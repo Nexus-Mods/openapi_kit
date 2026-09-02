@@ -31,7 +31,7 @@ RSpec.describe "static guarantees" do
   it "rejects a codec whose from_wire and to_wire disagree" do
     expect(invalid("mismatched_codec")).to include(
       "Parameter `value` of type `String` not compatible with type of abstract method " \
-      "`Oapi::Codec#to_wire`"
+      "`Oapi::Codec::Contract#to_wire`"
     )
   end
 end

@@ -14,7 +14,7 @@ module KitchenSink
       class Codec
         extend T::Sig
         extend T::Generic
-        include ::Oapi::Codec
+        include ::Oapi::Codec::Contract
 
         Value = type_member { { fixed: KitchenSink::Types::ModStatus } }
 

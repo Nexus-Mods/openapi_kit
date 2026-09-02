@@ -25,7 +25,7 @@ module Oapi
           buffer.nest("class Codec") do
             buffer.line("extend T::Sig")
             buffer.line("extend T::Generic")
-            buffer.line("include ::Oapi::Codec")
+            buffer.line("include ::Oapi::Codec::Contract")
             buffer.blank
             buffer.line("Value = type_member { { fixed: #{qualified(name)} } }")
             buffer.blank

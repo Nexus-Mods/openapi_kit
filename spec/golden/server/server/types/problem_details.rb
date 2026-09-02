@@ -22,7 +22,7 @@ module Server
       class Codec
         extend T::Sig
         extend T::Generic
-        include ::Oapi::Codec
+        include ::Oapi::Codec::Contract
 
         Value = type_member { { fixed: Server::Types::ProblemDetails } }
 
@@ -30,17 +30,17 @@ module Server
         def from_wire(value)
           raw = ::Oapi::Decode.object(value)
           Server::Types::ProblemDetails.new(
-            title: ::Oapi::Decode.field(raw, "title") { |v| ::Oapi::Codec::Primitive::String::CODEC.from_wire(v) },
-            detail: ::Oapi::Decode.optional(raw, "detail") { |v| ::Oapi::Codec::Primitive::String::CODEC.from_wire(v) },
+            title: ::Oapi::Decode.field(raw, "title") { |v| ::Oapi::Codec::String::CODEC.from_wire(v) },
+            detail: ::Oapi::Decode.optional(raw, "detail") { |v| ::Oapi::Codec::String::CODEC.from_wire(v) },
           )
         end
 
         sig { override.params(value: Server::Types::ProblemDetails).returns(::Oapi::Wire) }
         def to_wire(value)
           wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
-          wire["title"] = ::Oapi::Codec::Primitive::String::CODEC.to_wire(value.title)
+          wire["title"] = ::Oapi::Codec::String::CODEC.to_wire(value.title)
           detail = value.detail
-          wire["detail"] = ::Oapi::Codec::Primitive::String::CODEC.to_wire(detail) unless detail.nil?
+          wire["detail"] = ::Oapi::Codec::String::CODEC.to_wire(detail) unless detail.nil?
           wire
         end
       end

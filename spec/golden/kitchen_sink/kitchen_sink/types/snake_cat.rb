@@ -21,7 +21,7 @@ module KitchenSink
       class Codec
         extend T::Sig
         extend T::Generic
-        include ::Oapi::Codec
+        include ::Oapi::Codec::Contract
 
         Value = type_member { { fixed: KitchenSink::Types::SnakeCat } }
 
@@ -29,14 +29,14 @@ module KitchenSink
         def from_wire(value)
           raw = ::Oapi::Decode.object(value)
           KitchenSink::Types::SnakeCat.new(
-            kind: ::Oapi::Decode.field(raw, "kind") { |v| ::Oapi::Codec::Primitive::String::CODEC.from_wire(v) },
+            kind: ::Oapi::Decode.field(raw, "kind") { |v| ::Oapi::Codec::String::CODEC.from_wire(v) },
           )
         end
 
         sig { override.params(value: KitchenSink::Types::SnakeCat).returns(::Oapi::Wire) }
         def to_wire(value)
           wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
-          wire["kind"] = ::Oapi::Codec::Primitive::String::CODEC.to_wire(value.kind)
+          wire["kind"] = ::Oapi::Codec::String::CODEC.to_wire(value.kind)
           wire
         end
       end

@@ -4,12 +4,12 @@ RSpec.describe Oapi::Decode do
   describe ".field" do
     it "decodes a present value" do
       expect(described_class.field({ "id" => "7" }, "id") do |v|
-        Oapi::Codec::Primitive::Integer::CODEC.from_wire(v)
+        Oapi::Codec::Integer::CODEC.from_wire(v)
       end).to eq(7)
     end
 
     it "attaches the pointer to a failure raised without one" do
-      expect { described_class.field({ "id" => "x" }, "id") { |v| Oapi::Codec::Primitive::Integer::CODEC.from_wire(v) } }
+      expect { described_class.field({ "id" => "x" }, "id") { |v| Oapi::Codec::Integer::CODEC.from_wire(v) } }
         .to raise_error(Oapi::DecodeError, "/id: expected an integer, got \"x\"")
     end
 
@@ -52,7 +52,7 @@ RSpec.describe Oapi::Decode do
 
     it "is Present(value) for a value" do
       expect(described_class.tristate({ "bio" => "hi" }, "bio") do |v|
-        Oapi::Codec::Primitive::String::CODEC.from_wire(v)
+        Oapi::Codec::String::CODEC.from_wire(v)
       end)
         .to eq(Oapi::Present.new(value: "hi"))
     end
@@ -60,7 +60,7 @@ RSpec.describe Oapi::Decode do
 
   describe ".each" do
     it "numbers the pointer by index" do
-      expect { described_class.field({ "tags" => %w[1 x] }, "tags") { |v| described_class.each(v) { |i| Oapi::Codec::Primitive::Integer::CODEC.from_wire(i) } } }
+      expect { described_class.field({ "tags" => %w[1 x] }, "tags") { |v| described_class.each(v) { |i| Oapi::Codec::Integer::CODEC.from_wire(i) } } }
         .to raise_error(Oapi::DecodeError, "/tags/1: expected an integer, got \"x\"")
     end
   end
@@ -87,7 +87,7 @@ RSpec.describe Oapi::Decode do
     it "returns a string keyed hash the other Decode helpers accept" do
       gathered = described_class.gather(%w[Page]) { |_name| "4" }
 
-      expect(described_class.field(gathered, "Page") { |v| Oapi::Codec::Primitive::Integer::CODEC.from_wire(v) })
+      expect(described_class.field(gathered, "Page") { |v| Oapi::Codec::Integer::CODEC.from_wire(v) })
         .to eq(4)
     end
   end

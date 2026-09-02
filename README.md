@@ -178,18 +178,18 @@ type_mappings:
 ```
 
 `type` is what appears in signatures. `codec` converts it, and is a class including
-`Oapi::Codec`:
+`Oapi::Codec::Contract`:
 
 ```ruby
 class MyApp::MoneyCodec
   extend T::Sig
   extend T::Generic
-  include Oapi::Codec
+  include Oapi::Codec::Contract
 
   Value = type_member { { fixed: ::Money } }
 
   sig { override.params(value: T.untyped).returns(::Money) }
-  def from_wire(value) = ::Money.parse(Oapi::Codec::Primitive::String::CODEC.from_wire(value))
+  def from_wire(value) = ::Money.parse(Oapi::Codec::String::CODEC.from_wire(value))
 
   sig { override.params(value: ::Money).returns(Oapi::Wire) }
   def to_wire(value) = value.format

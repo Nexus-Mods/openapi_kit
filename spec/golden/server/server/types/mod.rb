@@ -23,7 +23,7 @@ module Server
       class Codec
         extend T::Sig
         extend T::Generic
-        include ::Oapi::Codec
+        include ::Oapi::Codec::Contract
 
         Value = type_member { { fixed: Server::Types::Mod } }
 
@@ -31,8 +31,8 @@ module Server
         def from_wire(value)
           raw = ::Oapi::Decode.object(value)
           Server::Types::Mod.new(
-            id: ::Oapi::Decode.field(raw, "id") { |v| ::Oapi::Codec::Primitive::Integer::CODEC.from_wire(v) },
-            name: ::Oapi::Decode.field(raw, "name") { |v| ::Oapi::Codec::Primitive::String::CODEC.from_wire(v) },
+            id: ::Oapi::Decode.field(raw, "id") { |v| ::Oapi::Codec::Integer::CODEC.from_wire(v) },
+            name: ::Oapi::Decode.field(raw, "name") { |v| ::Oapi::Codec::String::CODEC.from_wire(v) },
             status: ::Oapi::Decode.optional(raw, "status") { |v| Server::Types::ModStatus::CODEC.from_wire(v) },
           )
         end
@@ -40,8 +40,8 @@ module Server
         sig { override.params(value: Server::Types::Mod).returns(::Oapi::Wire) }
         def to_wire(value)
           wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
-          wire["id"] = ::Oapi::Codec::Primitive::Integer::CODEC.to_wire(value.id)
-          wire["name"] = ::Oapi::Codec::Primitive::String::CODEC.to_wire(value.name)
+          wire["id"] = ::Oapi::Codec::Integer::CODEC.to_wire(value.id)
+          wire["name"] = ::Oapi::Codec::String::CODEC.to_wire(value.name)
           status = value.status
           wire["status"] = Server::Types::ModStatus::CODEC.to_wire(status) unless status.nil?
           wire

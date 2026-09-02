@@ -10,23 +10,23 @@ module KitchenSink
       class Codec
         extend T::Sig
         extend T::Generic
-        include ::Oapi::Codec
+        include ::Oapi::Codec::Contract
 
         Value = type_member { { fixed: KitchenSink::Types::Loose::Value } }
 
         sig { override.params(value: T.untyped).returns(KitchenSink::Types::Loose::Value) }
         def from_wire(value)
           ::Oapi::Decode.first_of(value, "Loose", [
-            ->(candidate) { ::Oapi::Codec::Primitive::String::CODEC.from_wire(candidate) },
-            ->(candidate) { ::Oapi::Codec::Primitive::Integer::CODEC.from_wire(candidate) },
+            ->(candidate) { ::Oapi::Codec::String::CODEC.from_wire(candidate) },
+            ->(candidate) { ::Oapi::Codec::Integer::CODEC.from_wire(candidate) },
           ])
         end
 
         sig { override.params(value: KitchenSink::Types::Loose::Value).returns(::Oapi::Wire) }
         def to_wire(value)
           case value
-          when ::String then ::Oapi::Codec::Primitive::String::CODEC.to_wire(value)
-          when ::Integer then ::Oapi::Codec::Primitive::Integer::CODEC.to_wire(value)
+          when ::String then ::Oapi::Codec::String::CODEC.to_wire(value)
+          when ::Integer then ::Oapi::Codec::Integer::CODEC.to_wire(value)
           else T.absurd(value)
           end
         end

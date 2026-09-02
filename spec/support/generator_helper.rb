@@ -44,9 +44,19 @@ module GeneratorHelper
     Generated.new(sources: sources, warnings: generator.warnings)
   end
 
-  Generated = Struct.new(:sources, :warnings, keyword_init: true) do
-    def [](path) = sources.fetch(path) { raise KeyError, "no #{path} in #{sources.keys.sort.inspect}" }
+  class Generated < T::Struct
+    extend T::Sig
+
+    const :sources, T::Hash[String, String]
+    const :warnings, T::Array[String]
+
+    sig { params(path: String).returns(String) }
+    def [](path) = sources.fetch(path) { raise KeyError, "no #{path} in #{paths.inspect}" }
+
+    sig { returns(T::Array[String]) }
     def paths = sources.keys.sort
+
+    sig { params(name: String).returns(String) }
     def type(name) = self["api/types/#{name}.rb"]
   end
 

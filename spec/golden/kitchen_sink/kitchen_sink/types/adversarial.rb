@@ -8,9 +8,9 @@ module KitchenSink
       extend T::Sig
 
       const :serialize_, ::String
-      const :since, ::Time, factory: -> { ::Oapi::Codec::Primitive::DateTime::CODEC.from_wire("2020-01-01T00:00:00Z") }
+      const :since, ::Time, factory: -> { ::Oapi::Codec::DateTime::CODEC.from_wire("2020-01-01T00:00:00Z") }
       const :cleared, T.nilable(::String), default: nil
-      const :rate, ::Float, factory: -> { ::Oapi::Codec::Primitive::Float::CODEC.from_wire(1) }
+      const :rate, ::Float, factory: -> { ::Oapi::Codec::Float::CODEC.from_wire(1) }
       const :additional_properties, T::Hash[::String, ::Time], factory: -> { {} }
 
       sig { params(other: T.untyped).returns(T::Boolean) }
@@ -25,7 +25,7 @@ module KitchenSink
       class Codec
         extend T::Sig
         extend T::Generic
-        include ::Oapi::Codec
+        include ::Oapi::Codec::Contract
 
         Value = type_member { { fixed: KitchenSink::Types::Adversarial } }
 
@@ -33,25 +33,25 @@ module KitchenSink
         def from_wire(value)
           raw = ::Oapi::Decode.object(value)
           KitchenSink::Types::Adversarial.new(
-            serialize_: ::Oapi::Decode.field(raw, "serialize") { |v| ::Oapi::Codec::Primitive::String::CODEC.from_wire(v) },
-            since: ::Oapi::Decode.defaulted(raw, "since", ::Oapi::Codec::Primitive::DateTime::CODEC.from_wire("2020-01-01T00:00:00Z")) { |v| ::Oapi::Codec::Primitive::DateTime::CODEC.from_wire(v) },
-            cleared: ::Oapi::Decode.defaulted(raw, "cleared", nil) { |v| ::Oapi::Codec::Primitive::String::CODEC.from_wire(v) },
-            rate: ::Oapi::Decode.defaulted(raw, "rate", ::Oapi::Codec::Primitive::Float::CODEC.from_wire(1)) { |v| ::Oapi::Codec::Primitive::Float::CODEC.from_wire(v) },
-            additional_properties: ::Oapi::Decode.values(raw.except("serialize", "since", "cleared", "rate")) { |item| ::Oapi::Codec::Primitive::DateTime::CODEC.from_wire(item) },
+            serialize_: ::Oapi::Decode.field(raw, "serialize") { |v| ::Oapi::Codec::String::CODEC.from_wire(v) },
+            since: ::Oapi::Decode.defaulted(raw, "since", ::Oapi::Codec::DateTime::CODEC.from_wire("2020-01-01T00:00:00Z")) { |v| ::Oapi::Codec::DateTime::CODEC.from_wire(v) },
+            cleared: ::Oapi::Decode.defaulted(raw, "cleared", nil) { |v| ::Oapi::Codec::String::CODEC.from_wire(v) },
+            rate: ::Oapi::Decode.defaulted(raw, "rate", ::Oapi::Codec::Float::CODEC.from_wire(1)) { |v| ::Oapi::Codec::Float::CODEC.from_wire(v) },
+            additional_properties: ::Oapi::Decode.values(raw.except("serialize", "since", "cleared", "rate")) { |item| ::Oapi::Codec::DateTime::CODEC.from_wire(item) },
           )
         end
 
         sig { override.params(value: KitchenSink::Types::Adversarial).returns(::Oapi::Wire) }
         def to_wire(value)
           wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
-          wire["serialize"] = ::Oapi::Codec::Primitive::String::CODEC.to_wire(value.serialize_)
+          wire["serialize"] = ::Oapi::Codec::String::CODEC.to_wire(value.serialize_)
           since = value.since
-          wire["since"] = ::Oapi::Codec::Primitive::DateTime::CODEC.to_wire(since) unless since.nil?
+          wire["since"] = ::Oapi::Codec::DateTime::CODEC.to_wire(since) unless since.nil?
           cleared = value.cleared
-          wire["cleared"] = ::Oapi::Codec::Primitive::String::CODEC.to_wire(cleared) unless cleared.nil?
+          wire["cleared"] = ::Oapi::Codec::String::CODEC.to_wire(cleared) unless cleared.nil?
           rate = value.rate
-          wire["rate"] = ::Oapi::Codec::Primitive::Float::CODEC.to_wire(rate) unless rate.nil?
-          wire.merge!(value.additional_properties.transform_values { |item| ::Oapi::Codec::Primitive::DateTime::CODEC.to_wire(item) })
+          wire["rate"] = ::Oapi::Codec::Float::CODEC.to_wire(rate) unless rate.nil?
+          wire.merge!(value.additional_properties.transform_values { |item| ::Oapi::Codec::DateTime::CODEC.to_wire(item) })
           wire
         end
       end

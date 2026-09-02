@@ -11,7 +11,7 @@ module Oapi
       class UploadedFile
         extend T::Sig
         extend T::Generic
-        include Oapi::Codec
+        include Oapi::Codec::Contract
 
         Value = type_member { { fixed: ::ActionDispatch::Http::UploadedFile } }
 

@@ -8,7 +8,7 @@ module Oapi
 
       sig { params(type: String, codec: String).returns(RubyType) }
       def self.primitive(type, codec)
-        RubyType.new(type: type, codec: "::Oapi::Codec::Primitive::#{codec}::CODEC")
+        RubyType.new(type: type, codec: "::Oapi::Codec::#{codec}::CODEC")
       end
       private_class_method :primitive
 

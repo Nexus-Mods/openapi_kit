@@ -13,7 +13,7 @@ module Server
       class Codec
         extend T::Sig
         extend T::Generic
-        include ::Oapi::Codec
+        include ::Oapi::Codec::Contract
 
         Value = type_member { { fixed: Server::Types::ModStatus } }
 
