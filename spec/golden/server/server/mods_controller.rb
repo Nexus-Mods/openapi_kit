@@ -14,14 +14,14 @@ module Server
 
       decoded = Server::Operations::ListMods::Request.new(
         path: Server::Operations::ListMods::Path.new(
-          game_domain: ::Oapi::Decode.field(path_params, "gameDomain") { |v| ::Oapi::Codec::String::CODEC.from_wire(v) },
+          game_domain: ::Oapi::Decode.field(path_params, "gameDomain") { |v| ::Oapi::Codec::String.from_wire(v) },
         ),
         query: Server::Operations::ListMods::Query.new(
-          page: ::Oapi::Decode.defaulted(query_params, "page", 1) { |v| ::Oapi::Codec::Integer::CODEC.from_wire(v) },
-          status: ::Oapi::Decode.optional(query_params, "status") { |v| Server::Types::ModStatus::CODEC.from_wire(v) },
+          page: ::Oapi::Decode.defaulted(query_params, "page", 1) { |v| ::Oapi::Codec::Integer.from_wire(v) },
+          status: ::Oapi::Decode.optional(query_params, "status") { |v| Server::Types::ModStatus::Codec.from_wire(v) },
         ),
         headers: Server::Operations::ListMods::Headers.new(
-          application_name: ::Oapi::Decode.optional(header_params, "Application-Name") { |v| ::Oapi::Codec::String::CODEC.from_wire(v) },
+          application_name: ::Oapi::Decode.optional(header_params, "Application-Name") { |v| ::Oapi::Codec::String.from_wire(v) },
         ),
         http_request: request
       )
@@ -40,9 +40,9 @@ module Server
 
       decoded = Server::Operations::CreateMod::Request.new(
         path: Server::Operations::CreateMod::Path.new(
-          game_domain: ::Oapi::Decode.field(path_params, "gameDomain") { |v| ::Oapi::Codec::String::CODEC.from_wire(v) },
+          game_domain: ::Oapi::Decode.field(path_params, "gameDomain") { |v| ::Oapi::Codec::String.from_wire(v) },
         ),
-        body: Server::Types::NewMod::CODEC.from_wire(request.request_parameters),
+        body: Server::Types::NewMod::Codec.from_wire(request.request_parameters),
         http_request: request
       )
 

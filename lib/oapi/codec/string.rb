@@ -5,24 +5,22 @@ require "oapi/codec/contract"
 
 module Oapi
   module Codec
-    class String
+    module String
       extend T::Sig
       extend T::Generic
-      include Contract
+      extend Contract
 
-      Value = type_member { { fixed: ::String } }
+      Value = type_template { { fixed: ::String } }
 
       sig { override.params(value: T.untyped).returns(::String) }
-      def from_wire(value)
+      def self.from_wire(value)
         return value if value.is_a?(::String)
 
         raise DecodeError.new("expected a string, got #{value.inspect}")
       end
 
       sig { override.params(value: ::String).returns(Oapi::Wire) }
-      def to_wire(value) = value
-
-      CODEC = T.let(new, String)
+      def self.to_wire(value) = value
     end
   end
 end

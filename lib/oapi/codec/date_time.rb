@@ -7,15 +7,15 @@ require "oapi/codec/contract"
 
 module Oapi
   module Codec
-    class DateTime
+    module DateTime
       extend T::Sig
       extend T::Generic
-      include Contract
+      extend Contract
 
-      Value = type_member { { fixed: ::Time } }
+      Value = type_template { { fixed: ::Time } }
 
       sig { override.params(value: T.untyped).returns(::Time) }
-      def from_wire(value)
+      def self.from_wire(value)
         raise DecodeError.new("expected an RFC 3339 date-time, got #{value.inspect}") unless
           value.is_a?(::String)
 
@@ -27,9 +27,7 @@ module Oapi
       end
 
       sig { override.params(value: ::Time).returns(Oapi::Wire) }
-      def to_wire(value) = value.utc.iso8601
-
-      CODEC = T.let(new, DateTime)
+      def self.to_wire(value) = value.utc.iso8601
     end
   end
 end

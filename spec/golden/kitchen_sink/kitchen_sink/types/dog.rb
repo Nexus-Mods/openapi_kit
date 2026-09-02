@@ -19,33 +19,31 @@ module KitchenSink
       sig { returns(::Integer) }
       def hash = [self.class, serialize].hash
 
-      class Codec
+      module Codec
         extend T::Sig
         extend T::Generic
-        include ::Oapi::Codec::Contract
+        extend ::Oapi::Codec::Contract
 
-        Value = type_member { { fixed: KitchenSink::Types::Dog } }
+        Value = type_template { { fixed: KitchenSink::Types::Dog } }
 
         sig { override.params(value: T.untyped).returns(KitchenSink::Types::Dog) }
-        def from_wire(value)
+        def self.from_wire(value)
           raw = ::Oapi::Decode.object(value)
           KitchenSink::Types::Dog.new(
-            kind: ::Oapi::Decode.field(raw, "kind") { |v| ::Oapi::Codec::String::CODEC.from_wire(v) },
-            breed: ::Oapi::Decode.optional(raw, "breed") { |v| ::Oapi::Codec::String::CODEC.from_wire(v) },
+            kind: ::Oapi::Decode.field(raw, "kind") { |v| ::Oapi::Codec::String.from_wire(v) },
+            breed: ::Oapi::Decode.optional(raw, "breed") { |v| ::Oapi::Codec::String.from_wire(v) },
           )
         end
 
         sig { override.params(value: KitchenSink::Types::Dog).returns(::Oapi::Wire) }
-        def to_wire(value)
+        def self.to_wire(value)
           wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
-          wire["kind"] = ::Oapi::Codec::String::CODEC.to_wire(value.kind)
+          wire["kind"] = ::Oapi::Codec::String.to_wire(value.kind)
           breed = value.breed
-          wire["breed"] = ::Oapi::Codec::String::CODEC.to_wire(breed) unless breed.nil?
+          wire["breed"] = ::Oapi::Codec::String.to_wire(breed) unless breed.nil?
           wire
         end
       end
-
-      CODEC = T.let(Codec.new, Codec)
     end
   end
 end

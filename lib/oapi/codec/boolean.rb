@@ -5,18 +5,18 @@ require "oapi/codec/contract"
 
 module Oapi
   module Codec
-    class Boolean
+    module Boolean
       extend T::Sig
       extend T::Generic
-      include Contract
+      extend Contract
 
-      Value = type_member { { fixed: T::Boolean } }
+      Value = type_template { { fixed: T::Boolean } }
 
       TRUTHY = T.let(%w[true 1].freeze, T::Array[::String])
       FALSEY = T.let(%w[false 0].freeze, T::Array[::String])
 
       sig { override.params(value: T.untyped).returns(T::Boolean) }
-      def from_wire(value)
+      def self.from_wire(value)
         return value if value.is_a?(::TrueClass) || value.is_a?(::FalseClass)
 
         if value.is_a?(::String)
@@ -28,9 +28,7 @@ module Oapi
       end
 
       sig { override.params(value: T::Boolean).returns(Oapi::Wire) }
-      def to_wire(value) = value
-
-      CODEC = T.let(new, Boolean)
+      def self.to_wire(value) = value
     end
   end
 end

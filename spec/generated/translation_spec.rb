@@ -107,7 +107,7 @@ RSpec.describe "translating a document" do
       YAML
 
       expect(generated.type("mod"))
-        .to include("const :status, Api::Types::Status, factory: -> { Api::Types::Status::CODEC.from_wire(\"live\") }")
+        .to include("const :status, Api::Types::Status, factory: -> { Api::Types::Status::Codec.from_wire(\"live\") }")
     end
 
     it "unwraps the nullable-allOf-ref idiom" do

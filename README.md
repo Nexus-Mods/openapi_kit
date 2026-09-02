@@ -141,39 +141,38 @@ A `type:format` pair with no built-in mapping is an error naming the config to a
 type_mappings:
   "string:money":
     type: "::Money"
-    codec: "MyApp::MoneyCodec::CODEC"
+    codec: "MyApp::MoneyCodec"
 ```
 
 `type` appears in signatures. `codec` converts it, and `Value` ties the halves together
 so a codec cannot decode one type and encode another:
 
 ```ruby
-class MyApp::MoneyCodec
+module MyApp::MoneyCodec
   extend T::Sig
   extend T::Generic
-  include Oapi::Codec::Contract
+  extend Oapi::Codec::Contract
 
-  Value = type_member { { fixed: ::Money } }
+  Value = type_template { { fixed: ::Money } }
 
   sig { override.params(value: T.untyped).returns(::Money) }
-  def from_wire(value) = ::Money.parse(Oapi::Codec::String::CODEC.from_wire(value))
+  def self.from_wire(value) = ::Money.parse(Oapi::Codec::String.from_wire(value))
 
   sig { override.params(value: ::Money).returns(Oapi::Wire) }
-  def to_wire(value) = value.format
-
-  CODEC = T.let(new, MyApp::MoneyCodec)
+  def self.to_wire(value) = value.format
 end
 ```
 
-Codecs are instances, so they can carry configuration: build one in an initializer and
-name that constant. The same override works inline, for one property rather than every
-occurrence of a format:
+`codec` only has to name a constant that answers `from_wire` and `to_wire`. A codec that
+needs configuration can `include` the contract instead, and you name the instance you
+built. The same override works inline, for one property rather than every occurrence of
+a format:
 
 ```yaml
 price:
   type: string
   x-ruby-type: "::Money"
-  x-ruby-codec: "MyApp::MoneyCodec::CODEC"
+  x-ruby-codec: "MyApp::MoneyCodec"
 ```
 
 ## Not supported yet

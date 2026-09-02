@@ -5,26 +5,24 @@ require "oapi/codec/contract"
 
 module Oapi
   module Codec
-    class Uuid
+    module Uuid
       extend T::Sig
       extend T::Generic
-      include Contract
+      extend Contract
 
-      Value = type_member { { fixed: ::String } }
+      Value = type_template { { fixed: ::String } }
 
       PATTERN = T.let(/\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/, Regexp)
 
       sig { override.params(value: T.untyped).returns(::String) }
-      def from_wire(value)
+      def self.from_wire(value)
         return value if value.is_a?(::String) && value.match?(PATTERN)
 
         raise DecodeError.new("expected a UUID, got #{value.inspect}")
       end
 
       sig { override.params(value: ::String).returns(Oapi::Wire) }
-      def to_wire(value) = value
-
-      CODEC = T.let(new, Uuid)
+      def self.to_wire(value) = value
     end
   end
 end

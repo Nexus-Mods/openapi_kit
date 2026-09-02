@@ -7,15 +7,15 @@ require "oapi/codec/contract"
 
 module Oapi
   module Codec
-    class Decimal
+    module Decimal
       extend T::Sig
       extend T::Generic
-      include Contract
+      extend Contract
 
-      Value = type_member { { fixed: ::BigDecimal } }
+      Value = type_template { { fixed: ::BigDecimal } }
 
       sig { override.params(value: T.untyped).returns(::BigDecimal) }
-      def from_wire(value)
+      def self.from_wire(value)
         case value
         when ::Integer then Kernel.BigDecimal(value)
         when ::Float then Kernel.BigDecimal(value, ::Float::DIG)
@@ -30,9 +30,7 @@ module Oapi
       end
 
       sig { override.params(value: ::BigDecimal).returns(Oapi::Wire) }
-      def to_wire(value) = value.to_s("F")
-
-      CODEC = T.let(new, Decimal)
+      def self.to_wire(value) = value.to_s("F")
     end
   end
 end

@@ -7,32 +7,30 @@ module KitchenSink
     module Loose
       Value = T.type_alias { T.any(::String, ::Integer) }
 
-      class Codec
+      module Codec
         extend T::Sig
         extend T::Generic
-        include ::Oapi::Codec::Contract
+        extend ::Oapi::Codec::Contract
 
-        Value = type_member { { fixed: KitchenSink::Types::Loose::Value } }
+        Value = type_template { { fixed: KitchenSink::Types::Loose::Value } }
 
         sig { override.params(value: T.untyped).returns(KitchenSink::Types::Loose::Value) }
-        def from_wire(value)
+        def self.from_wire(value)
           ::Oapi::Decode.first_of(value, "Loose", [
-            ->(candidate) { ::Oapi::Codec::String::CODEC.from_wire(candidate) },
-            ->(candidate) { ::Oapi::Codec::Integer::CODEC.from_wire(candidate) },
+            ->(candidate) { ::Oapi::Codec::String.from_wire(candidate) },
+            ->(candidate) { ::Oapi::Codec::Integer.from_wire(candidate) },
           ])
         end
 
         sig { override.params(value: KitchenSink::Types::Loose::Value).returns(::Oapi::Wire) }
-        def to_wire(value)
+        def self.to_wire(value)
           case value
-          when ::String then ::Oapi::Codec::String::CODEC.to_wire(value)
-          when ::Integer then ::Oapi::Codec::Integer::CODEC.to_wire(value)
+          when ::String then ::Oapi::Codec::String.to_wire(value)
+          when ::Integer then ::Oapi::Codec::Integer.to_wire(value)
           else T.absurd(value)
           end
         end
       end
-
-      CODEC = T.let(Codec.new, Codec)
     end
   end
 end

@@ -7,15 +7,15 @@ require "oapi/codec/contract"
 
 module Oapi
   module Codec
-    class Date
+    module Date
       extend T::Sig
       extend T::Generic
-      include Contract
+      extend Contract
 
-      Value = type_member { { fixed: ::Date } }
+      Value = type_template { { fixed: ::Date } }
 
       sig { override.params(value: T.untyped).returns(::Date) }
-      def from_wire(value)
+      def self.from_wire(value)
         raise DecodeError.new("expected an ISO 8601 date, got #{value.inspect}") unless value.is_a?(::String)
 
         begin
@@ -26,9 +26,7 @@ module Oapi
       end
 
       sig { override.params(value: ::Date).returns(Oapi::Wire) }
-      def to_wire(value) = value.iso8601
-
-      CODEC = T.let(new, Date)
+      def self.to_wire(value) = value.iso8601
     end
   end
 end

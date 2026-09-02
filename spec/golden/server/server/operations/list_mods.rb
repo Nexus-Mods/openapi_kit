@@ -59,7 +59,7 @@ module Server
         def status = 200
 
         sig { override.returns(::Oapi::Wire) }
-        def to_wire = body.map { |item| Server::Types::Mod::CODEC.to_wire(item) }
+        def to_wire = body.map { |item| Server::Types::Mod::Codec.to_wire(item) }
 
         sig { override.returns(T.nilable(::String)) }
         def content_type = "application/json"
@@ -75,7 +75,7 @@ module Server
         def status = 400
 
         sig { override.returns(::Oapi::Wire) }
-        def to_wire = Server::Types::ProblemDetails::CODEC.to_wire(body)
+        def to_wire = Server::Types::ProblemDetails::Codec.to_wire(body)
 
         sig { override.returns(T.nilable(::String)) }
         def content_type = "application/problem+json"

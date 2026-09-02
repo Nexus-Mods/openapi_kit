@@ -14,35 +14,39 @@ RSpec.describe Oapi::Codec::Contract do
     end
   end
 
-  let(:money_codec) do
-    Class.new do
-      extend T::Sig
-      extend T::Generic
-      include Oapi::Codec::Contract
-
-      Value = type_member { { fixed: T.untyped } }
-
-      def from_wire(value) = Money.new(Oapi::Codec::Integer::CODEC.from_wire(value))
-      def to_wire(value) = value.cents
-    end.new
-  end
-
   before { stub_const("Money", money) }
 
-  it "converts a type it does not own" do
-    expect(money.ancestors.map(&:to_s).grep(/Oapi/)).to be_empty
-    expect(money_codec.from_wire("500")).to eq(Money.new(500))
-    expect(money_codec.to_wire(Money.new(500))).to eq(500)
-  end
+  # The built-ins take this form: no instance to reach, and Value still binds from_wire's
+  # return to to_wire's argument, so a codec cannot decode one type and encode another.
+  describe "a codec with no state" do
+    let(:money_codec) do
+      Module.new do
+        extend T::Sig
+        extend T::Generic
+        extend Oapi::Codec::Contract
 
-  it "is the one contract every codec implements, built-in or yours" do
-    [Oapi::Codec::DateTime::CODEC, Oapi::Codec::Decimal::CODEC, money_codec].each do |codec|
-      expect(codec.class.ancestors).to include(described_class)
+        Value = type_template { { fixed: T.untyped } }
+
+        def self.from_wire(value) = Money.new(Oapi::Codec::Integer.from_wire(value))
+        def self.to_wire(value) = value.cents
+      end
+    end
+
+    it "converts a type it does not own" do
+      expect(money.ancestors.map(&:to_s).grep(/Oapi/)).to be_empty
+      expect(money_codec.from_wire("500")).to eq(Money.new(500))
+      expect(money_codec.to_wire(Money.new(500))).to eq(500)
+    end
+
+    it "is how every built-in codec is written" do
+      [Oapi::Codec::DateTime, Oapi::Codec::Decimal, Oapi::Codec::Uuid].each do |codec|
+        expect(codec.singleton_class.ancestors).to include(described_class)
+      end
     end
   end
 
-  # A module cannot satisfy the contract, since Value = type_member needs a class, so
-  # every codec is an instance and can therefore carry configuration.
+  # Including rather than extending gives an instance, for a codec that needs
+  # configuration. The generator only ever names a constant, so either will do.
   describe "a codec that needs state" do
     let(:salted_id_codec) do
       Class.new do
@@ -56,7 +60,7 @@ RSpec.describe Oapi::Codec::Contract do
           @salt = salt
         end
 
-        def from_wire(value) = Oapi::Codec::String::CODEC.from_wire(value).delete_prefix(@salt).to_i
+        def from_wire(value) = Oapi::Codec::String.from_wire(value).delete_prefix(@salt).to_i
         def to_wire(value) = "#{@salt}#{value}"
       end
     end

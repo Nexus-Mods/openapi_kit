@@ -8,42 +8,42 @@ module Oapi
 
       DEFAULT_TYPE_MAPPINGS = T.let(
         {
-          "string" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "integer" => RubyType.new(type: "::Integer", codec: "::Oapi::Codec::Integer::CODEC"),
-          "number" => RubyType.new(type: "::Float", codec: "::Oapi::Codec::Float::CODEC"),
-          "boolean" => RubyType.new(type: "T::Boolean", codec: "::Oapi::Codec::Boolean::CODEC"),
+          "string" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "integer" => RubyType.new(type: "::Integer", codec: "::Oapi::Codec::Integer"),
+          "number" => RubyType.new(type: "::Float", codec: "::Oapi::Codec::Float"),
+          "boolean" => RubyType.new(type: "T::Boolean", codec: "::Oapi::Codec::Boolean"),
 
-          "string:date-time" => RubyType.new(type: "::Time", codec: "::Oapi::Codec::DateTime::CODEC"),
-          "string:date" => RubyType.new(type: "::Date", codec: "::Oapi::Codec::Date::CODEC"),
-          "string:uuid" => RubyType.new(type: "::String", codec: "::Oapi::Codec::Uuid::CODEC"),
-          "string:byte" => RubyType.new(type: "::String", codec: "::Oapi::Codec::Byte::CODEC"),
-          "string:decimal" => RubyType.new(type: "::BigDecimal", codec: "::Oapi::Codec::Decimal::CODEC"),
+          "string:date-time" => RubyType.new(type: "::Time", codec: "::Oapi::Codec::DateTime"),
+          "string:date" => RubyType.new(type: "::Date", codec: "::Oapi::Codec::Date"),
+          "string:uuid" => RubyType.new(type: "::String", codec: "::Oapi::Codec::Uuid"),
+          "string:byte" => RubyType.new(type: "::String", codec: "::Oapi::Codec::Byte"),
+          "string:decimal" => RubyType.new(type: "::BigDecimal", codec: "::Oapi::Codec::Decimal"),
           "string:binary" => RubyType.new(type: "::ActionDispatch::Http::UploadedFile",
-                                          codec: "::Oapi::Codec::UploadedFile::CODEC"),
+                                          codec: "::Oapi::Codec::UploadedFile"),
 
-          "string:time" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "string:duration" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "string:email" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "string:idn-email" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "string:hostname" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "string:idn-hostname" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "string:ipv4" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "string:ipv6" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "string:uri" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "string:uri-reference" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "string:uri-template" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "string:iri" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "string:json-pointer" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "string:relative-json-pointer" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "string:regex" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
-          "string:password" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String::CODEC"),
+          "string:time" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "string:duration" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "string:email" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "string:idn-email" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "string:hostname" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "string:idn-hostname" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "string:ipv4" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "string:ipv6" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "string:uri" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "string:uri-reference" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "string:uri-template" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "string:iri" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "string:json-pointer" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "string:relative-json-pointer" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "string:regex" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
+          "string:password" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
 
-          "integer:int32" => RubyType.new(type: "::Integer", codec: "::Oapi::Codec::Integer::CODEC"),
-          "integer:int64" => RubyType.new(type: "::Integer", codec: "::Oapi::Codec::Integer::CODEC"),
+          "integer:int32" => RubyType.new(type: "::Integer", codec: "::Oapi::Codec::Integer"),
+          "integer:int64" => RubyType.new(type: "::Integer", codec: "::Oapi::Codec::Integer"),
 
-          "number:float" => RubyType.new(type: "::Float", codec: "::Oapi::Codec::Float::CODEC"),
-          "number:double" => RubyType.new(type: "::Float", codec: "::Oapi::Codec::Float::CODEC"),
-          "number:decimal" => RubyType.new(type: "::BigDecimal", codec: "::Oapi::Codec::Decimal::CODEC")
+          "number:float" => RubyType.new(type: "::Float", codec: "::Oapi::Codec::Float"),
+          "number:double" => RubyType.new(type: "::Float", codec: "::Oapi::Codec::Float"),
+          "number:decimal" => RubyType.new(type: "::BigDecimal", codec: "::Oapi::Codec::Decimal")
         }.freeze,
         T::Hash[String, RubyType]
       )
@@ -141,7 +141,7 @@ module Oapi
       # Rails only hands back request_parameters verbatim for a JSON object; anything else it
       # wraps under "_json". The emitters need to know which shape a body will arrive in.
       sig { params(name: String).returns(String) }
-      def codec_reference(name) = "#{@namespace}::Types::#{name}::CODEC"
+      def codec_reference(name) = "#{@namespace}::Types::#{name}::Codec"
 
       sig { params(schema: Model::Schema).returns(T::Boolean) }
       def object?(schema)

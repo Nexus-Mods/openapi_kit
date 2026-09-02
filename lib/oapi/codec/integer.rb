@@ -5,15 +5,15 @@ require "oapi/codec/contract"
 
 module Oapi
   module Codec
-    class Integer
+    module Integer
       extend T::Sig
       extend T::Generic
-      include Contract
+      extend Contract
 
-      Value = type_member { { fixed: ::Integer } }
+      Value = type_template { { fixed: ::Integer } }
 
       sig { override.params(value: T.untyped).returns(::Integer) }
-      def from_wire(value)
+      def self.from_wire(value)
         return value if value.is_a?(::Integer)
         return value.to_i if value.is_a?(::String) && value.match?(/\A[+-]?\d+\z/)
 
@@ -21,9 +21,7 @@ module Oapi
       end
 
       sig { override.params(value: ::Integer).returns(Oapi::Wire) }
-      def to_wire(value) = value
-
-      CODEC = T.let(new, Integer)
+      def self.to_wire(value) = value
     end
   end
 end

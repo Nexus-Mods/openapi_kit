@@ -5,15 +5,15 @@ require "oapi/codec/contract"
 
 module Oapi
   module Codec
-    class Float
+    module Float
       extend T::Sig
       extend T::Generic
-      include Contract
+      extend Contract
 
-      Value = type_member { { fixed: ::Float } }
+      Value = type_template { { fixed: ::Float } }
 
       sig { override.params(value: T.untyped).returns(::Float) }
-      def from_wire(value)
+      def self.from_wire(value)
         return value.to_f if value.is_a?(::Numeric)
 
         if value.is_a?(::String)
@@ -28,9 +28,7 @@ module Oapi
       end
 
       sig { override.params(value: ::Float).returns(Oapi::Wire) }
-      def to_wire(value) = value
-
-      CODEC = T.let(new, Float)
+      def self.to_wire(value) = value
     end
   end
 end
