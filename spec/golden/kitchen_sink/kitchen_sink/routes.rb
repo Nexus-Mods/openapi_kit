@@ -6,7 +6,7 @@ module KitchenSink
   module Routes
     extend T::Sig
 
-    sig { params(mapper: T.untyped).void }
+    sig { params(mapper: ::ActionDispatch::Routing::Mapper).void }
     def self.draw(mapper)
     end
   end

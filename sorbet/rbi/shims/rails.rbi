@@ -39,6 +39,33 @@ module Rails
   end
 end
 
+module ActionDispatch
+  module Routing
+    class Mapper
+      sig { params(path: String, to: String).void }
+      def get(path, to:); end
+
+      sig { params(path: String, to: String).void }
+      def post(path, to:); end
+
+      sig { params(path: String, to: String).void }
+      def put(path, to:); end
+
+      sig { params(path: String, to: String).void }
+      def patch(path, to:); end
+
+      sig { params(path: String, to: String).void }
+      def delete(path, to:); end
+
+      sig { params(path: String, to: String).void }
+      def options(path, to:); end
+
+      sig { params(path: String, to: String).void }
+      def head(path, to:); end
+    end
+  end
+end
+
 module ActionController
   class API
     sig { params(error: T.untyped, with: T.untyped).void }

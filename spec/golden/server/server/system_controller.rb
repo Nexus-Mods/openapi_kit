@@ -19,7 +19,7 @@ module Server
 
     sig { returns(Server::Handlers::System) }
     def handler
-      T.cast(::Oapi::Rails.container.resolve("v1.handlers.system"), Server::Handlers::System)
+      T.cast(oapi_container.resolve("v1.handlers.system"), Server::Handlers::System)
     end
   end
 end

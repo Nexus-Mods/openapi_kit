@@ -27,7 +27,7 @@ module Oapi
         def emit_body(buffer)
           buffer.line("extend T::Sig")
           buffer.blank
-          buffer.line("sig { params(mapper: T.untyped).void }")
+          buffer.line("sig { params(mapper: ::ActionDispatch::Routing::Mapper).void }")
           buffer.nest("def self.draw(mapper)") do
             @document.operations.each { |operation| buffer.line(route_for(operation)) }
           end

@@ -6,7 +6,7 @@ module Server
   module Routes
     extend T::Sig
 
-    sig { params(mapper: T.untyped).void }
+    sig { params(mapper: ::ActionDispatch::Routing::Mapper).void }
     def self.draw(mapper)
       mapper.get("/v1/games/:gameDomain/mods", to: "server/mods#list_mods")
       mapper.post("/v1/games/:gameDomain/mods", to: "server/mods#create_mod")

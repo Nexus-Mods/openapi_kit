@@ -18,3 +18,5 @@ end
 gem "zeitwerk", "~> 2.8", groups: %i[development test]
 
 gem "railties", "~> 8.1", groups: %i[development test]
+
+gem "rack-test", "~> 2.2", groups: %i[development test]

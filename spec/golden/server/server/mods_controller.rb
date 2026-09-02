@@ -10,7 +10,7 @@ module Server
     def list_mods
       path_params = request.path_parameters.transform_keys(&:to_s)
       query_params = request.query_parameters
-      header_params = ::Oapi::Rails.headers(request, ["Application-Name"])
+      header_params = ::Oapi::Decode.gather(request.headers, ["Application-Name"])
 
       decoded = Server::Operations::ListMods::Request.new(
         path: Server::Operations::ListMods::Path.new(
@@ -48,7 +48,7 @@ module Server
 
     sig { returns(Server::Handlers::Mods) }
     def handler
-      T.cast(::Oapi::Rails.container.resolve("v1.handlers.mods"), Server::Handlers::Mods)
+      T.cast(oapi_container.resolve("v1.handlers.mods"), Server::Handlers::Mods)
     end
   end
 end

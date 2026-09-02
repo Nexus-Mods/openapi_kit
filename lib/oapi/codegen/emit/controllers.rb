@@ -38,7 +38,7 @@ module Oapi
 
         sig { params(buffer: Buffer, tag: String, operations: T::Array[Ir::Operation]).void }
         def emit_controller(buffer, tag, operations)
-          buffer.nest("class #{Naming.pascal(tag)}Controller < ::Oapi::Rails::Controller") do
+          buffer.nest("class #{Naming.pascal(tag)}Controller < #{@config.controller_base}") do
             buffer.line("extend T::Sig")
 
             operations.each do |operation|
@@ -60,7 +60,7 @@ module Oapi
 
           buffer.line("sig { returns(#{interface}) }")
           buffer.nest("def handler") do
-            buffer.line("T.cast(::Oapi::Rails.container.resolve(#{key.inspect}), #{interface})")
+            buffer.line("T.cast(oapi_container.resolve(#{key.inspect}), #{interface})")
           end
         end
 
@@ -108,8 +108,8 @@ module Oapi
           case group
           when "Path" then "path_params = request.path_parameters.transform_keys(&:to_s)"
           when "Query" then "query_params = request.query_parameters"
-          when "Headers" then "header_params = ::Oapi::Rails.headers(request, #{names.inspect})"
-          when "Cookies" then "cookie_params = ::Oapi::Rails.cookies(request, #{names.inspect})"
+          when "Headers" then "header_params = ::Oapi::Decode.gather(request.headers, #{names.inspect})"
+          when "Cookies" then "cookie_params = ::Oapi::Decode.gather(request.cookie_jar, #{names.inspect})"
           else raise SchemaError, "unknown parameter group #{group}"
           end
         end
