@@ -39,7 +39,7 @@ RSpec.describe Oapi::Config do
     expect(config.container_key("handlers", "mods")).to eq("v3.handlers.mods")
   end
 
-  it "omits an empty prefix rather than emitting a leading dot" do
+  it "omits an absent prefix rather than emitting a leading dot" do
     config = described_class.load(write(<<~YAML))
       spec: api.yaml
       output: out

@@ -6,42 +6,6 @@ module Oapi
     class Registry
       extend T::Sig
 
-      BUILTINS = T.let(
-        {
-          "string" => ["::String", "Oapi::Coders::String"],
-          "string:date-time" => ["::Time", "Oapi::Coders::DateTime"],
-          "string:date" => ["::Date", "Oapi::Coders::Date"],
-          "string:uuid" => ["::String", "Oapi::Coders::Uuid"],
-          "string:byte" => ["::String", "Oapi::Coders::Byte"],
-          "string:binary" => ["::Oapi::UploadedFile", "Oapi::Coders::Binary"],
-          "string:decimal" => ["::BigDecimal", "Oapi::Coders::Decimal"],
-          "string:time" => ["::String", "Oapi::Coders::String"],
-          "string:duration" => ["::String", "Oapi::Coders::String"],
-          "string:email" => ["::String", "Oapi::Coders::String"],
-          "string:idn-email" => ["::String", "Oapi::Coders::String"],
-          "string:hostname" => ["::String", "Oapi::Coders::String"],
-          "string:idn-hostname" => ["::String", "Oapi::Coders::String"],
-          "string:ipv4" => ["::String", "Oapi::Coders::String"],
-          "string:ipv6" => ["::String", "Oapi::Coders::String"],
-          "string:uri" => ["::String", "Oapi::Coders::String"],
-          "string:uri-reference" => ["::String", "Oapi::Coders::String"],
-          "string:uri-template" => ["::String", "Oapi::Coders::String"],
-          "string:iri" => ["::String", "Oapi::Coders::String"],
-          "string:json-pointer" => ["::String", "Oapi::Coders::String"],
-          "string:regex" => ["::String", "Oapi::Coders::String"],
-          "string:password" => ["::String", "Oapi::Coders::String"],
-          "integer" => ["::Integer", "Oapi::Coders::Integer"],
-          "integer:int32" => ["::Integer", "Oapi::Coders::Integer"],
-          "integer:int64" => ["::Integer", "Oapi::Coders::Integer"],
-          "number" => ["::Float", "Oapi::Coders::Float"],
-          "number:float" => ["::Float", "Oapi::Coders::Float"],
-          "number:double" => ["::Float", "Oapi::Coders::Float"],
-          "number:decimal" => ["::BigDecimal", "Oapi::Coders::Decimal"],
-          "boolean" => ["T::Boolean", "Oapi::Coders::Boolean"]
-        }.freeze,
-        T::Hash[String, [String, String]]
-      )
-
       sig { returns(T::Array[String]) }
       attr_reader :warnings
 
@@ -124,11 +88,11 @@ module Oapi
         end
 
         keys.each_with_index do |key, index|
-          builtin = BUILTINS[key]
+          builtin = Builtins[key]
           next if builtin.nil?
 
           warn_unrecognised_format(T.must(keys.first), key) if index.positive?
-          return RubyType.new(type: T.must(builtin[0]), coder: T.must(builtin[1]))
+          return builtin
         end
 
         raise SchemaError, unmapped_message(T.must(keys.first))
@@ -138,7 +102,7 @@ module Oapi
       def warn_unrecognised_format(requested, used)
         message = <<~MESSAGE.strip
           #{requested.inspect} has no Ruby type mapped, so it is treated as #{used.inspect}
-          (#{T.must(T.must(BUILTINS[used])[0])}). If that is wrong, map it:
+          (#{T.must(Builtins[used]).type}). If that is wrong, map it:
 
             type_mappings:
               #{requested.inspect}:

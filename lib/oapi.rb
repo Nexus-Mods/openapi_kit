@@ -13,6 +13,7 @@ require "oapi/ir/document"
 require "oapi/config"
 require "oapi/writer"
 require "oapi/loader"
+require "oapi/types/builtins"
 require "oapi/types/registry"
 
 module Oapi

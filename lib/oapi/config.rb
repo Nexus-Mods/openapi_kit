@@ -11,8 +11,8 @@ module Oapi
     const :spec, Pathname
     const :output, Pathname
     const :modules, T::Array[String]
-    const :route_prefix, String, default: ""
-    const :container_prefix, String, default: ""
+    const :route_prefix, T.nilable(String), default: nil
+    const :container_prefix, T.nilable(String), default: nil
     const :type_mappings, T::Hash[String, RubyType], default: {}
     const :security_schemes, T::Hash[String, String], default: {}
     const :name_overrides, T::Hash[String, String], default: {}
@@ -62,8 +62,8 @@ module Oapi
         spec: base.join(raw.fetch("spec").to_s).expand_path,
         output: base.join(raw.fetch("output").to_s).expand_path,
         modules: modules,
-        route_prefix: raw.fetch("route_prefix", "").to_s,
-        container_prefix: raw.fetch("container_prefix", "").to_s,
+        route_prefix: raw["route_prefix"]&.to_s,
+        container_prefix: raw["container_prefix"]&.to_s,
         type_mappings: parse_type_mappings(raw["type_mappings"]),
         security_schemes: stringify(raw["security_schemes"]),
         name_overrides: stringify(raw["name_overrides"]),
@@ -88,7 +88,7 @@ module Oapi
 
     sig { params(parts: String).returns(String) }
     def container_key(*parts)
-      [container_prefix, *parts].reject(&:empty?).join(".")
+      [container_prefix, *parts].compact.join(".")
     end
   end
 end
