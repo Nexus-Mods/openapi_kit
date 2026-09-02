@@ -12,7 +12,7 @@ module Oapi
 
       Value = type_template { { fixed: ::Integer } }
 
-      sig { override.params(value: Oapi::Wire).returns(::Integer) }
+      sig { override.params(value: Oapi::Wire::In).returns(::Integer) }
       def self.from_wire(value)
         return value if value.is_a?(::Integer)
         return value.to_i if value.is_a?(::String) && value.match?(/\A[+-]?\d+\z/)
@@ -20,7 +20,7 @@ module Oapi
         raise DecodeError.new("expected an integer, got #{value.inspect}")
       end
 
-      sig { override.params(value: ::Integer).returns(Oapi::Wire) }
+      sig { override.params(value: ::Integer).returns(Oapi::Wire::Out) }
       def self.to_wire(value) = value
     end
   end

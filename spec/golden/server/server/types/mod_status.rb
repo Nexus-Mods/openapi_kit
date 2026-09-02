@@ -17,15 +17,15 @@ module Server
 
         Value = type_template { { fixed: Server::Types::ModStatus } }
 
-        VALUES = T.let(["live", "hidden"].freeze, T::Array[::Oapi::Wire])
+        VALUES = T.let(["live", "hidden"].freeze, T::Array[::Oapi::Wire::Out])
 
-        sig { override.params(value: ::Oapi::Wire).returns(Server::Types::ModStatus) }
+        sig { override.params(value: ::Oapi::Wire::In).returns(Server::Types::ModStatus) }
         def self.from_wire(value)
           Server::Types::ModStatus.try_deserialize(value) ||
             raise(::Oapi::DecodeError.new("expected one of #{VALUES.join(", ")}, got #{value.inspect}"))
         end
 
-        sig { override.params(value: Server::Types::ModStatus).returns(::Oapi::Wire) }
+        sig { override.params(value: Server::Types::ModStatus).returns(::Oapi::Wire::Out) }
         def self.to_wire(value) = value.serialize
       end
     end

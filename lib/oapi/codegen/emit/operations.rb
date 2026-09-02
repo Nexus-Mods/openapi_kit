@@ -137,7 +137,7 @@ module Oapi
             buffer.line("sig { abstract.returns(::Integer) }")
             buffer.line("def status; end")
             buffer.blank
-            buffer.line("sig { abstract.returns(::Oapi::Wire) }")
+            buffer.line("sig { abstract.returns(::Oapi::Wire::Out) }")
             buffer.line("def to_wire; end")
             buffer.blank
             buffer.line("sig { abstract.returns(T.nilable(::String)) }")
@@ -189,7 +189,7 @@ module Oapi
             buffer.line("sig { override.returns(::Integer) }")
             buffer.line(status_method(status))
             buffer.blank
-            buffer.line("sig { override.returns(::Oapi::Wire) }")
+            buffer.line("sig { override.returns(::Oapi::Wire::Out) }")
             buffer.line("def to_wire = #{schema ? @registry.to_wire_expr(schema, value: "body") : "nil"}")
             buffer.blank
             buffer.line("sig { override.returns(T.nilable(::String)) }")

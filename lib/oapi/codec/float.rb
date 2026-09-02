@@ -12,7 +12,7 @@ module Oapi
 
       Value = type_template { { fixed: ::Float } }
 
-      sig { override.params(value: Oapi::Wire).returns(::Float) }
+      sig { override.params(value: Oapi::Wire::In).returns(::Float) }
       def self.from_wire(value)
         return value.to_f if value.is_a?(::Numeric)
 
@@ -27,7 +27,7 @@ module Oapi
         raise DecodeError.new("expected a number, got #{value.inspect}")
       end
 
-      sig { override.params(value: ::Float).returns(Oapi::Wire) }
+      sig { override.params(value: ::Float).returns(Oapi::Wire::Out) }
       def self.to_wire(value) = value
     end
   end

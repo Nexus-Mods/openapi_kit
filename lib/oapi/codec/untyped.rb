@@ -12,10 +12,10 @@ module Oapi
 
       Value = type_template { { fixed: T.untyped } }
 
-      sig { override.params(value: Oapi::Wire).returns(T.untyped) }
+      sig { override.params(value: Oapi::Wire::In).returns(T.untyped) }
       def self.from_wire(value) = value
 
-      sig { override.params(value: Oapi::Wire).returns(Oapi::Wire) }
+      sig { override.params(value: T.untyped).returns(Oapi::Wire::Out) }
       def self.to_wire(value) = value
     end
   end

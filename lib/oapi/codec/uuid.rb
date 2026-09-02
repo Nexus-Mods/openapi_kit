@@ -14,14 +14,14 @@ module Oapi
 
       PATTERN = T.let(/\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/, Regexp)
 
-      sig { override.params(value: Oapi::Wire).returns(::String) }
+      sig { override.params(value: Oapi::Wire::In).returns(::String) }
       def self.from_wire(value)
         return value if value.is_a?(::String) && value.match?(PATTERN)
 
         raise DecodeError.new("expected a UUID, got #{value.inspect}")
       end
 
-      sig { override.params(value: ::String).returns(Oapi::Wire) }
+      sig { override.params(value: ::String).returns(Oapi::Wire::Out) }
       def self.to_wire(value) = value
     end
   end

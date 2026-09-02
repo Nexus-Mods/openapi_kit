@@ -27,7 +27,7 @@ module KitchenSink
 
         Value = type_template { { fixed: KitchenSink::Types::User } }
 
-        sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::User) }
+        sig { override.params(value: ::Oapi::Wire::In).returns(KitchenSink::Types::User) }
         def self.from_wire(value)
           raw = ::Oapi::Decode.object(value)
           KitchenSink::Types::User.new(
@@ -37,9 +37,9 @@ module KitchenSink
           )
         end
 
-        sig { override.params(value: KitchenSink::Types::User).returns(::Oapi::Wire) }
+        sig { override.params(value: KitchenSink::Types::User).returns(::Oapi::Wire::Out) }
         def self.to_wire(value)
-          wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
+          wire = T.let({}, T::Hash[::String, ::Oapi::Wire::Out])
           wire["id"] = ::Oapi::Codec::Uuid.to_wire(value.id)
           wire["name"] = ::Oapi::Codec::String.to_wire(value.name)
           friend = value.friend

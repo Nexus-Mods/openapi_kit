@@ -13,10 +13,10 @@ module Oapi
 
       Value = type_member
 
-      sig { abstract.params(value: Oapi::Wire).returns(Value) }
+      sig { abstract.params(value: Oapi::Wire::In).returns(Value) }
       def from_wire(value); end
 
-      sig { abstract.params(value: Value).returns(Oapi::Wire) }
+      sig { abstract.params(value: Value).returns(Oapi::Wire::Out) }
       def to_wire(value); end
     end
   end

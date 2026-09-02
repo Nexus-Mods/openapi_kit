@@ -29,7 +29,7 @@ module KitchenSink
 
         Value = type_template { { fixed: KitchenSink::Types::Adversarial } }
 
-        sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::Adversarial) }
+        sig { override.params(value: ::Oapi::Wire::In).returns(KitchenSink::Types::Adversarial) }
         def self.from_wire(value)
           raw = ::Oapi::Decode.object(value)
           KitchenSink::Types::Adversarial.new(
@@ -41,9 +41,9 @@ module KitchenSink
           )
         end
 
-        sig { override.params(value: KitchenSink::Types::Adversarial).returns(::Oapi::Wire) }
+        sig { override.params(value: KitchenSink::Types::Adversarial).returns(::Oapi::Wire::Out) }
         def self.to_wire(value)
-          wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
+          wire = T.let({}, T::Hash[::String, ::Oapi::Wire::Out])
           wire["serialize"] = ::Oapi::Codec::String.to_wire(value.serialize_)
           since = value.since
           wire["since"] = ::Oapi::Codec::DateTime.to_wire(since) unless since.nil?

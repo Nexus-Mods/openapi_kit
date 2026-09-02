@@ -36,7 +36,7 @@ module KitchenSink
 
         Value = type_template { { fixed: KitchenSink::Types::Mod } }
 
-        sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::Mod) }
+        sig { override.params(value: ::Oapi::Wire::In).returns(KitchenSink::Types::Mod) }
         def self.from_wire(value)
           raw = ::Oapi::Decode.object(value)
           KitchenSink::Types::Mod.new(
@@ -55,9 +55,9 @@ module KitchenSink
           )
         end
 
-        sig { override.params(value: KitchenSink::Types::Mod).returns(::Oapi::Wire) }
+        sig { override.params(value: KitchenSink::Types::Mod).returns(::Oapi::Wire::Out) }
         def self.to_wire(value)
-          wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
+          wire = T.let({}, T::Hash[::String, ::Oapi::Wire::Out])
           wire["id"] = ::Oapi::Codec::Integer.to_wire(value.id)
           wire["name"] = ::Oapi::Codec::String.to_wire(value.name)
           status = value.status
