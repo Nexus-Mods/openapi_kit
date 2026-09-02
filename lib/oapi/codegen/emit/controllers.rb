@@ -78,6 +78,12 @@ module Oapi
 
           buffer.line("sig { void }")
           buffer.nest("def #{Naming.identifier(operation.id)}") do
+            unless @document.security_for(operation).empty?
+              buffer.line("oapi_authenticate!(#{scope}::SECURITY)")
+              buffer.line("return if performed?")
+              buffer.blank
+            end
+
             groups.each { |name, parameters| buffer.line(source_line(name, parameters)) }
             buffer.blank unless groups.empty?
 

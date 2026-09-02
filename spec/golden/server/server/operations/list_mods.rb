@@ -5,6 +5,13 @@
 module Server
   module Operations
     module ListMods
+      SECURITY = T.let(
+        [
+          ::Oapi::Security::Requirement.new(schemes: {"bearerAuth" => []}),
+        ].freeze,
+        T::Array[::Oapi::Security::Requirement]
+      )
+
       class Path < T::Struct
         extend T::Sig
 

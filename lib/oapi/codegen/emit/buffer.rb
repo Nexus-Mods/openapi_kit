@@ -40,6 +40,18 @@ module Oapi
           line("end")
         end
 
+        sig { params(call: String, arguments: T::Array[[String, String]]).returns(Buffer) }
+        def nest_call(call, arguments)
+          line("#{call}(")
+          indent do
+            arguments.each_with_index do |(keyword, value), index|
+              comma = index == arguments.size - 1 ? "" : ","
+              line("#{keyword}: #{value}#{comma}")
+            end
+          end
+          line("),")
+        end
+
         sig { params(subject: String, block: T.proc.void).returns(Buffer) }
         def case_of(subject, &block)
           line("case #{subject}")

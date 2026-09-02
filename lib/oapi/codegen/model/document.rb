@@ -266,6 +266,10 @@ module Oapi
         const :operations, T::Array[Operation], default: []
         const :security_schemes, T::Array[SecurityScheme], default: []
         const :security, T::Array[SecurityRequirement], default: []
+
+        # An operation that declares no security inherits the document's.
+        sig { params(operation: Operation).returns(T::Array[SecurityRequirement]) }
+        def security_for(operation) = operation.security || security
         const :raw, T::Hash[String, T.untyped], default: {}
 
         sig { returns(T::Array[String]) }

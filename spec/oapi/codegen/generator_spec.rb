@@ -14,7 +14,7 @@ RSpec.describe Oapi::Codegen::Generator do
           server/mods_controller.rb
           server/operations/create_mod.rb server/operations/get_health.rb
           server/operations/list_mods.rb
-          server/routes.rb server/system_controller.rb
+          server/routes.rb server/security.rb server/system_controller.rb
           server/types/mod.rb server/types/mod_status.rb server/types/new_mod.rb
           server/types/problem_details.rb
         ]

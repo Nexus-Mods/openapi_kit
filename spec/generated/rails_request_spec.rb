@@ -10,8 +10,11 @@ RSpec.describe "a generated API inside a Rails application" do
 
   def parsed_body = JSON.parse(last_response.body)
 
+  # The document puts every operation but /health behind bearerAuth.
+  def bearer(scopes: []) = { "HTTP_AUTHORIZATION" => "Bearer t0ken", "HTTP_X_SCOPES" => scopes.join(",") }
+
   it "routes a path parameter and a defaulted query parameter to the handler" do
-    get "/v1/games/skyrim/mods"
+    get "/v1/games/skyrim/mods", {}, bearer
 
     expect(last_response.status).to eq(200)
     expect(parsed_body.first["name"]).to eq("skyrim:1")
@@ -19,13 +22,13 @@ RSpec.describe "a generated API inside a Rails application" do
   end
 
   it "decodes a supplied query parameter" do
-    get "/v1/games/oblivion/mods?page=4"
+    get "/v1/games/oblivion/mods?page=4", {}, bearer
 
     expect(parsed_body.first["name"]).to eq("oblivion:4")
   end
 
   it "lets the handler choose a different sealed response variant" do
-    get "/v1/games/skyrim/mods?page=0"
+    get "/v1/games/skyrim/mods?page=0", {}, bearer
 
     expect(last_response.status).to eq(400)
     expect(last_response.headers["content-type"]).to include("application/problem+json")
@@ -33,14 +36,16 @@ RSpec.describe "a generated API inside a Rails application" do
   end
 
   it "decodes a JSON request body" do
-    post "/v1/games/skyrim/mods", { name: "Cool Mod" }.to_json, { "CONTENT_TYPE" => "application/json" }
+    post "/v1/games/skyrim/mods", { name: "Cool Mod" }.to_json,
+         { "CONTENT_TYPE" => "application/json" }.merge(bearer(scopes: ["mods:write"]))
 
     expect(last_response.status).to eq(201)
     expect(parsed_body["name"]).to eq("Cool Mod")
   end
 
   it "omits a property the handler left nil" do
-    post "/v1/games/skyrim/mods", { name: "No Status" }.to_json, { "CONTENT_TYPE" => "application/json" }
+    post "/v1/games/skyrim/mods", { name: "No Status" }.to_json,
+         { "CONTENT_TYPE" => "application/json" }.merge(bearer(scopes: ["mods:write"]))
 
     expect(parsed_body).not_to have_key("status")
   end
@@ -52,9 +57,45 @@ RSpec.describe "a generated API inside a Rails application" do
     expect(last_response.body).to be_empty
   end
 
+  # oapi reports what the document requires and the application does the checking, so
+  # these assert the wiring rather than any particular auth scheme.
+  describe "security" do
+    it "refuses an operation the document protects when no credential is sent" do
+      get "/v1/games/skyrim/mods"
+
+      expect(last_response.status).to eq(401)
+    end
+
+    it "lets an operation through when the requirement is satisfied" do
+      get "/v1/games/skyrim/mods", {}, bearer
+
+      expect(last_response.status).to eq(200)
+    end
+
+    it "enforces the scopes the operation asks for" do
+      post "/v1/games/skyrim/mods", { name: "Cool Mod" }.to_json,
+           { "CONTENT_TYPE" => "application/json" }.merge(bearer)
+
+      expect(last_response.status).to eq(401)
+    end
+
+    it "accepts the second alternative when the first is not satisfied" do
+      post "/v1/games/skyrim/mods", { name: "Cool Mod" }.to_json,
+           { "CONTENT_TYPE" => "application/json", "HTTP_X_API_KEY" => "k3y" }
+
+      expect(last_response.status).to eq(201)
+    end
+
+    it "leaves an operation that opts out of security alone" do
+      get "/v1/health"
+
+      expect(last_response.status).to eq(200)
+    end
+  end
+
   # oapi raises and takes no view on the error body; the application decides.
   it "raises a DecodeError the application handles however it likes" do
-    get "/v1/games/skyrim/mods?page=banana"
+    get "/v1/games/skyrim/mods?page=banana", {}, bearer
 
     expect(last_response.status).to eq(400)
     expect(parsed_body["field"]).to eq("/page")

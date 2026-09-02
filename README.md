@@ -117,6 +117,30 @@ end
 An undecodable request raises `Oapi::DecodeError`, carrying `detail` and a `json_pointer`
 naming the field. oapi takes no view on the wire format; the example answers RFC 9457.
 
+Where the document declares `security`, generated actions call `oapi_authenticate!` with
+that operation's requirements before decoding anything. Each requirement is one
+alternative: satisfy every scheme in any one of them. Render or raise to refuse; the
+action stops if you have rendered.
+
+```ruby
+def oapi_authenticate!(requirements)
+  return if requirements.any? { |requirement| satisfied?(requirement) }
+
+  render json: { "error" => "unauthenticated" }, status: :unauthorized
+end
+
+def satisfied?(requirement)
+  requirement.anonymous? || requirement.schemes.all? do |name, scopes|
+    scheme = Mods::V1::Security::SCHEMES.fetch(name)   # Oapi::Security::Http, ApiKey, ...
+    credential(scheme) && scopes.all? { |scope| granted.include?(scope) }
+  end
+end
+```
+
+`SCHEMES` is the document's `securitySchemes`, so a base controller can extract the
+credential from the scheme rather than hardcoding where it lives. oapi does no
+authenticating of its own and holds no principal.
+
 Build the container and verify it at boot, so a missing registration fails boot rather
 than the first request that needs it. Use `to_prepare`, or a reload leaves handlers
 holding stale constants:
@@ -177,7 +201,8 @@ price:
 
 ## Not supported yet
 
-- Security schemes are read from the document but not enforced or surfaced to handlers.
+- A principal on the request. oapi reports what the document requires and the
+  application authenticates; nothing typed reaches the handler.
 - Parameter styles other than `simple` for path and `form` for query.
 - Array and object query parameters follow Rails' conventions, not OpenAPI's: send
   `?tags[]=a&tags[]=b` and `?filter[lat]=1`, not `?tags=a&tags=b` or an exploded `?lat=1`.

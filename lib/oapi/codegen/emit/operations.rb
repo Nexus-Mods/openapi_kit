@@ -43,6 +43,7 @@ module Oapi
         sig { params(buffer: Buffer, operation: Model::Operation).void }
         def emit_operation(buffer, operation)
           buffer.nest("module #{Operations.module_name(operation)}") do
+            emit_security(buffer, operation)
             emit_parameter_structs(buffer, operation)
             emit_request(buffer, operation)
             buffer.blank
@@ -56,6 +57,31 @@ module Oapi
             found = operation.parameters.grep(kind)
             found.empty? ? nil : [name, found]
           end.to_h
+        end
+
+        # The alternatives that satisfy this operation, in the order the document lists
+        # them. The base controller decides what to do with them; oapi only reports them.
+        sig { params(buffer: Buffer, operation: Model::Operation).void }
+        def emit_security(buffer, operation)
+          requirements = @document.security_for(operation)
+          return if requirements.empty?
+
+          buffer.line("SECURITY = T.let(")
+          buffer.indent do
+            buffer.line("[")
+            buffer.indent do
+              requirements.each { |requirement| buffer.line("#{requirement_literal(requirement)},") }
+            end
+            buffer.line("].freeze,")
+            buffer.line("T::Array[::Oapi::Security::Requirement]")
+          end
+          buffer.line(")")
+          buffer.blank
+        end
+
+        sig { params(requirement: Model::SecurityRequirement).returns(String) }
+        def requirement_literal(requirement)
+          "::Oapi::Security::Requirement.new(schemes: #{requirement.schemes.inspect})"
         end
 
         sig { params(buffer: Buffer, operation: Model::Operation).void }

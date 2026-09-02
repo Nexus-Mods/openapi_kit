@@ -77,6 +77,9 @@ module ActionController
     sig { params(status: T.untyped).void }
     def head(status); end
 
+    sig { returns(T::Boolean) }
+    def performed?; end
+
     sig { params(json: T.untyped, status: T.untyped, content_type: T.untyped).void }
     def render(json:, status:, content_type:); end
   end

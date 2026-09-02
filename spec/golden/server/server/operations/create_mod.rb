@@ -5,6 +5,14 @@
 module Server
   module Operations
     module CreateMod
+      SECURITY = T.let(
+        [
+          ::Oapi::Security::Requirement.new(schemes: {"bearerAuth" => ["mods:write"]}),
+          ::Oapi::Security::Requirement.new(schemes: {"apiKeyAuth" => []}),
+        ].freeze,
+        T::Array[::Oapi::Security::Requirement]
+      )
+
       class Path < T::Struct
         extend T::Sig
 

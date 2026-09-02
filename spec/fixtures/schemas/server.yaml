@@ -24,6 +24,9 @@ paths:
     post:
       operationId: create_mod
       tags: [mods]
+      security:
+        - bearerAuth: [mods:write]
+        - apiKeyAuth: []
       parameters:
         - { name: gameDomain, in: path, required: true, schema: { type: string } }
       requestBody:
@@ -47,9 +50,15 @@ paths:
     get:
       operationId: get_health
       tags: [system]
+      security: []
       responses:
         "200": { description: ok }
+security:
+  - bearerAuth: []
 components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+    apiKeyAuth: { type: apiKey, in: header, name: X-Api-Key }
   schemas:
     ModStatus: { type: string, enum: [live, hidden] }
     ProblemDetails:

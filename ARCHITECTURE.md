@@ -38,6 +38,7 @@ then wipes and writes. Nothing is deleted until everything is known good.
 | the shape of a generated struct or codec | `Emit::Types`, `Emit::Codecs` |
 | request decoding, responses, handler interfaces | `Emit::Operations`, `Emit::Handlers` |
 | routes or controllers | `Emit::Routes`, `Emit::Controllers` |
+| the security scheme catalogue | `Emit::Security` |
 | what a document must contain | `Loader`, which raises `SchemaError` |
 | a new built-in codec | `lib/oapi/codec/`, then the mappings table |
 
