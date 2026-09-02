@@ -22,7 +22,8 @@ Gem::Specification.new do |spec|
   spec.files = Dir[
     "lib/oapi-runtime.rb",
     "lib/oapi/runtime.rb",
-    "lib/oapi/{codec,container,decode,errors,optional,rails,version}.rb",
+    "lib/oapi/{codec,container,decode,errors,optional,version}.rb",
+    "lib/oapi/rails/codec/uploaded_file.rb",
     "LICENSE.txt",
     "README.md"
   ]

@@ -3,8 +3,6 @@
 require "rack/test"
 require "action_controller/railtie"
 
-require "oapi/rails"
-
 class DummyApp < Rails::Application
   config.root = Pathname.new(__dir__).join("../..")
   config.eager_load = false
