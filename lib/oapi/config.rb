@@ -64,15 +64,18 @@ module Oapi
         modules: modules,
         route_prefix: raw.fetch("route_prefix", "").to_s,
         container_prefix: raw.fetch("container_prefix", "").to_s,
-        type_mappings: (raw["type_mappings"] || {})
-                       .to_h do |k, v|
-          [k.to_s,
-           RubyType.parse("type_mappings[#{k.to_s.inspect}]", v)]
-        end,
+        type_mappings: parse_type_mappings(raw["type_mappings"]),
         security_schemes: stringify(raw["security_schemes"]),
         name_overrides: stringify(raw["name_overrides"]),
         templates: raw["templates"] && base.join(raw["templates"].to_s).expand_path
       )
+    end
+
+    sig { params(value: T.untyped).returns(T::Hash[String, RubyType]) }
+    def self.parse_type_mappings(value)
+      (value || {}).to_h do |key, mapping|
+        [key.to_s, RubyType.parse("type_mappings[#{key.to_s.inspect}]", mapping)]
+      end
     end
 
     sig { params(value: T.untyped).returns(T::Hash[String, String]) }
