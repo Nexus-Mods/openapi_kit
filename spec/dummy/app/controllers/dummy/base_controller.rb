@@ -2,7 +2,10 @@
 
 module Dummy
   class BaseController < ActionController::API
+    class Unauthenticated < StandardError; end
+
     rescue_from Oapi::DecodeError, with: :bad_request
+    rescue_from Unauthenticated, with: :unauthorized
 
     private
 
@@ -13,7 +16,7 @@ module Dummy
     def oapi_authenticate!(requirements)
       return if requirements.any? { |requirement| satisfied?(requirement) }
 
-      render json: { "error" => "unauthenticated" }, status: :unauthorized
+      raise Unauthenticated
     end
 
     def satisfied?(requirement)
@@ -30,6 +33,8 @@ module Dummy
     end
 
     def granted = request.headers["X-Scopes"].to_s.split(",")
+
+    def unauthorized = render(json: { "error" => "unauthenticated" }, status: :unauthorized)
 
     def bad_request(error)
       render json: { "error" => error.detail, "field" => error.json_pointer }, status: :bad_request

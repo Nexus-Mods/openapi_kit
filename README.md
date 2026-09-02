@@ -119,14 +119,18 @@ naming the field. oapi takes no view on the wire format; the example answers RFC
 
 Where the document declares `security`, generated actions call `oapi_authenticate!` with
 that operation's requirements before decoding anything. Each requirement is one
-alternative: satisfy every scheme in any one of them. Render or raise to refuse; the
-action stops if you have rendered.
+alternative: satisfy every scheme in any one of them. Raise to refuse, and rescue it
+where you already rescue `Oapi::DecodeError`:
 
 ```ruby
+class Unauthenticated < StandardError; end
+
+rescue_from Unauthenticated, with: :unauthorized
+
 def oapi_authenticate!(requirements)
   return if requirements.any? { |requirement| satisfied?(requirement) }
 
-  render json: { "error" => "unauthenticated" }, status: :unauthorized
+  raise Unauthenticated
 end
 
 def satisfied?(requirement)
@@ -139,7 +143,7 @@ end
 
 `SCHEMES` is the document's `securitySchemes`, so a base controller can extract the
 credential from the scheme rather than hardcoding where it lives. oapi does no
-authenticating of its own and holds no principal.
+authenticating of its own, holds no principal, and takes no view on the refusal body.
 
 Build the container and verify it at boot, so a missing registration fails boot rather
 than the first request that needs it. Use `to_prepare`, or a reload leaves handlers

@@ -9,7 +9,6 @@ module Server
     sig { void }
     def list_mods
       oapi_authenticate!(Server::Operations::ListMods::SECURITY)
-      return if performed?
 
       path_params = ::Oapi::Decode.gather(["gameDomain"]) { |name| request.path_parameters[name.to_sym] }
       query_params = ::Oapi::Decode.gather(["page", "status"]) { |name| request.query_parameters[name] }
@@ -40,7 +39,6 @@ module Server
     sig { void }
     def create_mod
       oapi_authenticate!(Server::Operations::CreateMod::SECURITY)
-      return if performed?
 
       path_params = ::Oapi::Decode.gather(["gameDomain"]) { |name| request.path_parameters[name.to_sym] }
 

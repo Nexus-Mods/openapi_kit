@@ -80,7 +80,6 @@ module Oapi
           buffer.nest("def #{Naming.identifier(operation.id)}") do
             unless @document.security_for(operation).empty?
               buffer.line("oapi_authenticate!(#{scope}::SECURITY)")
-              buffer.line("return if performed?")
               buffer.blank
             end
 
