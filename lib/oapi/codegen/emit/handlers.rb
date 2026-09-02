@@ -6,8 +6,9 @@ module Oapi
     module Emit
       class Handlers
         extend T::Sig
+        include Emitter
 
-        sig { params(document: Ir::Document, config: Config).void }
+        sig { params(document: Model::Document, config: Config).void }
         def initialize(document:, config:)
           @document = document
           @config = config
@@ -16,7 +17,7 @@ module Oapi
         sig { params(tag: String).returns(String) }
         def self.module_name(tag) = Naming.pascal(tag)
 
-        sig { returns(T::Array[SourceFile]) }
+        sig { override.returns(T::Array[SourceFile]) }
         def render
           by_tag.map do |tag, operations|
             Source.file(path: "#{@config.module_path}/handlers/#{Naming.snake(tag)}.rb",
@@ -28,10 +29,10 @@ module Oapi
 
         private
 
-        sig { returns(T::Hash[String, T::Array[Ir::Operation]]) }
+        sig { returns(T::Hash[String, T::Array[Model::Operation]]) }
         def by_tag = @document.operations.group_by(&:tag)
 
-        sig { params(buffer: Buffer, tag: String, operations: T::Array[Ir::Operation]).void }
+        sig { params(buffer: Buffer, tag: String, operations: T::Array[Model::Operation]).void }
         def emit_interface(buffer, tag, operations)
           buffer.nest("module #{Handlers.module_name(tag)}") do
             buffer.line("extend T::Sig")
@@ -45,7 +46,7 @@ module Oapi
           end
         end
 
-        sig { params(buffer: Buffer, operation: Ir::Operation).void }
+        sig { params(buffer: Buffer, operation: Model::Operation).void }
         def emit_method(buffer, operation)
           scope = "#{@config.namespace}::Operations::#{Emit::Operations.module_name(operation)}"
 

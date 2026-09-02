@@ -31,7 +31,7 @@ module Oapi
 
       private
 
-      sig { params(document: Ir::Document, registry: TypeRegistry).returns(T::Array[T.untyped]) }
+      sig { params(document: Model::Document, registry: TypeRegistry).returns(T::Array[Emit::Emitter]) }
       def emitters(document, registry)
         [
           Emit::Types.new(document: document, registry: registry, config: @config),

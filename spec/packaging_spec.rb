@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-PACKAGING_ROOT = Pathname.new(__dir__).join("../..")
+PACKAGING_ROOT = Pathname.new(__dir__).join("..")
 PACKAGING_GEM_FOR_REQUIRE = {
   "action_dispatch" => "actionpack", "action_controller" => "actionpack"
 }.freeze

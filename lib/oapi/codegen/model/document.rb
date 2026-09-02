@@ -3,7 +3,7 @@
 
 module Oapi
   module Codegen
-    module Ir
+    module Model
       class HttpMethod < T::Enum
         enums do
           Get     = new("get")

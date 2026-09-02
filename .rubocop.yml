@@ -55,8 +55,8 @@ Naming/FileName:
 Lint/UnusedMethodArgument:
   Exclude:
     - "lib/oapi/optional.rb"
-    - "spec/unit/container_spec.rb"
-    - "spec/integration/**/*"
+    - "spec/oapi/container_spec.rb"
+    - "spec/generated/**/*"
 RSpec/MultipleExpectations:
   Max: 6
 RSpec/ExampleLength:
@@ -64,12 +64,11 @@ RSpec/ExampleLength:
 RSpec/NestedGroups:
   Max: 4
 RSpec/InstanceVariable:
-  Enabled: false
-RSpec/SpecFilePathFormat:
-  Enabled: false
+  Exclude:
+    - "spec/oapi/codegen/writer_spec.rb"
+    - "spec/oapi/codegen/config_spec.rb"
+    - "spec/generated/**/*"
 RSpec/DescribeClass:
-  Enabled: false
-RSpec/MultipleDescribes:
   Enabled: false
 Metrics/ModuleLength:
   Max: 150

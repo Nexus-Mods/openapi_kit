@@ -6,8 +6,9 @@ module Oapi
     module Emit
       class Types
         extend T::Sig
+        include Emitter
 
-        sig { params(document: Ir::Document, registry: TypeRegistry, config: Config).void }
+        sig { params(document: Model::Document, registry: TypeRegistry, config: Config).void }
         def initialize(document:, registry:, config:)
           @document = document
           @registry = registry
@@ -15,10 +16,10 @@ module Oapi
           @codecs = T.let(Codecs.new(document: document, registry: registry, config: config), Codecs)
         end
 
-        sig { returns(T::Array[SourceFile]) }
+        sig { override.returns(T::Array[SourceFile]) }
         def render
           declared_types.map do |type|
-            name = Ir::TypeDef.name_of(type)
+            name = Model::TypeDef.name_of(type)
             Source.file(path: "#{@config.module_path}/types/#{Naming.snake(name)}.rb",
                         modules: @config.modules + ["Types"]) do |buffer|
               emit_declaration(buffer, type)
@@ -28,21 +29,21 @@ module Oapi
 
         private
 
-        sig { returns(T::Array[Ir::TypeDef]) }
-        def declared_types = @document.types.grep_v(Ir::AliasDef)
+        sig { returns(T::Array[Model::TypeDef]) }
+        def declared_types = @document.types.grep_v(Model::AliasDef)
 
-        sig { params(buffer: Buffer, type: Ir::TypeDef).void }
+        sig { params(buffer: Buffer, type: Model::TypeDef).void }
         def emit_declaration(buffer, type)
           case type
-          when Ir::EnumDef then emit_enum(buffer, type)
-          when Ir::UnionDef then emit_union(buffer, type)
-          when Ir::ObjectDef then emit_object(buffer, type)
-          when Ir::AliasDef then nil
+          when Model::EnumDef then emit_enum(buffer, type)
+          when Model::UnionDef then emit_union(buffer, type)
+          when Model::ObjectDef then emit_object(buffer, type)
+          when Model::AliasDef then nil
           else T.absurd(type)
           end
         end
 
-        sig { params(buffer: Buffer, type: Ir::EnumDef).void }
+        sig { params(buffer: Buffer, type: Model::EnumDef).void }
         def emit_enum(buffer, type)
           buffer.nest("class #{type.name} < T::Enum") do
             buffer.nest("enums do") do
@@ -53,7 +54,7 @@ module Oapi
           end
         end
 
-        sig { params(buffer: Buffer, type: Ir::UnionDef).void }
+        sig { params(buffer: Buffer, type: Model::UnionDef).void }
         def emit_union(buffer, type)
           members = type.members.map { |member| @registry.sorbet_type(member) }.uniq
           inner = members.one? ? T.must(members.first) : "T.any(#{members.join(", ")})"
@@ -65,7 +66,7 @@ module Oapi
           end
         end
 
-        sig { params(buffer: Buffer, type: Ir::ObjectDef).void }
+        sig { params(buffer: Buffer, type: Model::ObjectDef).void }
         def emit_object(buffer, type)
           buffer.nest("class #{type.name} < T::Struct") do
             buffer.line("extend T::Sig")
@@ -80,7 +81,7 @@ module Oapi
           end
         end
 
-        sig { params(buffer: Buffer, type: Ir::ObjectDef).void }
+        sig { params(buffer: Buffer, type: Model::ObjectDef).void }
         def emit_equality(buffer, type)
           buffer.line("sig { params(other: T.untyped).returns(T::Boolean) }")
           buffer.line("def ==(other) = other.instance_of?(#{type.name}) && other.serialize == serialize")
@@ -92,32 +93,32 @@ module Oapi
           buffer.line("def hash = [self.class, serialize].hash")
         end
 
-        sig { params(schema: Ir::Schema).returns(String) }
+        sig { params(schema: Model::Schema).returns(String) }
         def additional_type(schema) = "T::Hash[::String, #{@registry.sorbet_type(schema)}]"
 
-        sig { params(property: Ir::Property).returns(String) }
+        sig { params(property: Model::Property).returns(String) }
         def prop_line(property)
-          meta = Ir::Schema.meta(property.schema)
+          meta = Model::Schema.meta(property.schema)
           declaration = "const :#{property.identifier}, #{prop_type(property)}"
 
           default = meta.default
           return "#{declaration}, #{default_clause(property, default)}" if default && !property.required
           return "#{declaration}, factory: -> { ::Oapi::Absent.new }" if Decode.tristate?(required: property.required,
-                                                                                          meta: Ir::Schema.meta(property.schema))
+                                                                                          meta: Model::Schema.meta(property.schema))
 
           declaration
         end
 
-        sig { params(property: Ir::Property, default: Ir::Default).returns(String) }
+        sig { params(property: Model::Property, default: Model::Default).returns(String) }
         def default_clause(property, default)
           Defaults.clause(schema: property.schema, default: default, registry: @registry)
         end
 
-        sig { params(property: Ir::Property).returns(String) }
+        sig { params(property: Model::Property).returns(String) }
         def prop_type(property)
-          meta = Ir::Schema.meta(property.schema)
+          meta = Model::Schema.meta(property.schema)
           base = @registry.sorbet_type(property.schema)
-          if Decode.tristate?(required: property.required, meta: Ir::Schema.meta(property.schema))
+          if Decode.tristate?(required: property.required, meta: Model::Schema.meta(property.schema))
             return "::Oapi::Optional[T.nilable(#{base})]"
           end
           return "T.nilable(#{base})" if Defaults.nilable?(required: property.required, meta: meta)

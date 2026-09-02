@@ -13,12 +13,12 @@ module Oapi
       sig { params(config: Config).void }
       def initialize(config:)
         @config = config
-        @types = T.let({}, T::Hash[String, Ir::TypeDef])
+        @types = T.let({}, T::Hash[String, Model::TypeDef])
         @keys_by_name = T.let({}, T::Hash[String, String])
         @in_progress = T.let(Set.new, T::Set[String])
       end
 
-      sig { returns(Ir::Document) }
+      sig { returns(Model::Document) }
       def parse
         document = Openapi3Parser.load_file(@config.spec)
         unless document.valid?
@@ -29,7 +29,7 @@ module Oapi
         operations = build_operations(document)
         document.components&.schemas&.each { |name, node| schema_for(node, hint: name) }
 
-        Ir::Document.new(
+        Model::Document.new(
           title: document.info.title,
           version: document.info.version,
           types: @types.values,
@@ -41,7 +41,7 @@ module Oapi
 
       private
 
-      sig { params(document: T.untyped).returns(T::Array[Ir::Operation]) }
+      sig { params(document: T.untyped).returns(T::Array[Model::Operation]) }
       def build_operations(document)
         document.paths.flat_map do |path, item|
           VERBS.filter_map do |verb|
@@ -51,7 +51,7 @@ module Oapi
         end
       end
 
-      sig { params(node: T.untyped, path: String, verb: String, item: T.untyped).returns(Ir::Operation) }
+      sig { params(node: T.untyped, path: String, verb: String, item: T.untyped).returns(Model::Operation) }
       def build_operation(node, path:, verb:, item:)
         id = node.operation_id
         if id.nil? || id.to_s.empty?
@@ -65,9 +65,9 @@ module Oapi
                      .uniq { |p| [p.name, p.in] }
                      .map { |p| build_parameter(p, hint: base) }
 
-        Ir::Operation.new(
+        Model::Operation.new(
           id: id,
-          http_method: Ir::HttpMethod.deserialize(verb),
+          http_method: Model::HttpMethod.deserialize(verb),
           path: path,
           tag: node.tags&.first || "default",
           parameters: parameters,
@@ -81,9 +81,9 @@ module Oapi
         )
       end
 
-      sig { params(node: T.untyped, hint: String).returns(Ir::Parameter) }
+      sig { params(node: T.untyped, hint: String).returns(Model::Parameter) }
       def build_parameter(node, hint:)
-        info = Ir::ParameterInfo.new(
+        info = Model::ParameterInfo.new(
           name: node.name,
           identifier: Naming.identifier(node.name),
           schema: schema_for(node.schema, hint: "#{hint}#{Naming.pascal(node.name)}"),
@@ -94,94 +94,94 @@ module Oapi
 
         case node.in
         when "path"
-          Ir::PathParameter.new(info: info, style: path_style(node), explode: explode || false)
+          Model::PathParameter.new(info: info, style: path_style(node), explode: explode || false)
         when "query"
-          Ir::QueryParameter.new(info: info, required: !!node.required?, style: query_style(node),
-                                 explode: explode.nil? || explode,
-                                 allow_reserved: !!node.allow_reserved?)
+          Model::QueryParameter.new(info: info, required: !!node.required?, style: query_style(node),
+                                    explode: explode.nil? || explode,
+                                    allow_reserved: !!node.allow_reserved?)
         when "header"
-          Ir::HeaderParameter.new(info: info, required: !!node.required?, explode: explode || false)
+          Model::HeaderParameter.new(info: info, required: !!node.required?, explode: explode || false)
         when "cookie"
-          Ir::CookieParameter.new(info: info, required: !!node.required?,
-                                  explode: explode.nil? || explode)
+          Model::CookieParameter.new(info: info, required: !!node.required?,
+                                     explode: explode.nil? || explode)
         else
           raise SchemaError, "Parameter #{node.name.inspect} has an unknown `in: #{node.in.inspect}`."
         end
       end
 
-      sig { params(node: T.untyped).returns(Ir::PathStyle) }
+      sig { params(node: T.untyped).returns(Model::PathStyle) }
       def path_style(node)
-        return Ir::PathStyle::Simple if node.style.nil?
+        return Model::PathStyle::Simple if node.style.nil?
 
-        Ir::PathStyle.try_deserialize(node.style) ||
+        Model::PathStyle.try_deserialize(node.style) ||
           raise(SchemaError,
                 "Path parameter #{node.name.inspect} has style #{node.style.inspect}. " \
                 "Path parameters support simple, label or matrix.")
       end
 
-      sig { params(node: T.untyped).returns(Ir::QueryStyle) }
+      sig { params(node: T.untyped).returns(Model::QueryStyle) }
       def query_style(node)
-        return Ir::QueryStyle::Form if node.style.nil?
+        return Model::QueryStyle::Form if node.style.nil?
 
-        Ir::QueryStyle.try_deserialize(node.style) ||
+        Model::QueryStyle.try_deserialize(node.style) ||
           raise(SchemaError,
                 "Query parameter #{node.name.inspect} has style #{node.style.inspect}. " \
                 "Query parameters support form, spaceDelimited, pipeDelimited or deepObject.")
       end
 
-      sig { params(node: T.untyped, hint: String).returns(Ir::RequestBody) }
+      sig { params(node: T.untyped, hint: String).returns(Model::RequestBody) }
       def build_request_body(node, hint:)
-        Ir::RequestBody.new(contents: contents(node.content, hint: "#{hint}Body"),
-                            required: !!node.required?, description: node.description)
+        Model::RequestBody.new(contents: contents(node.content, hint: "#{hint}Body"),
+                               required: !!node.required?, description: node.description)
       end
 
-      sig { params(node: T.untyped, hint: String).returns(T::Array[Ir::Response]) }
+      sig { params(node: T.untyped, hint: String).returns(T::Array[Model::Response]) }
       def build_responses(node, hint:)
         return [] if node.nil?
 
         node.map do |raw_status, response|
-          status = Ir::Status.parse(raw_status.to_s)
-          scoped = "#{hint}#{Ir::Status.constant(status)}"
-          Ir::Response.new(
+          status = Model::Status.parse(raw_status.to_s)
+          scoped = "#{hint}#{Model::Status.constant(status)}"
+          Model::Response.new(
             status: status,
             contents: contents(response.content, hint: scoped),
             headers: (response.headers || {}).map do |name, header|
-              Ir::Header.new(name: name, identifier: Naming.identifier(name),
-                             schema: schema_for(header.schema, hint: "#{scoped}#{Naming.pascal(name)}"),
-                             required: !!header.required?, description: header.description)
+              Model::Header.new(name: name, identifier: Naming.identifier(name),
+                                schema: schema_for(header.schema, hint: "#{scoped}#{Naming.pascal(name)}"),
+                                required: !!header.required?, description: header.description)
             end,
             description: response.description
           )
         end
       end
 
-      sig { params(node: T.untyped, hint: String).returns(T::Array[Ir::Content]) }
+      sig { params(node: T.untyped, hint: String).returns(T::Array[Model::Content]) }
       def contents(node, hint:)
         return [] if node.nil?
 
         multiple = node.keys.size > 1
         node.map do |media_type, media|
           suffix = multiple ? Naming.pascal(media_type.split("/").last.to_s.split("+").first.to_s) : ""
-          Ir::Content.new(media_type: media_type,
-                          schema: (schema_for(media.schema, hint: "#{hint}#{suffix}") if media.schema))
+          Model::Content.new(media_type: media_type,
+                             schema: (schema_for(media.schema, hint: "#{hint}#{suffix}") if media.schema))
         end
       end
 
-      sig { params(document: T.untyped).returns(T::Array[Ir::SecurityScheme]) }
+      sig { params(document: T.untyped).returns(T::Array[Model::SecurityScheme]) }
       def build_security_schemes(document)
         (document.components&.security_schemes || {}).map do |name, node|
           case node.type
           when "apiKey"
-            Ir::ApiKeyScheme.new(name: name, location: Ir::ApiKeyLocation.deserialize(node.in),
-                                 parameter_name: node.name, description: node.description)
+            Model::ApiKeyScheme.new(name: name, location: Model::ApiKeyLocation.deserialize(node.in),
+                                    parameter_name: node.name, description: node.description)
           when "http"
-            Ir::HttpScheme.new(name: name, scheme: node.scheme.to_s.downcase,
-                               bearer_format: node.bearer_format, description: node.description)
+            Model::HttpScheme.new(name: name, scheme: node.scheme.to_s.downcase,
+                                  bearer_format: node.bearer_format, description: node.description)
           when "oauth2"
-            Ir::OAuth2Scheme.new(name: name, scopes: oauth_scopes(node), description: node.description)
+            Model::OAuth2Scheme.new(name: name, scopes: oauth_scopes(node), description: node.description)
           when "openIdConnect"
-            Ir::OpenIdConnectScheme.new(name: name, url: node.open_id_connect_url.to_s,
-                                        description: node.description)
+            Model::OpenIdConnectScheme.new(name: name, url: node.open_id_connect_url.to_s,
+                                           description: node.description)
           else
             raise SchemaError, "Security scheme #{name.inspect} has unsupported type #{node.type.inspect}."
           end
@@ -199,20 +199,20 @@ module Oapi
         end
       end
 
-      sig { params(node: T.untyped, declared: T::Boolean).returns(T.nilable(T::Array[Ir::SecurityRequirement])) }
+      sig { params(node: T.untyped, declared: T::Boolean).returns(T.nilable(T::Array[Model::SecurityRequirement])) }
       def requirements(node, declared: true)
         return nil if node.nil? || !declared
 
         node.map do |requirement|
-          Ir::SecurityRequirement.new(
+          Model::SecurityRequirement.new(
             schemes: requirement.to_h.transform_values { |scopes| Array(scopes).map(&:to_s) }
           )
         end
       end
 
-      sig { params(node: T.untyped, hint: String, nullable: T::Boolean).returns(Ir::Schema) }
+      sig { params(node: T.untyped, hint: String, nullable: T::Boolean).returns(Model::Schema) }
       def schema_for(node, hint:, nullable: false)
-        return Ir::Untyped.new if node.nil?
+        return Model::Untyped.new if node.nil?
 
         members = Array(node.all_of)
         if members.size == 1 && (node.properties.nil? || node.properties.empty?)
@@ -226,7 +226,7 @@ module Oapi
                end
         if name
           register(node, name: name)
-          return Ir::Ref.new(name: name, meta: meta_for(node, nullable: nullable))
+          return Model::Ref.new(name: name, meta: meta_for(node, nullable: nullable))
         end
 
         structural(node, hint: hint, nullable: nullable)
@@ -239,36 +239,36 @@ module Oapi
         !(node.properties.nil? || node.properties.empty?)
       end
 
-      sig { params(node: T.untyped, hint: String, nullable: T::Boolean).returns(Ir::Schema) }
+      sig { params(node: T.untyped, hint: String, nullable: T::Boolean).returns(Model::Schema) }
       def structural(node, hint:, nullable: false)
         meta = meta_for(node, nullable: nullable)
 
         case node.type
         when "string"
-          Ir::StringSchema.new(format: node.format, min_length: node.min_length,
-                               max_length: node.max_length, pattern: node.pattern, meta: meta)
+          Model::StringSchema.new(format: node.format, min_length: node.min_length,
+                                  max_length: node.max_length, pattern: node.pattern, meta: meta)
         when "integer"
-          Ir::IntegerSchema.new(format: node.format, minimum: node.minimum, maximum: node.maximum,
-                                exclusive_minimum: !!node.exclusive_minimum?,
-                                exclusive_maximum: !!node.exclusive_maximum?,
-                                multiple_of: node.multiple_of, meta: meta)
+          Model::IntegerSchema.new(format: node.format, minimum: node.minimum, maximum: node.maximum,
+                                   exclusive_minimum: !!node.exclusive_minimum?,
+                                   exclusive_maximum: !!node.exclusive_maximum?,
+                                   multiple_of: node.multiple_of, meta: meta)
         when "number"
-          Ir::NumberSchema.new(format: node.format, minimum: node.minimum, maximum: node.maximum,
-                               exclusive_minimum: !!node.exclusive_minimum?,
-                               exclusive_maximum: !!node.exclusive_maximum?,
-                               multiple_of: node.multiple_of, meta: meta)
+          Model::NumberSchema.new(format: node.format, minimum: node.minimum, maximum: node.maximum,
+                                  exclusive_minimum: !!node.exclusive_minimum?,
+                                  exclusive_maximum: !!node.exclusive_maximum?,
+                                  multiple_of: node.multiple_of, meta: meta)
         when "boolean"
-          Ir::BooleanSchema.new(meta: meta)
+          Model::BooleanSchema.new(meta: meta)
         when "array"
-          Ir::List.new(items: schema_for(node.items, hint: "#{hint}Item"), min_items: node.min_items,
-                       max_items: node.max_items, unique_items: !!node.unique_items?, meta: meta)
+          Model::List.new(items: schema_for(node.items, hint: "#{hint}Item"), min_items: node.min_items,
+                          max_items: node.max_items, unique_items: !!node.unique_items?, meta: meta)
         when "object"
           values = node.additional_properties_schema
-          Ir::Freeform.new(values: (schema_for(values, hint: "#{hint}Value") if values),
-                           min_properties: node.min_properties, max_properties: node.max_properties,
-                           meta: meta)
+          Model::Freeform.new(values: (schema_for(values, hint: "#{hint}Value") if values),
+                              min_properties: node.min_properties, max_properties: node.max_properties,
+                              meta: meta)
         else
-          Ir::Untyped.new(meta: meta)
+          Model::Untyped.new(meta: meta)
         end
       end
 
@@ -292,16 +292,16 @@ module Oapi
         end
       end
 
-      sig { params(node: T.untyped, name: String).returns(Ir::TypeDef) }
+      sig { params(node: T.untyped, name: String).returns(Model::TypeDef) }
       def build_type_def(node, name:)
         return enum_def(node, name: name) if node.enum
         return union_def(node, name: name) if node.one_of || node.any_of
         return object_def(node, name: name) if node.all_of&.any? || node.properties&.any?
 
-        Ir::AliasDef.new(name: name, target: structural(node, hint: name), meta: meta_for(node))
+        Model::AliasDef.new(name: name, target: structural(node, hint: name), meta: meta_for(node))
       end
 
-      sig { params(node: T.untyped, name: String).returns(Ir::TypeDef) }
+      sig { params(node: T.untyped, name: String).returns(Model::TypeDef) }
       def enum_def(node, name:)
         values = node.enum.to_a
         kinds = values.map(&:class).uniq
@@ -312,41 +312,41 @@ module Oapi
                 "A T::Enum needs its values to be all strings or all integers."
         end
 
-        Ir::EnumDef.new(
+        Model::EnumDef.new(
           name: name,
-          members: values.map { |v| Ir::EnumMember.new(constant: Naming.enum_member(v), value: v) },
+          members: values.map { |v| Model::EnumMember.new(constant: Naming.enum_member(v), value: v) },
           meta: meta_for(node)
         )
       end
 
-      sig { params(node: T.untyped, name: String).returns(Ir::TypeDef) }
+      sig { params(node: T.untyped, name: String).returns(Model::TypeDef) }
       def union_def(node, name:)
         raw = node.one_of || node.any_of
         members = raw.each_with_index.map { |m, i| schema_for(m, hint: "#{name}Member#{i + 1}") }
 
-        Ir::UnionDef.new(name: name, members: members, tag: union_tag(node),
-                         meta: meta_for(node))
+        Model::UnionDef.new(name: name, members: members, tag: union_tag(node),
+                            meta: meta_for(node))
       end
 
-      sig { params(node: T.untyped, name: String).returns(Ir::TypeDef) }
+      sig { params(node: T.untyped, name: String).returns(Model::TypeDef) }
       def object_def(node, name:)
         properties = T.let({}, T::Hash[String, T.untyped])
         required = T.let(Set.new, T::Set[String])
         collect_properties(node, properties, required)
 
-        Ir::ObjectDef.new(
+        Model::ObjectDef.new(
           name: name,
           properties: properties.map do |pname, pnode|
-            Ir::Property.new(name: pname, identifier: Naming.identifier(pname),
-                             schema: schema_for(pnode, hint: "#{name}#{Naming.pascal(pname)}"),
-                             required: required.include?(pname))
+            Model::Property.new(name: pname, identifier: Naming.identifier(pname),
+                                schema: schema_for(pnode, hint: "#{name}#{Naming.pascal(pname)}"),
+                                required: required.include?(pname))
           end,
           additional_properties: additional_properties_for(node, name),
           meta: meta_for(node)
         )
       end
 
-      sig { params(node: T.untyped, name: String).returns(T.nilable(Ir::Schema)) }
+      sig { params(node: T.untyped, name: String).returns(T.nilable(Model::Schema)) }
       def additional_properties_for(node, name)
         schema = node.additional_properties_schema
         return nil if schema.nil?
@@ -361,16 +361,16 @@ module Oapi
         Array(node.required).each { |name| required << name.to_s }
       end
 
-      sig { params(node: T.untyped).returns(Ir::UnionTag) }
+      sig { params(node: T.untyped).returns(Model::UnionTag) }
       def union_tag(node)
         discriminator = node.discriminator
-        return Ir::Untagged.new if discriminator.nil?
+        return Model::Untagged.new if discriminator.nil?
 
         mapping = (discriminator.mapping || {})
                   .to_h { |value, ref| [value.to_s, rename(ref.to_s.split("/").last.to_s)] }
         mapping = implicit_mapping(node) if mapping.empty?
 
-        Ir::Tagged.new(property_name: discriminator.property_name, mapping: mapping)
+        Model::Tagged.new(property_name: discriminator.property_name, mapping: mapping)
       end
 
       sig { params(node: T.untyped).returns(T::Hash[String, String]) }
@@ -380,14 +380,14 @@ module Oapi
                                     .to_h
       end
 
-      sig { params(node: T.untyped, nullable: T::Boolean).returns(Ir::Meta) }
+      sig { params(node: T.untyped, nullable: T::Boolean).returns(Model::Meta) }
       def meta_for(node, nullable: false)
         data = raw(node)
-        Ir::Meta.new(
+        Model::Meta.new(
           description: node.description,
           nullable: nullable || !!node.nullable?,
           deprecated: !!node.deprecated?,
-          default: data.key?("default") ? Ir::Default.new(value: node.default) : nil,
+          default: data.key?("default") ? Model::Default.new(value: node.default) : nil,
           read_only: !!node.read_only?,
           write_only: !!node.write_only?,
           extensions: extensions(node),

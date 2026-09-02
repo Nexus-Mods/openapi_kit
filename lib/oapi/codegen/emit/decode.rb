@@ -7,15 +7,15 @@ module Oapi
       module Decode
         extend T::Sig
 
-        sig { params(required: T::Boolean, meta: Ir::Meta).returns(T::Boolean) }
+        sig { params(required: T::Boolean, meta: Model::Meta).returns(T::Boolean) }
         def self.tristate?(required:, meta:) = !required && meta.nullable && meta.default.nil?
 
         sig do
-          params(source: String, key: String, schema: Ir::Schema, required: T::Boolean,
+          params(source: String, key: String, schema: Model::Schema, required: T::Boolean,
                  registry: TypeRegistry).returns(String)
         end
         def self.expression(source:, key:, schema:, required:, registry:)
-          meta = Ir::Schema.meta(schema)
+          meta = Model::Schema.meta(schema)
           inner = registry.from_wire_expr(schema, value: "v")
           quoted = key.inspect
           default = meta.default

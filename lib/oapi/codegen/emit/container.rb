@@ -6,8 +6,9 @@ module Oapi
     module Emit
       class Container
         extend T::Sig
+        include Emitter
 
-        sig { params(document: Ir::Document, config: Config).void }
+        sig { params(document: Model::Document, config: Config).void }
         def initialize(document:, config:)
           @document = document
           @config = config
@@ -16,8 +17,10 @@ module Oapi
         sig { params(tag: String).returns(String) }
         def key_for(tag) = @config.container_key("handlers", Naming.snake(tag))
 
-        sig { returns(T::Array[SourceFile]) }
+        sig { override.returns(T::Array[SourceFile]) }
         def render
+          return [] if @document.operations.empty?
+
           [Source.file(path: "#{@config.module_path}/container.rb",
                        modules: @config.modules + ["Container"]) { |buffer| emit_body(buffer) }]
         end

@@ -33,7 +33,7 @@ module SpecBuilder
   end
 
   def type_named(document, name)
-    document.types.find { |t| Oapi::Codegen::Ir::TypeDef.name_of(t) == name }
+    document.types.find { |t| Oapi::Codegen::Model::TypeDef.name_of(t) == name }
   end
 
   def property(object_def, name)

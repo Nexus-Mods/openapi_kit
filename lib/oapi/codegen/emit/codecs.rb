@@ -7,21 +7,21 @@ module Oapi
       class Codecs
         extend T::Sig
 
-        sig { params(document: Ir::Document, registry: TypeRegistry, config: Config).void }
+        sig { params(document: Model::Document, registry: TypeRegistry, config: Config).void }
         def initialize(document:, registry:, config:)
           @document = document
           @registry = registry
           @config = config
         end
 
-        sig { params(buffer: Buffer, type: Ir::TypeDef).void }
+        sig { params(buffer: Buffer, type: Model::TypeDef).void }
         def emit(buffer, type) = emit_codec(buffer, type)
 
         private
 
-        sig { params(buffer: Buffer, type: Ir::TypeDef).void }
+        sig { params(buffer: Buffer, type: Model::TypeDef).void }
         def emit_codec(buffer, type)
-          name = Ir::TypeDef.name_of(type)
+          name = Model::TypeDef.name_of(type)
           buffer.nest("class Codec") do
             buffer.line("extend T::Sig")
             buffer.line("extend T::Generic")
@@ -40,16 +40,16 @@ module Oapi
           buffer.line("CODEC = T.let(Codec.new, Codec)")
         end
 
-        sig { params(buffer: Buffer, type: Ir::TypeDef).void }
+        sig { params(buffer: Buffer, type: Model::TypeDef).void }
         def emit_codec_constants(buffer, type)
-          if type.is_a?(Ir::EnumDef)
+          if type.is_a?(Model::EnumDef)
             values = type.members.map { |member| member.value.inspect }.join(", ")
             buffer.line("VALUES = T.let([#{values}].freeze, T::Array[::Oapi::Wire])")
             buffer.blank
           end
 
-          tag = type.is_a?(Ir::UnionDef) ? type.tag : nil
-          return unless tag.is_a?(Ir::Tagged)
+          tag = type.is_a?(Model::UnionDef) ? type.tag : nil
+          return unless tag.is_a?(Model::Tagged)
 
           tags = tag.mapping.keys.map(&:inspect).join(", ")
           buffer.line("TAGS = T.let([#{tags}].freeze, T::Array[::String])")
@@ -57,33 +57,33 @@ module Oapi
         end
 
         sig { params(name: String).returns(String) }
-        def qualified(name) = @registry.sorbet_type(Ir::Ref.new(name: name))
+        def qualified(name) = @registry.sorbet_type(Model::Ref.new(name: name))
 
-        sig { params(buffer: Buffer, type: Ir::TypeDef).void }
+        sig { params(buffer: Buffer, type: Model::TypeDef).void }
         def emit_from_wire(buffer, type)
           case type
-          when Ir::EnumDef then emit_enum_from_wire(buffer, type)
-          when Ir::ObjectDef then emit_object_from_wire(buffer, type)
-          when Ir::UnionDef then emit_union_from_wire(buffer, type)
-          when Ir::AliasDef
+          when Model::EnumDef then emit_enum_from_wire(buffer, type)
+          when Model::ObjectDef then emit_object_from_wire(buffer, type)
+          when Model::UnionDef then emit_union_from_wire(buffer, type)
+          when Model::AliasDef
             buffer.line("def from_wire(value) = #{@registry.from_wire_expr(type.target, value: "value")}")
           else T.absurd(type)
           end
         end
 
-        sig { params(buffer: Buffer, type: Ir::TypeDef).void }
+        sig { params(buffer: Buffer, type: Model::TypeDef).void }
         def emit_to_wire(buffer, type)
           case type
-          when Ir::EnumDef then buffer.line("def to_wire(value) = value.serialize")
-          when Ir::ObjectDef then emit_object_to_wire(buffer, type)
-          when Ir::UnionDef then emit_union_to_wire(buffer, type)
-          when Ir::AliasDef
+          when Model::EnumDef then buffer.line("def to_wire(value) = value.serialize")
+          when Model::ObjectDef then emit_object_to_wire(buffer, type)
+          when Model::UnionDef then emit_union_to_wire(buffer, type)
+          when Model::AliasDef
             buffer.line("def to_wire(value) = #{@registry.to_wire_expr(type.target, value: "value")}")
           else T.absurd(type)
           end
         end
 
-        sig { params(buffer: Buffer, type: Ir::EnumDef).void }
+        sig { params(buffer: Buffer, type: Model::EnumDef).void }
         def emit_enum_from_wire(buffer, type)
           buffer.nest("def from_wire(value)") do
             buffer.line("#{qualified(type.name)}.try_deserialize(value) ||")
@@ -93,7 +93,7 @@ module Oapi
           end
         end
 
-        sig { params(buffer: Buffer, type: Ir::ObjectDef).void }
+        sig { params(buffer: Buffer, type: Model::ObjectDef).void }
         def emit_object_from_wire(buffer, type)
           buffer.nest("def from_wire(value)") do
             buffer.line("raw = ::Oapi::Decode.object(value)")
@@ -107,14 +107,14 @@ module Oapi
           end
         end
 
-        sig { params(type: Ir::ObjectDef, schema: Ir::Schema).returns(String) }
+        sig { params(type: Model::ObjectDef, schema: Model::Schema).returns(String) }
         def additional_decode(type, schema)
           known = type.properties.map { |property| property.name.inspect }.join(", ")
           inner = @registry.from_wire_expr(schema, value: "item")
           "::Oapi::Decode.values(raw.except(#{known})) { |item| #{inner} }"
         end
 
-        sig { params(schema: Ir::Schema).returns(String) }
+        sig { params(schema: Model::Schema).returns(String) }
         def additional_encode(schema)
           inner = @registry.to_wire_expr(schema, value: "item")
           return "value.additional_properties" if inner == "item"
@@ -122,13 +122,13 @@ module Oapi
           "value.additional_properties.transform_values { |item| #{inner} }"
         end
 
-        sig { params(property: Ir::Property).returns(String) }
+        sig { params(property: Model::Property).returns(String) }
         def decode_expr(property)
           Decode.expression(source: "raw", key: property.name, schema: property.schema,
                             required: property.required, registry: @registry)
         end
 
-        sig { params(buffer: Buffer, type: Ir::ObjectDef).void }
+        sig { params(buffer: Buffer, type: Model::ObjectDef).void }
         def emit_object_to_wire(buffer, type)
           buffer.nest("def to_wire(value)") do
             buffer.line("wire = T.let({}, T::Hash[::String, ::Oapi::Wire])")
@@ -139,13 +139,13 @@ module Oapi
           end
         end
 
-        sig { params(buffer: Buffer, property: Ir::Property).void }
+        sig { params(buffer: Buffer, property: Model::Property).void }
         def emit_property_to_wire(buffer, property)
-          meta = Ir::Schema.meta(property.schema)
+          meta = Model::Schema.meta(property.schema)
           key = property.name.inspect
           reader = property.identifier.to_s
 
-          if Decode.tristate?(required: property.required, meta: Ir::Schema.meta(property.schema))
+          if Decode.tristate?(required: property.required, meta: Model::Schema.meta(property.schema))
             buffer.line("#{reader} = value.#{reader}")
             buffer.nest("if #{reader}.is_a?(::Oapi::Present)") do
               buffer.line("inner = #{reader}.value")
@@ -170,19 +170,19 @@ module Oapi
           end
         end
 
-        sig { params(buffer: Buffer, type: Ir::UnionDef).void }
+        sig { params(buffer: Buffer, type: Model::UnionDef).void }
         def emit_union_from_wire(buffer, type)
           tag = type.tag
           buffer.nest("def from_wire(value)") do
             case tag
-            when Ir::Tagged then emit_tagged_from_wire(buffer, tag)
-            when Ir::Untagged then emit_untagged_from_wire(buffer, type)
+            when Model::Tagged then emit_tagged_from_wire(buffer, tag)
+            when Model::Untagged then emit_untagged_from_wire(buffer, type)
             else T.absurd(tag)
             end
           end
         end
 
-        sig { params(buffer: Buffer, tag: Ir::Tagged).void }
+        sig { params(buffer: Buffer, tag: Model::Tagged).void }
         def emit_tagged_from_wire(buffer, tag)
           buffer.line("raw = ::Oapi::Decode.object(value)")
           buffer.line("tag = raw[#{tag.property_name.inspect}]")
@@ -196,7 +196,7 @@ module Oapi
           end
         end
 
-        sig { params(buffer: Buffer, type: Ir::UnionDef).void }
+        sig { params(buffer: Buffer, type: Model::UnionDef).void }
         def emit_untagged_from_wire(buffer, type)
           buffer.line("::Oapi::Decode.first_of(value, #{type.name.inspect}, [")
           buffer.indent do
@@ -207,7 +207,7 @@ module Oapi
           buffer.line("])")
         end
 
-        sig { params(buffer: Buffer, type: Ir::UnionDef).void }
+        sig { params(buffer: Buffer, type: Model::UnionDef).void }
         def emit_union_to_wire(buffer, type)
           buffer.nest("def to_wire(value)") do
             buffer.case_of("value") do

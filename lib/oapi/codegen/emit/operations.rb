@@ -6,15 +6,16 @@ module Oapi
     module Emit
       class Operations
         extend T::Sig
+        include Emitter
 
-        sig { params(document: Ir::Document, registry: TypeRegistry, config: Config).void }
+        sig { params(document: Model::Document, registry: TypeRegistry, config: Config).void }
         def initialize(document:, registry:, config:)
           @document = document
           @registry = registry
           @config = config
         end
 
-        sig { returns(T::Array[SourceFile]) }
+        sig { override.returns(T::Array[SourceFile]) }
         def render
           @document.operations.map do |operation|
             Source.file(path: "#{@config.module_path}/operations/#{Naming.snake(operation.id)}.rb",
@@ -24,22 +25,22 @@ module Oapi
           end
         end
 
-        sig { params(operation: Ir::Operation).returns(String) }
+        sig { params(operation: Model::Operation).returns(String) }
         def self.module_name(operation) = Naming.pascal(operation.id)
 
         GROUPS = T.let(
           {
-            "Path" => Ir::PathParameter,
-            "Query" => Ir::QueryParameter,
-            "Headers" => Ir::HeaderParameter,
-            "Cookies" => Ir::CookieParameter
+            "Path" => Model::PathParameter,
+            "Query" => Model::QueryParameter,
+            "Headers" => Model::HeaderParameter,
+            "Cookies" => Model::CookieParameter
           }.freeze,
           T::Hash[String, T::Class[T.anything]]
         )
 
         private
 
-        sig { params(buffer: Buffer, operation: Ir::Operation).void }
+        sig { params(buffer: Buffer, operation: Model::Operation).void }
         def emit_operation(buffer, operation)
           buffer.nest("module #{Operations.module_name(operation)}") do
             emit_parameter_structs(buffer, operation)
@@ -49,7 +50,7 @@ module Oapi
           end
         end
 
-        sig { params(operation: Ir::Operation).returns(T::Hash[String, T::Array[Ir::Parameter]]) }
+        sig { params(operation: Model::Operation).returns(T::Hash[String, T::Array[Model::Parameter]]) }
         def groups(operation)
           GROUPS.filter_map do |name, kind|
             found = operation.parameters.grep(kind)
@@ -57,7 +58,7 @@ module Oapi
           end.to_h
         end
 
-        sig { params(buffer: Buffer, operation: Ir::Operation).void }
+        sig { params(buffer: Buffer, operation: Model::Operation).void }
         def emit_parameter_structs(buffer, operation)
           groups(operation).each do |name, parameters|
             buffer.nest("class #{name} < T::Struct") do
@@ -69,10 +70,10 @@ module Oapi
           end
         end
 
-        sig { params(parameter: Ir::Parameter).returns(String) }
+        sig { params(parameter: Model::Parameter).returns(String) }
         def parameter_prop(parameter)
-          info = Ir::Parameter.info(parameter)
-          meta = Ir::Schema.meta(info.schema)
+          info = Model::Parameter.info(parameter)
+          meta = Model::Schema.meta(info.schema)
           base = @registry.sorbet_type(info.schema)
           default = meta.default
 
@@ -82,12 +83,12 @@ module Oapi
             return "const :#{info.identifier}, #{type}, #{clause}"
           end
 
-          return "const :#{info.identifier}, #{base}" if Ir::Parameter.required?(parameter) && !meta.nullable
+          return "const :#{info.identifier}, #{base}" if Model::Parameter.required?(parameter) && !meta.nullable
 
           "const :#{info.identifier}, T.nilable(#{base})"
         end
 
-        sig { params(buffer: Buffer, operation: Ir::Operation).void }
+        sig { params(buffer: Buffer, operation: Model::Operation).void }
         def emit_request(buffer, operation)
           buffer.nest("class Request < T::Struct") do
             buffer.line("extend T::Sig")
@@ -99,7 +100,7 @@ module Oapi
           end
         end
 
-        sig { params(operation: Ir::Operation).returns(T.nilable(String)) }
+        sig { params(operation: Model::Operation).returns(T.nilable(String)) }
         def body_type(operation)
           body = operation.request_body
           return nil if body.nil?
@@ -112,7 +113,7 @@ module Oapi
           body.required ? type : "T.nilable(#{type})"
         end
 
-        sig { params(contents: T::Array[Ir::Content], where: String).returns(T.nilable(Ir::Content)) }
+        sig { params(contents: T::Array[Model::Content], where: String).returns(T.nilable(Model::Content)) }
         def single_content(contents, where)
           return nil if contents.empty?
           return contents.first if contents.one?
@@ -123,7 +124,7 @@ module Oapi
                 "request body; split the alternatives into separate operations."
         end
 
-        sig { params(buffer: Buffer, operation: Ir::Operation).void }
+        sig { params(buffer: Buffer, operation: Model::Operation).void }
         def emit_response(buffer, operation)
           variants = variants_for(operation)
 
@@ -151,15 +152,15 @@ module Oapi
 
         class Variant < T::Struct
           const :name, String
-          const :status, Ir::Status
+          const :status, Model::Status
           const :media_type, T.nilable(String)
-          const :schema, T.nilable(Ir::Schema)
+          const :schema, T.nilable(Model::Schema)
         end
 
-        sig { params(operation: Ir::Operation).returns(T::Array[Variant]) }
+        sig { params(operation: Model::Operation).returns(T::Array[Variant]) }
         def variants_for(operation)
           operation.responses.flat_map do |response|
-            base = Ir::Status.constant(response.status)
+            base = Model::Status.constant(response.status)
             next [Variant.new(name: base, status: response.status, media_type: nil, schema: nil)] if
               response.contents.empty?
 
@@ -182,8 +183,8 @@ module Oapi
             buffer.line("include Response")
             buffer.blank
             buffer.line("const :body, #{@registry.sorbet_type(schema)}") if schema
-            buffer.line("const :status_code, ::Integer") if status.is_a?(Ir::DefaultStatus)
-            buffer.blank unless schema.nil? && !status.is_a?(Ir::DefaultStatus)
+            buffer.line("const :status_code, ::Integer") if status.is_a?(Model::DefaultStatus)
+            buffer.blank unless schema.nil? && !status.is_a?(Model::DefaultStatus)
 
             buffer.line("sig { override.returns(::Integer) }")
             buffer.line(status_method(status))
@@ -196,12 +197,12 @@ module Oapi
           end
         end
 
-        sig { params(status: Ir::Status).returns(String) }
+        sig { params(status: Model::Status).returns(String) }
         def status_method(status)
           case status
-          when Ir::StatusCode then "def status = #{status.code}"
-          when Ir::StatusRange then "def status = #{status.hundreds * 100}"
-          when Ir::DefaultStatus then "def status = status_code"
+          when Model::StatusCode then "def status = #{status.code}"
+          when Model::StatusRange then "def status = #{status.hundreds * 100}"
+          when Model::DefaultStatus then "def status = status_code"
           else T.absurd(status)
           end
         end

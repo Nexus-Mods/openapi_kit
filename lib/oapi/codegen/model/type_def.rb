@@ -3,7 +3,7 @@
 
 module Oapi
   module Codegen
-    module Ir
+    module Model
       class Property < T::Struct
         const :name, String
         const :identifier, Symbol

@@ -52,12 +52,12 @@ module Oapi
 
       DEFAULT_TYPE_MAPPINGS = T.let(build_default_type_mappings, T::Hash[String, RubyType])
 
-      sig { params(document: Ir::Document, config: Config).returns(TypeRegistry) }
+      sig { params(document: Model::Document, config: Config).returns(TypeRegistry) }
       def self.for(document, config)
         new(
           namespace: config.namespace,
           type_mappings: DEFAULT_TYPE_MAPPINGS.merge(config.type_mappings),
-          types: document.types.to_h { |type| [Ir::TypeDef.name_of(type), type] }
+          types: document.types.to_h { |type| [Model::TypeDef.name_of(type), type] }
         )
       end
 
@@ -66,7 +66,7 @@ module Oapi
 
       sig do
         params(namespace: String, type_mappings: T::Hash[String, RubyType],
-               types: T::Hash[String, Ir::TypeDef]).void
+               types: T::Hash[String, Model::TypeDef]).void
       end
       def initialize(namespace:, type_mappings: DEFAULT_TYPE_MAPPINGS, types: {})
         @namespace = namespace
@@ -75,40 +75,40 @@ module Oapi
         @warnings = T.let(Set.new, T::Set[String])
       end
 
-      sig { params(schema: Ir::Schema).returns(String) }
+      sig { params(schema: Model::Schema).returns(String) }
       def sorbet_type(schema)
         case schema
-        when Ir::Ref
+        when Model::Ref
           aliased = alias_target(schema)
           return sorbet_type(aliased) if aliased
 
           union?(schema) ? "#{@namespace}::Types::#{schema.name}::Value" : "#{@namespace}::Types::#{schema.name}"
-        when Ir::List then "T::Array[#{sorbet_type(schema.items)}]"
-        when Ir::Freeform
+        when Model::List then "T::Array[#{sorbet_type(schema.items)}]"
+        when Model::Freeform
           values = schema.values
           "T::Hash[::String, #{values ? sorbet_type(values) : "T.untyped"}]"
-        when Ir::Untyped then "T.untyped"
-        when Ir::StringSchema, Ir::IntegerSchema, Ir::NumberSchema, Ir::BooleanSchema
+        when Model::Untyped then "T.untyped"
+        when Model::StringSchema, Model::IntegerSchema, Model::NumberSchema, Model::BooleanSchema
           ruby_type_for(schema).type
         else T.absurd(schema)
         end
       end
 
-      sig { params(schema: Ir::Schema, value: String).returns(String) }
+      sig { params(schema: Model::Schema, value: String).returns(String) }
       def from_wire_expr(schema, value:)
         case schema
-        when Ir::Ref
+        when Model::Ref
           aliased = alias_target(schema)
           aliased ? from_wire_expr(aliased, value: value) : "#{codec_for(schema)}.from_wire(#{value})"
-        when Ir::List
+        when Model::List
           "Oapi::Decode.each(#{value}) { |item| #{from_wire_expr(schema.items, value: "item")} }"
-        when Ir::Freeform
+        when Model::Freeform
           values = schema.values
           return "Oapi::Decode.object(#{value})" if values.nil?
 
           "Oapi::Decode.values(#{value}) { |item| #{from_wire_expr(values, value: "item")} }"
-        when Ir::Untyped then value
-        when Ir::StringSchema, Ir::IntegerSchema, Ir::NumberSchema, Ir::BooleanSchema
+        when Model::Untyped then value
+        when Model::StringSchema, Model::IntegerSchema, Model::NumberSchema, Model::BooleanSchema
           "#{ruby_type_for(schema).codec}.from_wire(#{value})"
         else T.absurd(schema)
         end
@@ -124,28 +124,28 @@ module Oapi
         T::Hash[String, T::Array[T::Class[T.anything]]]
       )
 
-      sig { params(schema: Ir::Schema, value: T.untyped).returns(T::Boolean) }
+      sig { params(schema: Model::Schema, value: T.untyped).returns(T::Boolean) }
       def literal_matches_type?(schema, value)
         NATIVE_LITERALS.fetch(sorbet_type(schema), []).any? { |native| value.is_a?(native) }
       end
 
-      sig { params(schema: Ir::Schema, value: String).returns(String) }
+      sig { params(schema: Model::Schema, value: String).returns(String) }
       def to_wire_expr(schema, value:)
         case schema
-        when Ir::Ref
+        when Model::Ref
           aliased = alias_target(schema)
           aliased ? to_wire_expr(aliased, value: value) : "#{codec_for(schema)}.to_wire(#{value})"
-        when Ir::List
+        when Model::List
           inner = to_wire_expr(schema.items, value: "item")
           inner == "item" ? value : "#{value}.map { |item| #{inner} }"
-        when Ir::Freeform
+        when Model::Freeform
           values = schema.values
           return value if values.nil?
 
           inner = to_wire_expr(values, value: "item")
           inner == "item" ? value : "#{value}.transform_values { |item| #{inner} }"
-        when Ir::Untyped then value
-        when Ir::StringSchema, Ir::IntegerSchema, Ir::NumberSchema, Ir::BooleanSchema
+        when Model::Untyped then value
+        when Model::StringSchema, Model::IntegerSchema, Model::NumberSchema, Model::BooleanSchema
           "#{ruby_type_for(schema).codec}.to_wire(#{value})"
         else T.absurd(schema)
         end
@@ -153,21 +153,21 @@ module Oapi
 
       private
 
-      sig { params(schema: Ir::Ref).returns(String) }
+      sig { params(schema: Model::Ref).returns(String) }
       def codec_for(schema) = "#{@namespace}::Types::#{schema.name}::CODEC"
 
-      sig { params(schema: Ir::Ref).returns(T::Boolean) }
-      def union?(schema) = @types[schema.name].is_a?(Ir::UnionDef)
+      sig { params(schema: Model::Ref).returns(T::Boolean) }
+      def union?(schema) = @types[schema.name].is_a?(Model::UnionDef)
 
-      sig { params(schema: Ir::Ref).returns(T.nilable(Ir::Schema)) }
+      sig { params(schema: Model::Ref).returns(T.nilable(Model::Schema)) }
       def alias_target(schema)
         found = @types[schema.name]
-        found.is_a?(Ir::AliasDef) ? found.target : nil
+        found.is_a?(Model::AliasDef) ? found.target : nil
       end
 
-      sig { params(schema: Ir::Schema).returns(RubyType) }
+      sig { params(schema: Model::Schema).returns(RubyType) }
       def ruby_type_for(schema)
-        override = Ir::Schema.meta(schema).ruby_type
+        override = Model::Schema.meta(schema).ruby_type
         return override if override
 
         type, format = scalar_kind(schema)
@@ -187,13 +187,13 @@ module Oapi
       sig { params(type: String, format: T.nilable(String)).returns(T::Array[String]) }
       def candidate_keys(type, format) = format ? ["#{type}:#{format}", type] : [type]
 
-      sig { params(schema: Ir::Schema).returns([String, T.nilable(String)]) }
+      sig { params(schema: Model::Schema).returns([String, T.nilable(String)]) }
       def scalar_kind(schema)
         case schema
-        when Ir::StringSchema then ["string", schema.format]
-        when Ir::IntegerSchema then ["integer", schema.format]
-        when Ir::NumberSchema then ["number", schema.format]
-        when Ir::BooleanSchema then ["boolean", nil]
+        when Model::StringSchema then ["string", schema.format]
+        when Model::IntegerSchema then ["integer", schema.format]
+        when Model::NumberSchema then ["number", schema.format]
+        when Model::BooleanSchema then ["boolean", nil]
         else raise SchemaError, "#{schema.class} is not a scalar"
         end
       end

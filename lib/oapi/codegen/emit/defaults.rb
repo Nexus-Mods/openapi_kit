@@ -8,7 +8,7 @@ module Oapi
         extend T::Sig
 
         sig do
-          params(schema: Ir::Schema, default: Ir::Default, registry: TypeRegistry).returns(String)
+          params(schema: Model::Schema, default: Model::Default, registry: TypeRegistry).returns(String)
         end
         def self.expression(schema:, default:, registry:)
           literal = default.value
@@ -19,7 +19,7 @@ module Oapi
         end
 
         sig do
-          params(schema: Ir::Schema, default: Ir::Default, registry: TypeRegistry).returns(String)
+          params(schema: Model::Schema, default: Model::Default, registry: TypeRegistry).returns(String)
         end
         def self.clause(schema:, default:, registry:)
           literal = default.value
@@ -29,7 +29,7 @@ module Oapi
           "factory: -> { #{expression(schema: schema, default: default, registry: registry)} }"
         end
 
-        sig { params(required: T::Boolean, meta: Ir::Meta).returns(T::Boolean) }
+        sig { params(required: T::Boolean, meta: Model::Meta).returns(T::Boolean) }
         def self.nilable?(required:, meta:)
           default = meta.default
           return true if default && default.value.nil?

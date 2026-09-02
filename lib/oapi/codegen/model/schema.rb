@@ -3,7 +3,7 @@
 
 module Oapi
   module Codegen
-    module Ir
+    module Model
       class Default < T::Struct
         const :value, T.untyped
       end
