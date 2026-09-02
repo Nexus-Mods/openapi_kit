@@ -1,15 +1,12 @@
 # typed: strict
 # frozen_string_literal: true
 
-require "action_controller"
 require "action_dispatch"
 
 require "oapi/runtime"
 
 module Oapi
   module Rails
-    extend T::Sig
-
     module Codec
       class UploadedFile
         extend T::Sig
@@ -29,31 +26,6 @@ module Oapi
         def to_wire(value) = value.original_filename
 
         CODEC = T.let(new, UploadedFile)
-      end
-    end
-
-    class MissingContainer < Error; end
-
-    module Rendering
-      extend T::Sig
-      include Kernel
-
-      private
-
-      sig { returns(T.untyped) }
-      def oapi_container
-        raise MissingContainer,
-              "#{self.class} needs a container. Define #oapi_container on the controller named " \
-              "by `controller_base` in your oapi.yml, returning something that responds to " \
-              "resolve(key)."
-      end
-
-      sig { params(response: T.untyped).void }
-      def render_openapi(response)
-        body = response.to_wire
-        return T.unsafe(self).head(response.status) if body.nil?
-
-        T.unsafe(self).render(json: body, status: response.status, content_type: response.content_type)
       end
     end
   end

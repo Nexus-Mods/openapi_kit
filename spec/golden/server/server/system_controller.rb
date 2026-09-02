@@ -3,7 +3,7 @@
 # frozen_string_literal: true
 
 module Server
-  class SystemController < ApiBaseController
+  class SystemController < ::ApiBaseController
     extend T::Sig
 
     sig { void }
@@ -12,7 +12,12 @@ module Server
         http_request: request
       )
 
-      render_openapi(handler.get_health(request: decoded))
+      response = handler.get_health(request: decoded)
+      body = response.to_wire
+
+      return head(response.status) if body.nil?
+
+      render(json: body, status: response.status, content_type: response.content_type)
     end
 
     private

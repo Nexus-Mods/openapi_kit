@@ -20,13 +20,13 @@ RSpec.describe Oapi::Codegen::Config do
     config = described_class.from_file(write(<<~YAML))
       spec: specs/api.yaml
       output: generated
-      modules: [Api, V3]
+      modules: [API, V3]
       controller_base: ApiBaseController
     YAML
 
     expect(config.spec).to eq(@dir.join("specs/api.yaml"))
     expect(config.output).to eq(@dir.join("generated"))
-    expect(config.namespace).to eq("Api::V3")
+    expect(config.namespace).to eq("API::V3")
   end
 
   it "builds container keys from the prefix" do

@@ -28,7 +28,6 @@ spec: openapi/mods.yaml
 output: app/api
 modules: [Mods, V1]
 controller_base: Api::BaseController
-route_prefix: /v1
 container_prefix: v1
 ```
 
@@ -37,7 +36,6 @@ container_prefix: v1
 | `spec` | the root OpenAPI document, resolved relative to this file |
 | `output` | directory the tree is written to; oapi owns it, see below |
 | `modules` | namespace for every generated constant, so `Mods::V1::Types::Mod` |
-| `route_prefix` | prefixed onto every generated route |
 | `container_prefix` | prefixed onto every container key, so `v1.handlers.mods` |
 | `controller_base` | your controller class the generated controllers inherit from |
 | `type_mappings` | your Ruby type for a `type:format` pair |
@@ -70,14 +68,27 @@ else, add it:
 config.autoload_paths << Rails.root.join("app/api").to_s
 ```
 
+`modules` names become directories, so an acronym namespace needs an inflection, the
+same as any acronym constant in a Rails application:
+
+```ruby
+# config/initializers/inflections.rb
+ActiveSupport::Inflector.inflections { |inflect| inflect.acronym "API" }
+```
+
 **2. Draw the routes.**
 
 ```ruby
 # config/routes.rb
 Rails.application.routes.draw do
-  Mods::V1::Routes.draw(self)
+  scope "/v1" do
+    Mods::V1::Routes.draw(self)
+  end
 end
 ```
+
+Generated routes carry no prefix of their own, so mount them wherever you like with
+Rails' own `scope`.
 
 **3. Implement a handler per tag.** Each is a Sorbet interface with one method per
 operation, taking a typed request and returning one of that operation's sealed response
@@ -111,8 +122,6 @@ no global state, so the base is yours:
 # app/controllers/api/base_controller.rb
 module Api
   class BaseController < ApplicationController
-    include Oapi::Rails::Rendering
-
     rescue_from Oapi::DecodeError, with: :unprocessable
 
     private
@@ -128,9 +137,8 @@ module Api
 end
 ```
 
-`Oapi::Rails::Rendering` supplies `render_openapi`, which turns a sealed response variant
-into a rendered response. Including it is optional — a base class providing that method
-itself works just as well, and nothing generated depends on the module.
+`oapi_container` is the only method generated controllers need from it. They render
+inline, so there is nothing of oapi's to include or inherit.
 
 A request oapi cannot decode raises `Oapi::DecodeError`, carrying `detail` and a
 `json_pointer` naming the field. oapi takes no view on what that should look like on the
@@ -215,8 +223,6 @@ price:
   types and formats are.
 - A request oapi cannot decode raises `Oapi::DecodeError`; mapping that to a response is
   the application's job.
-- `modules` whose names are acronyms (`[API, V1]`) produce directories Zeitwerk's
-  default inflector will not resolve. Use `[Api, V1]` or configure an inflection.
 
 ## Development
 

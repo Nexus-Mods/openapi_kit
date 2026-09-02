@@ -42,9 +42,7 @@ module Oapi
         end
 
         sig { params(operation: Ir::Operation).returns(String) }
-        def path_for(operation)
-          "#{@config.route_prefix}#{operation.path.gsub(/\{(\w+)\}/, ':\1')}"
-        end
+        def path_for(operation) = operation.path.gsub(/\{(\w+)\}/, ':\1')
       end
     end
   end

@@ -58,9 +58,7 @@ CONTAINER = DummyContainer.new(
   "v1.handlers.system" => SystemHandler.new
 )
 
-class ApiBaseController < ActionController::API
-  include Oapi::Rails::Rendering
-
+class ApiBaseController
   rescue_from Oapi::DecodeError, with: :bad_request
 
   private
@@ -75,7 +73,7 @@ end
 
 Server::Container.verify!(CONTAINER)
 
-DummyApp.routes.draw { Server::Routes.draw(self) }
+DummyApp.routes.draw { scope("/v1") { Server::Routes.draw(self) } }
 
 # The generated code is loaded by Rails' own autoloader from spec/golden/server, so
 # this exercises routing, parameter decoding, handler dispatch and response rendering

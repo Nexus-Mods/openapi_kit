@@ -38,7 +38,7 @@ module Oapi
 
         sig { params(buffer: Buffer, tag: String, operations: T::Array[Ir::Operation]).void }
         def emit_controller(buffer, tag, operations)
-          buffer.nest("class #{Naming.pascal(tag)}Controller < #{@config.controller_base}") do
+          buffer.nest("class #{Naming.pascal(tag)}Controller < #{controller_base}") do
             buffer.line("extend T::Sig")
 
             operations.each do |operation|
@@ -51,6 +51,12 @@ module Oapi
             buffer.blank
             emit_handler(buffer, tag)
           end
+        end
+
+        sig { returns(String) }
+        def controller_base
+          base = @config.controller_base
+          base.start_with?("::") ? base : "::#{base}"
         end
 
         sig { params(buffer: Buffer, tag: String).void }
@@ -86,7 +92,12 @@ module Oapi
             end
             buffer.line(")")
             buffer.blank
-            buffer.line("render_openapi(handler.#{Naming.identifier(operation.id)}(request: decoded))")
+            buffer.line("response = handler.#{Naming.identifier(operation.id)}(request: decoded)")
+            buffer.line("body = response.to_wire")
+            buffer.blank
+            buffer.line("return head(response.status) if body.nil?")
+            buffer.blank
+            buffer.line("render(json: body, status: response.status, content_type: response.content_type)")
           end
         end
 

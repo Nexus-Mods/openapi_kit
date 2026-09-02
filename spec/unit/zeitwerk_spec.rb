@@ -35,6 +35,24 @@ RSpec.describe "Zeitwerk compatibility" do
     loader&.unload
   end
 
+  # An acronym namespace needs an inflection, which is how Rails handles acronym
+  # constants generally: config.autoload_paths plus inflect, or the loader's own
+  # inflector outside Rails.
+  it "loads an acronym namespace when the inflector is told about it" do
+    result = generate("server.yaml", modules: %w[API V1], "container_prefix" => "v1")
+
+    loader = Zeitwerk::Loader.new
+    loader.inflector.inflect("api" => "API")
+    loader.push_dir(result[:dir].to_s)
+    loader.setup
+    loader.eager_load
+
+    expect(Object.const_get("API::V1::Types::Mod")).to be < T::Struct
+    expect(Object.const_get("API::V1::Handlers::Mods")).to be_a(Module)
+  ensure
+    loader&.unload
+  end
+
   # Mutually recursive schemas were rejected because T::Struct evaluates a property
   # type when the class body runs. One constant per file makes Zeitwerk autoload the
   # other side on reference, so the cycle resolves.

@@ -73,6 +73,12 @@ module ActionController
 
     sig { returns(ActionDispatch::Request) }
     def request; end
+
+    sig { params(status: T.untyped).void }
+    def head(status); end
+
+    sig { params(json: T.untyped, status: T.untyped, content_type: T.untyped).void }
+    def render(json:, status:, content_type:); end
   end
 end
 

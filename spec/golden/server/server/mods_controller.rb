@@ -3,7 +3,7 @@
 # frozen_string_literal: true
 
 module Server
-  class ModsController < ApiBaseController
+  class ModsController < ::ApiBaseController
     extend T::Sig
 
     sig { void }
@@ -26,7 +26,12 @@ module Server
         http_request: request
       )
 
-      render_openapi(handler.list_mods(request: decoded))
+      response = handler.list_mods(request: decoded)
+      body = response.to_wire
+
+      return head(response.status) if body.nil?
+
+      render(json: body, status: response.status, content_type: response.content_type)
     end
 
     sig { void }
@@ -41,7 +46,12 @@ module Server
         http_request: request
       )
 
-      render_openapi(handler.create_mod(request: decoded))
+      response = handler.create_mod(request: decoded)
+      body = response.to_wire
+
+      return head(response.status) if body.nil?
+
+      render(json: body, status: response.status, content_type: response.content_type)
     end
 
     private
