@@ -27,7 +27,7 @@ RSpec.describe Oapi::Types::Builtins do
 
   it "refuses to guess a type for binary content rather than owning a wrapper" do
     expect(described_class["string:binary"]).to be_nil
-    expect(described_class.refusal("string:binary")).to match(/depends on your framework/)
+    expect(described_class.refusal("string:binary")).to include("depends on your framework")
   end
 
   it "names a codec implementing Oapi::Codec for every entry" do

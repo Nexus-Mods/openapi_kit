@@ -17,7 +17,7 @@ module SpecBuilder
       { "spec" => "api.yaml", "output" => "out", "modules" => ["API"] }.merge(config_options),
       base: dir
     )
-    Oapi::Loader.new(config: config).load
+    Oapi::Loader.new(config: config).parse
   end
 
   def openapi(paths: nil, components: nil)

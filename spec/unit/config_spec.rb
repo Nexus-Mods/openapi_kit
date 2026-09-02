@@ -17,7 +17,7 @@ RSpec.describe Oapi::Config do
   end
 
   it "resolves paths relative to the config file" do
-    config = described_class.load(write(<<~YAML))
+    config = described_class.from_file(write(<<~YAML))
       spec: specs/api.yaml
       output: generated
       modules: [API, V3]
@@ -29,7 +29,7 @@ RSpec.describe Oapi::Config do
   end
 
   it "builds container keys from the prefix" do
-    config = described_class.load(write(<<~YAML))
+    config = described_class.from_file(write(<<~YAML))
       spec: api.yaml
       output: out
       modules: [API]
@@ -40,7 +40,7 @@ RSpec.describe Oapi::Config do
   end
 
   it "omits an absent prefix rather than emitting a leading dot" do
-    config = described_class.load(write(<<~YAML))
+    config = described_class.from_file(write(<<~YAML))
       spec: api.yaml
       output: out
       modules: [API]
@@ -51,22 +51,22 @@ RSpec.describe Oapi::Config do
 
   describe "options it refuses to guess at" do
     it "names the unknown option and lists the valid ones" do
-      expect { described_class.load(write("spec: a\noutput: b\nmodules: [A]\nmodules_: x\n")) }
+      expect { described_class.from_file(write("spec: a\noutput: b\nmodules: [A]\nmodules_: x\n")) }
         .to raise_error(Oapi::ConfigError, /unknown option modules_\. Known options: spec, output/)
     end
 
     it "requires spec, output and modules" do
-      expect { described_class.load(write("spec: a\noutput: b\n")) }
+      expect { described_class.from_file(write("spec: a\noutput: b\n")) }
         .to raise_error(Oapi::ConfigError, /`modules` is required/)
     end
 
     it "rejects an empty modules list" do
-      expect { described_class.load(write("spec: a\noutput: b\nmodules: []\n")) }
+      expect { described_class.from_file(write("spec: a\noutput: b\nmodules: []\n")) }
         .to raise_error(Oapi::ConfigError, /must name at least one namespace, e\.g\. \[API, V3\]/)
     end
 
     it "reports a missing file rather than crashing" do
-      expect { described_class.load(@dir.join("nope.yml")) }
+      expect { described_class.from_file(@dir.join("nope.yml")) }
         .to raise_error(Oapi::ConfigError, /No such config file/)
     end
   end

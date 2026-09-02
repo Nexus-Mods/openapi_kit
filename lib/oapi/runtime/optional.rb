@@ -6,10 +6,11 @@ module Oapi
     extend T::Sig
     extend T::Generic
     extend T::Helpers
+    include Kernel
     abstract!
     sealed!
 
-    Value = type_member(:out)
+    Value = type_member
 
     sig { abstract.returns(T::Boolean) }
     def present?; end
@@ -23,7 +24,7 @@ module Oapi
     extend T::Generic
     include Optional
 
-    Value = type_member(:out)
+    Value = type_member
 
     sig { returns(Value) }
     attr_reader :value
@@ -37,10 +38,10 @@ module Oapi
     def present? = true
 
     sig { override.params(fallback: Value).returns(Value) }
-    def value_or(_fallback) = value
+    def value_or(fallback) = value
 
     sig { params(other: T.untyped).returns(T::Boolean) }
-    def ==(other) = other.is_a?(Present) && other.value == value
+    def ==(other) = other.is_a?(Present) && T.unsafe(other).value == T.unsafe(self).value
   end
 
   class Absent
@@ -48,7 +49,7 @@ module Oapi
     extend T::Generic
     include Optional
 
-    Value = type_member(:out)
+    Value = type_member
 
     sig { override.returns(T::Boolean) }
     def present? = false
@@ -58,7 +59,5 @@ module Oapi
 
     sig { params(other: T.untyped).returns(T::Boolean) }
     def ==(other) = other.is_a?(Absent)
-
-    INSTANCE = T.let(new, Absent[T.untyped])
   end
 end

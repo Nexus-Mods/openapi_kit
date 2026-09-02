@@ -12,6 +12,7 @@ module Oapi
 
     module UnionTag
       extend T::Helpers
+      include Kernel
       sealed!
     end
 
@@ -27,6 +28,7 @@ module Oapi
 
     module TypeDef
       extend T::Helpers
+      include Kernel
       sealed!
     end
 

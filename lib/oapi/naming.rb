@@ -32,7 +32,7 @@ module Oapi
 
     sig { params(string: String).returns(String) }
     def self.camel(string)
-      pascal(string).then { |s| s.empty? ? s : T.must(s[0]).downcase + T.must(s[1..]) }
+      pascal(string).then { |name| name.empty? ? name : "#{name[0].to_s.downcase}#{name[1..]}" }
     end
 
     SHADOWED = T.let(

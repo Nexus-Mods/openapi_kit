@@ -6,10 +6,10 @@ module Oapi
     module Builtins
       extend T::Sig
 
-      sig { params(type: T.any(Module, String), codec: Module).returns(RubyType) }
+      sig { params(type: T.any(T::Module[T.anything], String), codec: T::Module[T.anything]).returns(RubyType) }
       def self.entry(type, codec)
         RubyType.new(
-          type: type.is_a?(Module) ? "::#{T.must(type.name)}" : type,
+          type: type.is_a?(::Module) ? "::#{T.must(type.name)}" : type,
           codec: "::#{T.must(codec.name)}"
         )
       end

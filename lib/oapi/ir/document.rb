@@ -43,6 +43,7 @@ module Oapi
 
     module Parameter
       extend T::Helpers
+      include Kernel
       sealed!
     end
 
@@ -118,6 +119,7 @@ module Oapi
 
     module Status
       extend T::Helpers
+      include Kernel
       sealed!
     end
 
@@ -204,6 +206,7 @@ module Oapi
 
     module SecurityScheme
       extend T::Helpers
+      include Kernel
       sealed!
     end
 

@@ -18,7 +18,7 @@ module Oapi
     end
 
     sig { returns(Ir::Document) }
-    def load
+    def parse
       document = Openapi3Parser.load_file(@config.spec)
       unless document.valid?
         details = document.errors.map { |e| "  #{e.context&.location_summary}: #{e.message}" }
@@ -70,7 +70,7 @@ module Oapi
         path: path,
         tag: node.tags&.first || "default",
         parameters: parameters,
-        request_body: node.request_body && build_request_body(node.request_body, hint: base),
+        request_body: (build_request_body(node.request_body, hint: base) if node.request_body),
         responses: build_responses(node.responses, hint: base),
         security: requirements(node.security, declared: raw(node).key?("security")),
         summary: node.summary,
@@ -162,7 +162,7 @@ module Oapi
       node.map do |media_type, media|
         suffix = multiple ? Naming.pascal(media_type.split("/").last.to_s.split("+").first.to_s) : ""
         Ir::Content.new(media_type: media_type,
-                        schema: media.schema && schema_for(media.schema, hint: "#{hint}#{suffix}"))
+                        schema: (schema_for(media.schema, hint: "#{hint}#{suffix}") if media.schema))
       end
     end
 
@@ -263,7 +263,7 @@ module Oapi
                      max_items: node.max_items, unique_items: !!node.unique_items?, meta: meta)
       when "object"
         values = node.additional_properties_schema
-        Ir::Freeform.new(values: values && schema_for(values, hint: "#{hint}Value"),
+        Ir::Freeform.new(values: (schema_for(values, hint: "#{hint}Value") if values),
                          min_properties: node.min_properties, max_properties: node.max_properties,
                          meta: meta)
       else
@@ -340,10 +340,17 @@ module Oapi
                            schema: schema_for(pnode, hint: "#{name}#{Naming.pascal(pname)}"),
                            required: required.include?(pname))
         end,
-        additional_properties: node.additional_properties_schema &&
-          schema_for(node.additional_properties_schema, hint: "#{name}Value"),
+        additional_properties: additional_properties_for(node, name),
         meta: meta_for(node)
       )
+    end
+
+    sig { params(node: T.untyped, name: String).returns(T.nilable(Ir::Schema)) }
+    def additional_properties_for(node, name)
+      schema = node.additional_properties_schema
+      return nil if schema.nil?
+
+      schema_for(schema, hint: "#{name}Value")
     end
 
     sig { params(node: T.untyped, properties: T::Hash[String, T.untyped], required: T::Set[String]).void }

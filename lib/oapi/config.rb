@@ -27,7 +27,7 @@ module Oapi
     )
 
     sig { params(path: T.any(String, Pathname)).returns(Config) }
-    def self.load(path)
+    def self.from_file(path)
       file = Pathname.new(path).expand_path
       raise ConfigError, "No such config file: #{file}" unless file.file?
 
@@ -67,7 +67,7 @@ module Oapi
         type_mappings: parse_type_mappings(raw["type_mappings"]),
         security_schemes: stringify(raw["security_schemes"]),
         name_overrides: stringify(raw["name_overrides"]),
-        templates: raw["templates"] && base.join(raw["templates"].to_s).expand_path
+        templates: (base.join(raw["templates"].to_s).expand_path if raw["templates"])
       )
     end
 

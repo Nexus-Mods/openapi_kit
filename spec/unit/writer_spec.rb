@@ -3,14 +3,14 @@
 require "tmpdir"
 
 RSpec.describe Oapi::Writer do
+  subject(:writer) { described_class.new(output: @dir.join("out")) }
+
   around do |example|
     Dir.mktmpdir do |dir|
       @dir = Pathname.new(dir)
       example.run
     end
   end
-
-  subject(:writer) { described_class.new(output: @dir.join("out")) }
 
   it "marks every file it writes as generated" do
     path = writer.write("types.rb", "module Types; end")

@@ -38,12 +38,12 @@ module Oapi
         .returns(Oapi::Optional[T.nilable(T.type_parameter(:T))])
     end
     def self.tristate(raw, key, &block)
-      return Absent::INSTANCE unless raw.key?(key)
+      return Absent[T.nilable(T.type_parameter(:T))].new unless raw.key?(key)
 
       value = raw[key]
-      return Present.new(value: nil) if value.nil?
+      return Present[T.nilable(T.type_parameter(:T))].new(value: nil) if value.nil?
 
-      Present.new(value: at("/#{key}") { block.call(value) })
+      Present[T.nilable(T.type_parameter(:T))].new(value: at("/#{key}") { block.call(value) })
     end
 
     sig do

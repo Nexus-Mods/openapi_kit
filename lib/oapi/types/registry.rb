@@ -32,39 +32,39 @@ module Oapi
       end
 
       sig { params(schema: Ir::Schema, value: String).returns(String) }
-      def load_expr(schema, value:)
+      def from_wire_expr(schema, value:)
         case schema
-        when Ir::Ref then "#{codec_for(schema)}.load(#{value})"
+        when Ir::Ref then "#{codec_for(schema)}.from_wire(#{value})"
         when Ir::List
-          "Oapi::Decode.each(#{value}) { |item| #{load_expr(schema.items, value: "item")} }"
+          "Oapi::Decode.each(#{value}) { |item| #{from_wire_expr(schema.items, value: "item")} }"
         when Ir::Freeform
           values = schema.values
           return "Oapi::Decode.object(#{value})" if values.nil?
 
-          "Oapi::Decode.values(#{value}) { |item| #{load_expr(values, value: "item")} }"
+          "Oapi::Decode.values(#{value}) { |item| #{from_wire_expr(values, value: "item")} }"
         when Ir::Untyped then value
         when Ir::StringSchema, Ir::IntegerSchema, Ir::NumberSchema, Ir::BooleanSchema
-          "#{scalar(schema).codec}.load(#{value})"
+          "#{scalar(schema).codec}.from_wire(#{value})"
         else T.absurd(schema)
         end
       end
 
       sig { params(schema: Ir::Schema, value: String).returns(String) }
-      def dump_expr(schema, value:)
+      def to_wire_expr(schema, value:)
         case schema
-        when Ir::Ref then "#{codec_for(schema)}.dump(#{value})"
+        when Ir::Ref then "#{codec_for(schema)}.to_wire(#{value})"
         when Ir::List
-          inner = dump_expr(schema.items, value: "item")
+          inner = to_wire_expr(schema.items, value: "item")
           inner == "item" ? value : "#{value}.map { |item| #{inner} }"
         when Ir::Freeform
           values = schema.values
           return value if values.nil?
 
-          inner = dump_expr(values, value: "item")
+          inner = to_wire_expr(values, value: "item")
           inner == "item" ? value : "#{value}.transform_values { |item| #{inner} }"
         when Ir::Untyped then value
         when Ir::StringSchema, Ir::IntegerSchema, Ir::NumberSchema, Ir::BooleanSchema
-          "#{scalar(schema).codec}.dump(#{value})"
+          "#{scalar(schema).codec}.to_wire(#{value})"
         else T.absurd(schema)
         end
       end
@@ -81,8 +81,7 @@ module Oapi
 
         type, format = kind(schema)
         keys = format ? ["#{type}:#{format}", type] : [type]
-
-        requested = T.must(keys.first)
+        requested = format ? "#{type}:#{format}" : type
 
         keys.each_with_index do |key, index|
           mapping = @type_mappings[key]

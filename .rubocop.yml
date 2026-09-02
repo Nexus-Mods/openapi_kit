@@ -1,5 +1,9 @@
+plugins:
+  - rubocop-rspec
+
 AllCops:
   TargetRubyVersion: 3.3
+  SuggestExtensions: false
   NewCops: enable
   Exclude:
     - "spec/golden/**/*"
@@ -46,3 +50,20 @@ Style/RaiseArgs:
 Naming/FileName:
   Exclude:
     - "lib/oapi-runtime.rb"
+Lint/UnusedMethodArgument:
+  Exclude:
+    - "lib/oapi/runtime/optional.rb"
+RSpec/MultipleExpectations:
+  Max: 6
+RSpec/ExampleLength:
+  Max: 20
+RSpec/NestedGroups:
+  Max: 4
+RSpec/InstanceVariable:
+  Enabled: false
+RSpec/SpecFilePathFormat:
+  Enabled: false
+RSpec/DescribeClass:
+  Enabled: false
+RSpec/MultipleDescribes:
+  Enabled: false

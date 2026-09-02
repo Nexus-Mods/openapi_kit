@@ -36,28 +36,28 @@ RSpec.describe Oapi::Types::Registry do
     end
   end
 
-  describe "#load_expr / #dump_expr" do
+  describe "#from_wire_expr / #to_wire_expr" do
     it "calls the codec for a built-in scalar" do
-      expect(registry.load_expr(string("date-time"), value: "v"))
-        .to eq("::Oapi::Codec::DateTime.load(v)")
-      expect(registry.dump_expr(string("date-time"), value: "at"))
-        .to eq("::Oapi::Codec::DateTime.dump(at)")
+      expect(registry.from_wire_expr(string("date-time"), value: "v"))
+        .to eq("::Oapi::Codec::DateTime.from_wire(v)")
+      expect(registry.to_wire_expr(string("date-time"), value: "at"))
+        .to eq("::Oapi::Codec::DateTime.to_wire(at)")
     end
 
     it "calls the generated type's nested codec for a ref" do
       ref = Oapi::Ir::Ref.new(name: "Mod")
-      expect(registry.load_expr(ref, value: "v"))
-        .to eq("API::V3::Types::Mod::Codec.load(v)")
-      expect(registry.dump_expr(ref, value: "mod")).to eq("API::V3::Types::Mod::Codec.dump(mod)")
+      expect(registry.from_wire_expr(ref, value: "v"))
+        .to eq("API::V3::Types::Mod::Codec.from_wire(v)")
+      expect(registry.to_wire_expr(ref, value: "mod")).to eq("API::V3::Types::Mod::Codec.to_wire(mod)")
     end
 
     it "maps over a list, and stays identity when the element needs no conversion" do
       list = Oapi::Ir::List.new(items: Oapi::Ir::Ref.new(name: "Mod"))
-      expect(registry.load_expr(list, value: "v"))
-        .to eq("Oapi::Decode.each(v) { |item| API::V3::Types::Mod::Codec.load(item) }")
-      expect(registry.dump_expr(list, value: "mods"))
-        .to eq("mods.map { |item| API::V3::Types::Mod::Codec.dump(item) }")
-      expect(registry.dump_expr(Oapi::Ir::Untyped.new, value: "x")).to eq("x")
+      expect(registry.from_wire_expr(list, value: "v"))
+        .to eq("Oapi::Decode.each(v) { |item| API::V3::Types::Mod::Codec.from_wire(item) }")
+      expect(registry.to_wire_expr(list, value: "mods"))
+        .to eq("mods.map { |item| API::V3::Types::Mod::Codec.to_wire(item) }")
+      expect(registry.to_wire_expr(Oapi::Ir::Untyped.new, value: "x")).to eq("x")
     end
 
     describe "custom types" do
@@ -70,8 +70,8 @@ RSpec.describe Oapi::Types::Registry do
 
       it "routes every custom type through its coder" do
         expect(registry.sorbet_type(string("money"))).to eq("::Money")
-        expect(registry.load_expr(string("money"), value: "v")).to eq("MyApp::MoneyCodec.load(v)")
-        expect(registry.dump_expr(string("money"), value: "price")).to eq("MyApp::MoneyCodec.dump(price)")
+        expect(registry.from_wire_expr(string("money"), value: "v")).to eq("MyApp::MoneyCodec.from_wire(v)")
+        expect(registry.to_wire_expr(string("money"), value: "price")).to eq("MyApp::MoneyCodec.to_wire(price)")
       end
 
       it "honours an x-ruby-type override on the schema itself" do
@@ -81,7 +81,7 @@ RSpec.describe Oapi::Types::Registry do
           )
         )
         expect(registry.sorbet_type(schema)).to eq("::Token")
-        expect(registry.load_expr(schema, value: "v")).to eq("MyApp::TokenCodec.load(v)")
+        expect(registry.from_wire_expr(schema, value: "v")).to eq("MyApp::TokenCodec.from_wire(v)")
       end
     end
   end
@@ -131,8 +131,8 @@ RSpec.describe Oapi::Types::Registry do
       registry.sorbet_type(Oapi::Ir::IntegerSchema.new(format: "unix-time"))
 
       expect(registry.warnings.join("\n"))
-        .to match(/"integer:unix-time" has no Ruby type mapped, so it is treated as "integer"/)
-      expect(registry.warnings.join("\n")).to match(/codec: "YourApp::YourTypeCodec"/)
+        .to include('"integer:unix-time" has no Ruby type mapped, so it is treated as "integer"')
+      expect(registry.warnings.join("\n")).to include('codec: "YourApp::YourTypeCodec"')
     end
 
     it "reports each unmapped format once, however many times it appears" do

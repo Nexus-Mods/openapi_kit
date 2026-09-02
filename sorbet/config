@@ -1,4 +1,2 @@
---dir=.
---ignore=/tmp/
---ignore=/vendor/
---ignore=/spec/dummy/
+--dir=./lib
+--dir=./sorbet/rbi

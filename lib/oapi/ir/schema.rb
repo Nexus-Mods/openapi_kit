@@ -20,6 +20,7 @@ module Oapi
 
     module Schema
       extend T::Helpers
+      include Kernel
       sealed!
     end
 
