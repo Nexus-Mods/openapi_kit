@@ -16,12 +16,12 @@ module Oapi
     const :type_mappings, T::Hash[String, RubyType], default: {}
     const :security_schemes, T::Hash[String, String], default: {}
     const :name_overrides, T::Hash[String, String], default: {}
-    const :templates, T.nilable(Pathname), default: nil
+    const :framework, T.nilable(Framework), default: nil
 
     KNOWN_KEYS = T.let(
       %w[
-        spec output modules route_prefix container_prefix
-        type_mappings security_schemes name_overrides templates
+        spec output modules route_prefix container_prefix framework
+        type_mappings security_schemes name_overrides
       ].freeze,
       T::Array[String]
     )
@@ -67,7 +67,7 @@ module Oapi
         type_mappings: parse_type_mappings(raw["type_mappings"]),
         security_schemes: stringify(raw["security_schemes"]),
         name_overrides: stringify(raw["name_overrides"]),
-        templates: (base.join(raw["templates"].to_s).expand_path if raw["templates"])
+        framework: (Framework.parse(raw["framework"]) if raw["framework"])
       )
     end
 

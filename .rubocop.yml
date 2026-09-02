@@ -55,6 +55,7 @@ Naming/FileName:
 Lint/UnusedMethodArgument:
   Exclude:
     - "lib/oapi/runtime/optional.rb"
+    - "spec/unit/container_spec.rb"
 RSpec/MultipleExpectations:
   Max: 6
 RSpec/ExampleLength:

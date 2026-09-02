@@ -1,3 +1,4 @@
 --dir=./lib
 --dir=./sorbet/rbi
 --dir=./spec/golden
+--dir=./spec/typecheck/valid

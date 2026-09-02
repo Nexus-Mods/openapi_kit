@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "action_dispatch"
+
 require "oapi"
 require "oapi-runtime"
 require "fileutils"
