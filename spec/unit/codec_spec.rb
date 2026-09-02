@@ -136,7 +136,7 @@ end
 
 module MoneyCodec
   extend T::Sig
-  extend Oapi::Codec
+  extend Oapi::Codec::Interface
 
   sig { override.params(value: Oapi::Wire).returns(Money) }
   def self.load(value) = Money.new(Oapi::Codec::Integer.load(value))
@@ -145,7 +145,25 @@ module MoneyCodec
   def self.dump(value) = value.cents
 end
 
-RSpec.describe Oapi::Codec do
+class SaltedIdCodec
+  extend T::Sig
+  include Oapi::Codec::Interface
+
+  sig { params(salt: String).void }
+  def initialize(salt:)
+    @salt = salt
+  end
+
+  sig { override.params(value: Oapi::Wire).returns(Integer) }
+  def load(value) = Oapi::Codec::String.load(value).delete_prefix(@salt).to_i
+
+  sig { override.params(value: Integer).returns(Oapi::Wire) }
+  def dump(value) = "#{@salt}#{value}"
+end
+
+SALTED_ID_CODEC = SaltedIdCodec.new(salt: "nx_")
+
+RSpec.describe Oapi::Codec::Interface do
   it "converts a type it does not own, with nothing mixed into that type" do
     expect(Money.ancestors.map(&:to_s).grep(/Oapi/)).to be_empty
     expect(MoneyCodec.load("500")).to eq(Money.new(500))
@@ -153,8 +171,36 @@ RSpec.describe Oapi::Codec do
   end
 
   it "is the one contract every codec implements, built-in or yours" do
-    [Oapi::Codec::DateTime, Oapi::Codec::Decimal, MoneyCodec].each do |coder|
-      expect(coder.singleton_class.ancestors).to include(described_class)
+    [Oapi::Codec::DateTime, Oapi::Codec::Decimal, MoneyCodec].each do |codec|
+      expect(codec.singleton_class.ancestors).to include(described_class)
+    end
+  end
+
+  describe "a codec that needs state" do
+    it "carries its configuration on an instance" do
+      expect(SALTED_ID_CODEC.load("nx_42")).to eq(42)
+      expect(SALTED_ID_CODEC.dump(42)).to eq("nx_42")
+    end
+
+    it "answers the same load and dump calls a module codec does" do
+      expect(SaltedIdCodec.ancestors).to include(described_class)
+      expect(SALTED_ID_CODEC).to respond_to(:load, :dump)
+      expect(Oapi::Codec::Integer).to respond_to(:load, :dump)
+    end
+
+    it "can be configured differently more than once" do
+      expect(SaltedIdCodec.new(salt: "a_").dump(1)).to eq("a_1")
+      expect(SaltedIdCodec.new(salt: "b_").dump(1)).to eq("b_1")
+    end
+
+    it "does not shadow ::String and friends in the including class" do
+      %w[String Integer Float Date DateTime].each do |name|
+        expect(SaltedIdCodec.const_get(name)).to eq(Object.const_get(name))
+      end
+    end
+
+    it "leaves Boolean unresolvable rather than pointing it at the codec" do
+      expect { SaltedIdCodec.const_get("Boolean") }.to raise_error(NameError)
     end
   end
 end

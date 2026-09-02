@@ -396,7 +396,8 @@ module Oapi
         raise SchemaError,
               "x-ruby-type and x-ruby-codec must be given together (found only " \
               "#{type.nil? ? "x-ruby-codec" : "x-ruby-type"}). `x-ruby-type` is what appears in " \
-              "signatures, `x-ruby-codec` is the module extending Oapi::Codec that converts it."
+              "signatures, `x-ruby-codec` is what converts it -- a module extending, or an " \
+              "instance of a class including, Oapi::Codec::Interface."
       end
 
       RubyType.new(type: type.to_s, codec: codec.to_s)

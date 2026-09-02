@@ -29,14 +29,15 @@ module Oapi
       unless missing.empty?
         raise ConfigError,
               "#{where} is missing #{missing.join(" and ")}. Both are required: `type` is what " \
-              "appears in signatures, `codec` is the module extending Oapi::Codec that converts it."
+              "appears in signatures, `codec` is what converts it -- a module extending, or an " \
+              "instance of a class including, Oapi::Codec::Interface."
       end
 
       codec = value.fetch("codec").to_s
       unless codec.match?(CONSTANT_PATH)
         raise ConfigError,
               "#{where}.codec is #{codec.inspect}, which is not a Ruby constant path. " \
-              "It must name a module extending Oapi::Codec, e.g. \"YourApp::YourTypeCodec\"."
+              "It must name a constant holding a codec, e.g. \"YourApp::YourTypeCodec\"."
       end
 
       new(type: value.fetch("type").to_s, codec: codec)

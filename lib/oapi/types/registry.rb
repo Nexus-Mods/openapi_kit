@@ -109,7 +109,7 @@ module Oapi
             type_mappings:
               #{requested.inspect}:
                 type: "::YourType"
-                codec: "YourApp::YourTypeCodec"   # a module extending Oapi::Codec
+                codec: "YourApp::YourTypeCodec"   # extends or includes Oapi::Codec::Interface
         MESSAGE
         @warnings << message unless @warnings.include?(message)
       end
@@ -141,7 +141,7 @@ module Oapi
             type_mappings:
               #{key.inspect}:
                 type: "::YourType"
-                codec: "YourApp::YourTypeCodec"   # a module extending Oapi::Codec
+                codec: "YourApp::YourTypeCodec"   # extends or includes Oapi::Codec::Interface
         MESSAGE
       end
     end

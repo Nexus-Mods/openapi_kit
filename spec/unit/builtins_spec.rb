@@ -32,7 +32,7 @@ RSpec.describe Oapi::Types::Builtins do
 
   it "names a codec implementing Oapi::Codec for every entry" do
     described_class::TABLE.each_value do |ruby_type|
-      expect(Object.const_get(ruby_type.codec).singleton_class.ancestors).to include(Oapi::Codec)
+      expect(Object.const_get(ruby_type.codec).singleton_class.ancestors).to include(Oapi::Codec::Interface)
     end
   end
 end

@@ -7,21 +7,23 @@ require "time"
 
 module Oapi
   module Codec
-    extend T::Sig
-    extend T::Helpers
-    interface!
+    module Interface
+      extend T::Sig
+      extend T::Helpers
+      interface!
 
-    sig { abstract.params(value: Oapi::Wire).returns(T.untyped) }
-    def load(value); end
+      sig { abstract.params(value: Oapi::Wire).returns(T.untyped) }
+      def load(value); end
 
-    sig { abstract.params(value: T.untyped).returns(Oapi::Wire) }
-    def dump(value); end
+      sig { abstract.params(value: T.untyped).returns(Oapi::Wire) }
+      def dump(value); end
+    end
 
     UUID = T.let(/\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/, Regexp)
 
     module Untyped
       extend T::Sig
-      extend Codec
+      extend Interface
 
       sig { override.params(value: Oapi::Wire).returns(T.untyped) }
       def self.load(value) = value
@@ -32,7 +34,7 @@ module Oapi
 
     module String
       extend T::Sig
-      extend Codec
+      extend Interface
 
       sig { override.params(value: Oapi::Wire).returns(::String) }
       def self.load(value)
@@ -47,7 +49,7 @@ module Oapi
 
     module Integer
       extend T::Sig
-      extend Codec
+      extend Interface
 
       sig { override.params(value: Oapi::Wire).returns(::Integer) }
       def self.load(value)
@@ -63,7 +65,7 @@ module Oapi
 
     module Float
       extend T::Sig
-      extend Codec
+      extend Interface
 
       sig { override.params(value: Oapi::Wire).returns(::Float) }
       def self.load(value)
@@ -86,7 +88,7 @@ module Oapi
 
     module Decimal
       extend T::Sig
-      extend Codec
+      extend Interface
 
       sig { override.params(value: Oapi::Wire).returns(::BigDecimal) }
       def self.load(value)
@@ -110,7 +112,7 @@ module Oapi
 
     module Boolean
       extend T::Sig
-      extend Codec
+      extend Interface
 
       TRUTHY = T.let(%w[true 1].freeze, T::Array[::String])
       FALSEY = T.let(%w[false 0].freeze, T::Array[::String])
@@ -133,7 +135,7 @@ module Oapi
 
     module DateTime
       extend T::Sig
-      extend Codec
+      extend Interface
 
       sig { override.params(value: Oapi::Wire).returns(::Time) }
       def self.load(value)
@@ -153,7 +155,7 @@ module Oapi
 
     module Date
       extend T::Sig
-      extend Codec
+      extend Interface
 
       sig { override.params(value: Oapi::Wire).returns(::Date) }
       def self.load(value)
@@ -173,7 +175,7 @@ module Oapi
 
     module Uuid
       extend T::Sig
-      extend Codec
+      extend Interface
 
       sig { override.params(value: Oapi::Wire).returns(::String) }
       def self.load(value)
@@ -188,7 +190,7 @@ module Oapi
 
     module Byte
       extend T::Sig
-      extend Codec
+      extend Interface
 
       sig { override.params(value: Oapi::Wire).returns(::String) }
       def self.load(value)
