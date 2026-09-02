@@ -4,7 +4,7 @@
 
 module KitchenSink
   module Codecs
-    class UserCodec
+    class User
       extend T::Sig
       extend T::Generic
       include ::Oapi::Codec
@@ -15,22 +15,23 @@ module KitchenSink
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
         KitchenSink::Types::User.new(
-          id: ::Oapi::Decode.field(raw, "id") { |v| ::Oapi::Codec::Scalar::Uuid.from_wire(v) },
-          name: ::Oapi::Decode.field(raw, "name") { |v| ::Oapi::Codec::Scalar::String.from_wire(v) },
-          friend: ::Oapi::Decode.optional(raw, "friend") { |v| KitchenSink::Codecs::User.from_wire(v) },
+          id: ::Oapi::Decode.field(raw, "id") { |v| ::Oapi::Codec::Primitive::Uuid::INSTANCE.from_wire(v) },
+          name: ::Oapi::Decode.field(raw, "name") { |v| ::Oapi::Codec::Primitive::String::INSTANCE.from_wire(v) },
+          friend: ::Oapi::Decode.optional(raw, "friend") { |v| KitchenSink::Codecs::User::INSTANCE.from_wire(v) },
         )
       end
 
       sig { override.params(value: KitchenSink::Types::User).returns(::Oapi::Wire) }
       def to_wire(value)
         wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
-        wire["id"] = ::Oapi::Codec::Scalar::Uuid.to_wire(value.id)
-        wire["name"] = ::Oapi::Codec::Scalar::String.to_wire(value.name)
+        wire["id"] = ::Oapi::Codec::Primitive::Uuid::INSTANCE.to_wire(value.id)
+        wire["name"] = ::Oapi::Codec::Primitive::String::INSTANCE.to_wire(value.name)
         friend = value.friend
-        wire["friend"] = KitchenSink::Codecs::User.to_wire(friend) unless friend.nil?
+        wire["friend"] = KitchenSink::Codecs::User::INSTANCE.to_wire(friend) unless friend.nil?
         wire
       end
+
+      INSTANCE = T.let(new, User)
     end
-    User = T.let(UserCodec.new, UserCodec)
   end
 end

@@ -4,7 +4,7 @@
 
 module Server
   module Codecs
-    class ModCodec
+    class Mod
       extend T::Sig
       extend T::Generic
       include ::Oapi::Codec
@@ -15,22 +15,23 @@ module Server
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
         Server::Types::Mod.new(
-          id: ::Oapi::Decode.field(raw, "id") { |v| ::Oapi::Codec::Scalar::Integer.from_wire(v) },
-          name: ::Oapi::Decode.field(raw, "name") { |v| ::Oapi::Codec::Scalar::String.from_wire(v) },
-          status: ::Oapi::Decode.optional(raw, "status") { |v| Server::Codecs::ModStatus.from_wire(v) },
+          id: ::Oapi::Decode.field(raw, "id") { |v| ::Oapi::Codec::Primitive::Integer::INSTANCE.from_wire(v) },
+          name: ::Oapi::Decode.field(raw, "name") { |v| ::Oapi::Codec::Primitive::String::INSTANCE.from_wire(v) },
+          status: ::Oapi::Decode.optional(raw, "status") { |v| Server::Codecs::ModStatus::INSTANCE.from_wire(v) },
         )
       end
 
       sig { override.params(value: Server::Types::Mod).returns(::Oapi::Wire) }
       def to_wire(value)
         wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
-        wire["id"] = ::Oapi::Codec::Scalar::Integer.to_wire(value.id)
-        wire["name"] = ::Oapi::Codec::Scalar::String.to_wire(value.name)
+        wire["id"] = ::Oapi::Codec::Primitive::Integer::INSTANCE.to_wire(value.id)
+        wire["name"] = ::Oapi::Codec::Primitive::String::INSTANCE.to_wire(value.name)
         status = value.status
-        wire["status"] = Server::Codecs::ModStatus.to_wire(status) unless status.nil?
+        wire["status"] = Server::Codecs::ModStatus::INSTANCE.to_wire(status) unless status.nil?
         wire
       end
+
+      INSTANCE = T.let(new, Mod)
     end
-    Mod = T.let(ModCodec.new, ModCodec)
   end
 end

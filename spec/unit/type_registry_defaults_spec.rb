@@ -9,10 +9,10 @@ RSpec.describe Oapi::Codegen::TypeRegistry::Defaults do
 
   it "gives formats with a distinct Ruby type that type" do
     expect(mapping("string:date-time")).to be_ir(
-      Oapi::Codegen::RubyType.new(type: "::Time", codec: "::Oapi::Codec::Scalar::DateTime")
+      Oapi::Codegen::RubyType.new(type: "::Time", codec: "::Oapi::Codec::Primitive::DateTime::INSTANCE")
     )
     expect(mapping("string:decimal")).to be_ir(
-      Oapi::Codegen::RubyType.new(type: "::BigDecimal", codec: "::Oapi::Codec::Scalar::Decimal")
+      Oapi::Codegen::RubyType.new(type: "::BigDecimal", codec: "::Oapi::Codec::Primitive::Decimal::INSTANCE")
     )
   end
 
@@ -30,7 +30,7 @@ RSpec.describe Oapi::Codegen::TypeRegistry::Defaults do
   it "maps binary content to the Rails upload type" do
     expect(mapping("string:binary")).to be_ir(
       Oapi::Codegen::RubyType.new(type: "::ActionDispatch::Http::UploadedFile",
-                                  codec: "::Oapi::Rails::Codec::UploadedFile")
+                                  codec: "::Oapi::Rails::Codec::UploadedFile::INSTANCE")
     )
   end
 
@@ -42,7 +42,9 @@ RSpec.describe Oapi::Codegen::TypeRegistry::Defaults do
 
   it "names a codec implementing Oapi::Codec for every entry" do
     described_class::TABLE.each_value do |entry|
-      expect(Object.const_get(entry.codec).class.ancestors).to include(Oapi::Codec)
+      codec = entry.codec.delete_prefix("::").split("::").reduce(Object) { |scope, name| scope.const_get(name) }
+
+      expect(codec.class.ancestors).to include(Oapi::Codec), entry.codec
     end
   end
 end

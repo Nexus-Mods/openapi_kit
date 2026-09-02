@@ -4,7 +4,7 @@
 
 module KitchenSink
   module Codecs
-    class ModMetaCodec
+    class ModMeta
       extend T::Sig
       extend T::Generic
       include ::Oapi::Codec
@@ -15,7 +15,7 @@ module KitchenSink
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
         KitchenSink::Types::ModMeta.new(
-          note: ::Oapi::Decode.optional(raw, "note") { |v| ::Oapi::Codec::Scalar::String.from_wire(v) },
+          note: ::Oapi::Decode.optional(raw, "note") { |v| ::Oapi::Codec::Primitive::String::INSTANCE.from_wire(v) },
         )
       end
 
@@ -23,10 +23,11 @@ module KitchenSink
       def to_wire(value)
         wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
         note = value.note
-        wire["note"] = ::Oapi::Codec::Scalar::String.to_wire(note) unless note.nil?
+        wire["note"] = ::Oapi::Codec::Primitive::String::INSTANCE.to_wire(note) unless note.nil?
         wire
       end
+
+      INSTANCE = T.let(new, ModMeta)
     end
-    ModMeta = T.let(ModMetaCodec.new, ModMetaCodec)
   end
 end

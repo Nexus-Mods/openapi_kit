@@ -4,7 +4,7 @@
 
 module KitchenSink
   module Codecs
-    class ModCodec
+    class Mod
       extend T::Sig
       extend T::Generic
       include ::Oapi::Codec
@@ -15,54 +15,55 @@ module KitchenSink
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
         KitchenSink::Types::Mod.new(
-          id: ::Oapi::Decode.field(raw, "id") { |v| ::Oapi::Codec::Scalar::Integer.from_wire(v) },
-          name: ::Oapi::Decode.field(raw, "name") { |v| ::Oapi::Codec::Scalar::String.from_wire(v) },
-          status: ::Oapi::Decode.optional(raw, "status") { |v| KitchenSink::Codecs::ModStatus.from_wire(v) },
-          updated_at: ::Oapi::Decode.field(raw, "updatedAt") { |v| ::Oapi::Codec::Scalar::DateTime.from_wire(v) },
-          deleted_at: ::Oapi::Decode.nullable_field(raw, "deletedAt") { |v| ::Oapi::Codec::Scalar::DateTime.from_wire(v) },
-          summary: ::Oapi::Decode.optional(raw, "summary") { |v| ::Oapi::Codec::Scalar::String.from_wire(v) },
-          bio: ::Oapi::Decode.tristate(raw, "bio") { |v| ::Oapi::Codec::Scalar::String.from_wire(v) },
-          page_size: ::Oapi::Decode.defaulted(raw, "pageSize", 20) { |v| ::Oapi::Codec::Scalar::Integer.from_wire(v) },
-          owner: ::Oapi::Decode.tristate(raw, "owner") { |v| KitchenSink::Codecs::User.from_wire(v) },
-          tags: ::Oapi::Decode.optional(raw, "tags") { |v| Oapi::Decode.each(v) { |item| ::Oapi::Codec::Scalar::String.from_wire(item) } },
-          meta: ::Oapi::Decode.optional(raw, "meta") { |v| KitchenSink::Codecs::ModMeta.from_wire(v) },
-          extra: ::Oapi::Decode.optional(raw, "extra") { |v| Oapi::Decode.values(v) { |item| ::Oapi::Codec::Scalar::Integer.from_wire(item) } },
+          id: ::Oapi::Decode.field(raw, "id") { |v| ::Oapi::Codec::Primitive::Integer::INSTANCE.from_wire(v) },
+          name: ::Oapi::Decode.field(raw, "name") { |v| ::Oapi::Codec::Primitive::String::INSTANCE.from_wire(v) },
+          status: ::Oapi::Decode.optional(raw, "status") { |v| KitchenSink::Codecs::ModStatus::INSTANCE.from_wire(v) },
+          updated_at: ::Oapi::Decode.field(raw, "updatedAt") { |v| ::Oapi::Codec::Primitive::DateTime::INSTANCE.from_wire(v) },
+          deleted_at: ::Oapi::Decode.nullable_field(raw, "deletedAt") { |v| ::Oapi::Codec::Primitive::DateTime::INSTANCE.from_wire(v) },
+          summary: ::Oapi::Decode.optional(raw, "summary") { |v| ::Oapi::Codec::Primitive::String::INSTANCE.from_wire(v) },
+          bio: ::Oapi::Decode.tristate(raw, "bio") { |v| ::Oapi::Codec::Primitive::String::INSTANCE.from_wire(v) },
+          page_size: ::Oapi::Decode.defaulted(raw, "pageSize", 20) { |v| ::Oapi::Codec::Primitive::Integer::INSTANCE.from_wire(v) },
+          owner: ::Oapi::Decode.tristate(raw, "owner") { |v| KitchenSink::Codecs::User::INSTANCE.from_wire(v) },
+          tags: ::Oapi::Decode.optional(raw, "tags") { |v| Oapi::Decode.each(v) { |item| ::Oapi::Codec::Primitive::String::INSTANCE.from_wire(item) } },
+          meta: ::Oapi::Decode.optional(raw, "meta") { |v| KitchenSink::Codecs::ModMeta::INSTANCE.from_wire(v) },
+          extra: ::Oapi::Decode.optional(raw, "extra") { |v| Oapi::Decode.values(v) { |item| ::Oapi::Codec::Primitive::Integer::INSTANCE.from_wire(item) } },
         )
       end
 
       sig { override.params(value: KitchenSink::Types::Mod).returns(::Oapi::Wire) }
       def to_wire(value)
         wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
-        wire["id"] = ::Oapi::Codec::Scalar::Integer.to_wire(value.id)
-        wire["name"] = ::Oapi::Codec::Scalar::String.to_wire(value.name)
+        wire["id"] = ::Oapi::Codec::Primitive::Integer::INSTANCE.to_wire(value.id)
+        wire["name"] = ::Oapi::Codec::Primitive::String::INSTANCE.to_wire(value.name)
         status = value.status
-        wire["status"] = KitchenSink::Codecs::ModStatus.to_wire(status) unless status.nil?
-        wire["updatedAt"] = ::Oapi::Codec::Scalar::DateTime.to_wire(value.updated_at)
+        wire["status"] = KitchenSink::Codecs::ModStatus::INSTANCE.to_wire(status) unless status.nil?
+        wire["updatedAt"] = ::Oapi::Codec::Primitive::DateTime::INSTANCE.to_wire(value.updated_at)
         deleted_at = value.deleted_at
-        wire["deletedAt"] = deleted_at.nil? ? nil : ::Oapi::Codec::Scalar::DateTime.to_wire(deleted_at)
+        wire["deletedAt"] = deleted_at.nil? ? nil : ::Oapi::Codec::Primitive::DateTime::INSTANCE.to_wire(deleted_at)
         summary = value.summary
-        wire["summary"] = ::Oapi::Codec::Scalar::String.to_wire(summary) unless summary.nil?
+        wire["summary"] = ::Oapi::Codec::Primitive::String::INSTANCE.to_wire(summary) unless summary.nil?
         bio = value.bio
         if bio.is_a?(::Oapi::Present)
           inner = bio.value
-          wire["bio"] = inner.nil? ? nil : ::Oapi::Codec::Scalar::String.to_wire(inner)
+          wire["bio"] = inner.nil? ? nil : ::Oapi::Codec::Primitive::String::INSTANCE.to_wire(inner)
         end
         page_size = value.page_size
-        wire["pageSize"] = ::Oapi::Codec::Scalar::Integer.to_wire(page_size) unless page_size.nil?
+        wire["pageSize"] = ::Oapi::Codec::Primitive::Integer::INSTANCE.to_wire(page_size) unless page_size.nil?
         owner = value.owner
         if owner.is_a?(::Oapi::Present)
           inner = owner.value
-          wire["owner"] = inner.nil? ? nil : KitchenSink::Codecs::User.to_wire(inner)
+          wire["owner"] = inner.nil? ? nil : KitchenSink::Codecs::User::INSTANCE.to_wire(inner)
         end
         tags = value.tags
-        wire["tags"] = tags.map { |item| ::Oapi::Codec::Scalar::String.to_wire(item) } unless tags.nil?
+        wire["tags"] = tags.map { |item| ::Oapi::Codec::Primitive::String::INSTANCE.to_wire(item) } unless tags.nil?
         meta = value.meta
-        wire["meta"] = KitchenSink::Codecs::ModMeta.to_wire(meta) unless meta.nil?
+        wire["meta"] = KitchenSink::Codecs::ModMeta::INSTANCE.to_wire(meta) unless meta.nil?
         extra = value.extra
-        wire["extra"] = extra.transform_values { |item| ::Oapi::Codec::Scalar::Integer.to_wire(item) } unless extra.nil?
+        wire["extra"] = extra.transform_values { |item| ::Oapi::Codec::Primitive::Integer::INSTANCE.to_wire(item) } unless extra.nil?
         wire
       end
+
+      INSTANCE = T.let(new, Mod)
     end
-    Mod = T.let(ModCodec.new, ModCodec)
   end
 end

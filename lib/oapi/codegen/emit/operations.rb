@@ -77,8 +77,9 @@ module Oapi
           default = meta.default
 
           if default
-            literal = default.value
-            return "const :#{info.identifier}, #{base}, default: #{literal.inspect}"
+            clause = Defaults.clause(schema: info.schema, default: default, registry: @registry)
+            type = Defaults.nilable?(required: true, meta: meta) ? "T.nilable(#{base})" : base
+            return "const :#{info.identifier}, #{type}, #{clause}"
           end
 
           return "const :#{info.identifier}, #{base}" if Ir::Parameter.required?(parameter) && !meta.nullable

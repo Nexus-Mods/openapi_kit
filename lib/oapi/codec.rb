@@ -25,10 +25,10 @@ module Oapi
     sig { abstract.params(value: Value).returns(Oapi::Wire) }
     def to_wire(value); end
 
-    module Scalar
+    module Primitive
       UUID = T.let(/\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/, Regexp)
 
-      class UntypedCodec
+      class Untyped
         extend T::Sig
         extend T::Generic
         include Oapi::Codec
@@ -40,9 +40,11 @@ module Oapi
 
         sig { override.params(value: T.untyped).returns(Oapi::Wire) }
         def to_wire(value) = value
+
+        INSTANCE = T.let(new, Untyped)
       end
 
-      class StringCodec
+      class String
         extend T::Sig
         extend T::Generic
         include Oapi::Codec
@@ -58,9 +60,11 @@ module Oapi
 
         sig { override.params(value: ::String).returns(Oapi::Wire) }
         def to_wire(value) = value
+
+        INSTANCE = T.let(new, String)
       end
 
-      class IntegerCodec
+      class Integer
         extend T::Sig
         extend T::Generic
         include Oapi::Codec
@@ -77,9 +81,11 @@ module Oapi
 
         sig { override.params(value: ::Integer).returns(Oapi::Wire) }
         def to_wire(value) = value
+
+        INSTANCE = T.let(new, Integer)
       end
 
-      class FloatCodec
+      class Float
         extend T::Sig
         extend T::Generic
         include Oapi::Codec
@@ -103,9 +109,11 @@ module Oapi
 
         sig { override.params(value: ::Float).returns(Oapi::Wire) }
         def to_wire(value) = value
+
+        INSTANCE = T.let(new, Float)
       end
 
-      class DecimalCodec
+      class Decimal
         extend T::Sig
         extend T::Generic
         include Oapi::Codec
@@ -129,9 +137,11 @@ module Oapi
 
         sig { override.params(value: ::BigDecimal).returns(Oapi::Wire) }
         def to_wire(value) = value.to_s("F")
+
+        INSTANCE = T.let(new, Decimal)
       end
 
-      class BooleanCodec
+      class Boolean
         extend T::Sig
         extend T::Generic
         include Oapi::Codec
@@ -155,9 +165,11 @@ module Oapi
 
         sig { override.params(value: T::Boolean).returns(Oapi::Wire) }
         def to_wire(value) = value
+
+        INSTANCE = T.let(new, Boolean)
       end
 
-      class DateTimeCodec
+      class DateTime
         extend T::Sig
         extend T::Generic
         include Oapi::Codec
@@ -178,9 +190,11 @@ module Oapi
 
         sig { override.params(value: ::Time).returns(Oapi::Wire) }
         def to_wire(value) = value.utc.iso8601
+
+        INSTANCE = T.let(new, DateTime)
       end
 
-      class DateCodec
+      class Date
         extend T::Sig
         extend T::Generic
         include Oapi::Codec
@@ -200,9 +214,11 @@ module Oapi
 
         sig { override.params(value: ::Date).returns(Oapi::Wire) }
         def to_wire(value) = value.iso8601
+
+        INSTANCE = T.let(new, Date)
       end
 
-      class UuidCodec
+      class Uuid
         extend T::Sig
         extend T::Generic
         include Oapi::Codec
@@ -218,9 +234,11 @@ module Oapi
 
         sig { override.params(value: ::String).returns(Oapi::Wire) }
         def to_wire(value) = value
+
+        INSTANCE = T.let(new, Uuid)
       end
 
-      class ByteCodec
+      class Byte
         extend T::Sig
         extend T::Generic
         include Oapi::Codec
@@ -241,18 +259,9 @@ module Oapi
 
         sig { override.params(value: ::String).returns(Oapi::Wire) }
         def to_wire(value) = [value].pack("m0")
-      end
 
-      Untyped = T.let(UntypedCodec.new, UntypedCodec)
-      String = T.let(StringCodec.new, StringCodec)
-      Integer = T.let(IntegerCodec.new, IntegerCodec)
-      Float = T.let(FloatCodec.new, FloatCodec)
-      Decimal = T.let(DecimalCodec.new, DecimalCodec)
-      Boolean = T.let(BooleanCodec.new, BooleanCodec)
-      DateTime = T.let(DateTimeCodec.new, DateTimeCodec)
-      Date = T.let(DateCodec.new, DateCodec)
-      Uuid = T.let(UuidCodec.new, UuidCodec)
-      Byte = T.let(ByteCodec.new, ByteCodec)
+        INSTANCE = T.let(new, Byte)
+      end
     end
   end
 end

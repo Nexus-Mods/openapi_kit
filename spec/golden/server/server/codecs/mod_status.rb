@@ -4,7 +4,7 @@
 
 module Server
   module Codecs
-    class ModStatusCodec
+    class ModStatus
       extend T::Sig
       extend T::Generic
       include ::Oapi::Codec
@@ -21,7 +21,8 @@ module Server
 
       sig { override.params(value: Server::Types::ModStatus).returns(::Oapi::Wire) }
       def to_wire(value) = value.serialize
+
+      INSTANCE = T.let(new, ModStatus)
     end
-    ModStatus = T.let(ModStatusCodec.new, ModStatusCodec)
   end
 end

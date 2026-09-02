@@ -7,28 +7,23 @@ module Oapi
       module Defaults
         extend T::Sig
 
-        sig { params(type: T.any(T::Module[T.anything], String), codec: T.untyped).returns(RubyType) }
+        sig do
+          params(type: T.any(T::Module[T.anything], String), codec: T::Class[T.anything])
+            .returns(RubyType)
+        end
         def self.entry(type, codec)
           RubyType.new(
             type: type.is_a?(::Module) ? "::#{T.must(type.name)}" : type,
-            codec: "::Oapi::Codec::Scalar::#{constant_holding(codec)}"
+            codec: "::#{T.must(codec.name)}::INSTANCE"
           )
-        end
-
-        sig { params(codec: T.untyped).returns(Symbol) }
-        def self.constant_holding(codec)
-          found = Oapi::Codec::Scalar.constants.find { |name| Oapi::Codec::Scalar.const_get(name).equal?(codec) }
-          return found if found
-
-          raise Error, "#{codec.class} is not held by any constant under Oapi::Codec::Scalar"
         end
 
         BASES = T.let(
           {
-            "string" => entry(::String, Oapi::Codec::Scalar::String),
-            "integer" => entry(::Integer, Oapi::Codec::Scalar::Integer),
-            "number" => entry(::Float, Oapi::Codec::Scalar::Float),
-            "boolean" => entry("T::Boolean", Oapi::Codec::Scalar::Boolean)
+            "string" => entry(::String, Oapi::Codec::Primitive::String),
+            "integer" => entry(::Integer, Oapi::Codec::Primitive::Integer),
+            "number" => entry(::Float, Oapi::Codec::Primitive::Float),
+            "boolean" => entry("T::Boolean", Oapi::Codec::Primitive::Boolean)
           }.freeze,
           T::Hash[String, RubyType]
         )
@@ -48,16 +43,16 @@ module Oapi
 
         FORMATS_WITH_OWN_TYPE = T.let(
           {
-            "string:date-time" => entry(::Time, Oapi::Codec::Scalar::DateTime),
-            "string:date" => entry(::Date, Oapi::Codec::Scalar::Date),
-            "string:uuid" => entry(::String, Oapi::Codec::Scalar::Uuid),
-            "string:byte" => entry(::String, Oapi::Codec::Scalar::Byte),
+            "string:date-time" => entry(::Time, Oapi::Codec::Primitive::DateTime),
+            "string:date" => entry(::Date, Oapi::Codec::Primitive::Date),
+            "string:uuid" => entry(::String, Oapi::Codec::Primitive::Uuid),
+            "string:byte" => entry(::String, Oapi::Codec::Primitive::Byte),
             "string:binary" => RubyType.new(
               type: "::ActionDispatch::Http::UploadedFile",
-              codec: "::Oapi::Rails::Codec::UploadedFile"
+              codec: "::Oapi::Rails::Codec::UploadedFile::INSTANCE"
             ),
-            "string:decimal" => entry(::BigDecimal, Oapi::Codec::Scalar::Decimal),
-            "number:decimal" => entry(::BigDecimal, Oapi::Codec::Scalar::Decimal)
+            "string:decimal" => entry(::BigDecimal, Oapi::Codec::Primitive::Decimal),
+            "number:decimal" => entry(::BigDecimal, Oapi::Codec::Primitive::Decimal)
           }.freeze,
           T::Hash[String, RubyType]
         )
@@ -140,6 +135,21 @@ module Oapi
         end
       end
 
+      NATIVE_LITERALS = T.let(
+        {
+          "::String" => [::String],
+          "::Integer" => [::Integer],
+          "::Float" => [::Float],
+          "T::Boolean" => [::TrueClass, ::FalseClass]
+        }.freeze,
+        T::Hash[String, T::Array[T::Class[T.anything]]]
+      )
+
+      sig { params(schema: Ir::Schema, value: T.untyped).returns(T::Boolean) }
+      def literal_matches_type?(schema, value)
+        NATIVE_LITERALS.fetch(sorbet_type(schema), []).any? { |native| value.is_a?(native) }
+      end
+
       sig { params(schema: Ir::Schema, value: String).returns(String) }
       def to_wire_expr(schema, value:)
         case schema
@@ -165,7 +175,7 @@ module Oapi
       private
 
       sig { params(schema: Ir::Ref).returns(String) }
-      def codec_for(schema) = "#{@namespace}::Codecs::#{schema.name}"
+      def codec_for(schema) = "#{@namespace}::Codecs::#{schema.name}::INSTANCE"
 
       sig { params(schema: Ir::Ref).returns(T.nilable(Ir::Schema)) }
       def alias_target(schema)

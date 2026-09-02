@@ -37,7 +37,8 @@ module Oapi
       end
 
       SHADOWED = T.let(
-        (Object.instance_methods + Kernel.instance_methods).to_set(&:to_s).freeze,
+        (Object.instance_methods + Kernel.instance_methods + T::Struct.instance_methods)
+          .to_set(&:to_s).freeze,
         T::Set[String]
       )
 

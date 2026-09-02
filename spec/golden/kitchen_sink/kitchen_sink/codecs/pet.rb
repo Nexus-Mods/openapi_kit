@@ -4,7 +4,7 @@
 
 module KitchenSink
   module Codecs
-    class PetCodec
+    class Pet
       extend T::Sig
       extend T::Generic
       include ::Oapi::Codec
@@ -18,8 +18,8 @@ module KitchenSink
         raw = ::Oapi::Decode.object(value)
         tag = raw["kind"]
         case tag
-        when "cat" then KitchenSink::Codecs::Cat.from_wire(raw)
-        when "dog" then KitchenSink::Codecs::Dog.from_wire(raw)
+        when "cat" then KitchenSink::Codecs::Cat::INSTANCE.from_wire(raw)
+        when "dog" then KitchenSink::Codecs::Dog::INSTANCE.from_wire(raw)
         else raise(::Oapi::DecodeError.new("expected kind to be one of #{TAGS.join(", ")}, got #{tag.inspect}"))
         end
       end
@@ -27,12 +27,13 @@ module KitchenSink
       sig { override.params(value: KitchenSink::Types::Pet).returns(::Oapi::Wire) }
       def to_wire(value)
         case value
-        when KitchenSink::Types::Cat then KitchenSink::Codecs::Cat.to_wire(value)
-        when KitchenSink::Types::Dog then KitchenSink::Codecs::Dog.to_wire(value)
+        when KitchenSink::Types::Cat then KitchenSink::Codecs::Cat::INSTANCE.to_wire(value)
+        when KitchenSink::Types::Dog then KitchenSink::Codecs::Dog::INSTANCE.to_wire(value)
         else T.absurd(value)
         end
       end
+
+      INSTANCE = T.let(new, Pet)
     end
-    Pet = T.let(PetCodec.new, PetCodec)
   end
 end

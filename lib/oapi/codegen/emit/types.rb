@@ -99,11 +99,7 @@ module Oapi
 
         sig { params(property: Ir::Property, default: Ir::Default).returns(String) }
         def default_clause(property, default)
-          literal = default.value
-          return "default: #{literal.inspect}" if literal.is_a?(::String) || literal.is_a?(::Integer) ||
-                                                  literal.is_a?(::Float) || literal == true || literal == false
-
-          "factory: -> { #{@registry.from_wire_expr(property.schema, value: literal.inspect)} }"
+          Defaults.clause(schema: property.schema, default: default, registry: @registry)
         end
 
         sig { params(property: Ir::Property).returns(T::Boolean) }
@@ -117,7 +113,7 @@ module Oapi
           meta = Ir::Schema.meta(property.schema)
           base = @registry.sorbet_type(property.schema)
           return "::Oapi::Optional[T.nilable(#{base})]" if tristate?(property)
-          return "T.nilable(#{base})" if meta.nullable || (!property.required && meta.default.nil?)
+          return "T.nilable(#{base})" if Defaults.nilable?(required: property.required, meta: meta)
 
           base
         end

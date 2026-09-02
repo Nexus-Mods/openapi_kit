@@ -4,7 +4,7 @@
 
 module Server
   module Codecs
-    class NewModCodec
+    class NewMod
       extend T::Sig
       extend T::Generic
       include ::Oapi::Codec
@@ -15,17 +15,18 @@ module Server
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
         Server::Types::NewMod.new(
-          name: ::Oapi::Decode.field(raw, "name") { |v| ::Oapi::Codec::Scalar::String.from_wire(v) },
+          name: ::Oapi::Decode.field(raw, "name") { |v| ::Oapi::Codec::Primitive::String::INSTANCE.from_wire(v) },
         )
       end
 
       sig { override.params(value: Server::Types::NewMod).returns(::Oapi::Wire) }
       def to_wire(value)
         wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
-        wire["name"] = ::Oapi::Codec::Scalar::String.to_wire(value.name)
+        wire["name"] = ::Oapi::Codec::Primitive::String::INSTANCE.to_wire(value.name)
         wire
       end
+
+      INSTANCE = T.let(new, NewMod)
     end
-    NewMod = T.let(NewModCodec.new, NewModCodec)
   end
 end

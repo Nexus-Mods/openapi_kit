@@ -8,7 +8,7 @@ require "oapi/runtime"
 module Oapi
   module Rails
     module Codec
-      class UploadedFileCodec
+      class UploadedFile
         extend T::Sig
         extend T::Generic
         include Oapi::Codec
@@ -24,9 +24,9 @@ module Oapi
 
         sig { override.params(value: ::ActionDispatch::Http::UploadedFile).returns(Oapi::Wire) }
         def to_wire(value) = value.original_filename
-      end
 
-      UploadedFile = T.let(UploadedFileCodec.new, UploadedFileCodec)
+        INSTANCE = T.let(new, UploadedFile)
+      end
     end
   end
 end

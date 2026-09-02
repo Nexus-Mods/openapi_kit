@@ -4,32 +4,29 @@
 
 module KitchenSink
   module Codecs
-    class Dog
+    class SnakeDog
       extend T::Sig
       extend T::Generic
       include ::Oapi::Codec
 
-      Value = type_member { { fixed: KitchenSink::Types::Dog } }
+      Value = type_member { { fixed: KitchenSink::Types::SnakeDog } }
 
-      sig { override.params(value: T.untyped).returns(KitchenSink::Types::Dog) }
+      sig { override.params(value: T.untyped).returns(KitchenSink::Types::SnakeDog) }
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
-        KitchenSink::Types::Dog.new(
+        KitchenSink::Types::SnakeDog.new(
           kind: ::Oapi::Decode.field(raw, "kind") { |v| ::Oapi::Codec::Primitive::String::INSTANCE.from_wire(v) },
-          breed: ::Oapi::Decode.optional(raw, "breed") { |v| ::Oapi::Codec::Primitive::String::INSTANCE.from_wire(v) },
         )
       end
 
-      sig { override.params(value: KitchenSink::Types::Dog).returns(::Oapi::Wire) }
+      sig { override.params(value: KitchenSink::Types::SnakeDog).returns(::Oapi::Wire) }
       def to_wire(value)
         wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
         wire["kind"] = ::Oapi::Codec::Primitive::String::INSTANCE.to_wire(value.kind)
-        breed = value.breed
-        wire["breed"] = ::Oapi::Codec::Primitive::String::INSTANCE.to_wire(breed) unless breed.nil?
         wire
       end
 
-      INSTANCE = T.let(new, Dog)
+      INSTANCE = T.let(new, SnakeDog)
     end
   end
 end

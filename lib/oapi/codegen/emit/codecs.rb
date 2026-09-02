@@ -36,7 +36,7 @@ module Oapi
         sig { params(buffer: Buffer, type: Ir::TypeDef).void }
         def emit_codec(buffer, type)
           name = Ir::TypeDef.name_of(type)
-          buffer.nest("class #{name}Codec") do
+          buffer.nest("class #{name}") do
             buffer.line("extend T::Sig")
             buffer.line("extend T::Generic")
             buffer.line("include ::Oapi::Codec")
@@ -49,8 +49,9 @@ module Oapi
             buffer.blank
             buffer.line("sig { override.params(value: #{qualified(name)}).returns(::Oapi::Wire) }")
             emit_to_wire(buffer, type)
+            buffer.blank
+            buffer.line("INSTANCE = T.let(new, #{name})")
           end
-          buffer.line("#{name} = T.let(#{name}Codec.new, #{name}Codec)")
         end
 
         sig { params(buffer: Buffer, type: Ir::TypeDef).void }
@@ -127,6 +128,14 @@ module Oapi
           "::Oapi::Decode.values(raw.except(#{known})) { |item| #{inner} }"
         end
 
+        sig { params(schema: Ir::Schema).returns(String) }
+        def additional_encode(schema)
+          inner = @registry.to_wire_expr(schema, value: "item")
+          return "value.additional_properties" if inner == "item"
+
+          "value.additional_properties.transform_values { |item| #{inner} }"
+        end
+
         sig { params(property: Ir::Property).returns(String) }
         def decode_expr(property)
           meta = Ir::Schema.meta(property.schema)
@@ -134,8 +143,10 @@ module Oapi
           key = property.name.inspect
           default = meta.default
 
-          return "::Oapi::Decode.defaulted(raw, #{key}, #{default.value.inspect}) { |v| #{inner} }" if
-            default && !property.required
+          if default && !property.required
+            fallback = Defaults.expression(schema: property.schema, default: default, registry: @registry)
+            return "::Oapi::Decode.defaulted(raw, #{key}, #{fallback}) { |v| #{inner} }"
+          end
           return "::Oapi::Decode.tristate(raw, #{key}) { |v| #{inner} }" if tristate?(property)
           return "::Oapi::Decode.nullable_field(raw, #{key}) { |v| #{inner} }" if property.required && meta.nullable
           return "::Oapi::Decode.field(raw, #{key}) { |v| #{inner} }" if property.required
@@ -148,7 +159,8 @@ module Oapi
           buffer.nest("def to_wire(value)") do
             buffer.line("wire = T.let({}, T::Hash[::String, ::Oapi::Wire])")
             type.properties.each { |property| emit_property_to_wire(buffer, property) }
-            buffer.line("wire.merge!(value.additional_properties)") if type.additional_properties
+            extra = type.additional_properties
+            buffer.line("wire.merge!(#{additional_encode(extra)})") if extra
             buffer.line("wire")
           end
         end
@@ -235,7 +247,7 @@ module Oapi
         end
 
         sig { params(name: String).returns(String) }
-        def codec_for(name) = "#{@config.namespace}::Codecs::#{name}"
+        def codec_for(name) = "#{@config.namespace}::Codecs::#{name}::INSTANCE"
       end
     end
   end

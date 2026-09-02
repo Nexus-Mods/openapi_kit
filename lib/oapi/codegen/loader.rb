@@ -61,7 +61,7 @@ module Oapi
         end
 
         base = Naming.pascal(id)
-        parameters = (Array(item.parameters) + Array(node.parameters))
+        parameters = (Array(node.parameters) + Array(item.parameters))
                      .uniq { |p| [p.name, p.in] }
                      .map { |p| build_parameter(p, hint: base) }
 
@@ -324,7 +324,7 @@ module Oapi
         raw = node.one_of || node.any_of
         members = raw.each_with_index.map { |m, i| schema_for(m, hint: "#{name}Member#{i + 1}") }
 
-        Ir::UnionDef.new(name: name, members: members, tag: union_tag(node, members),
+        Ir::UnionDef.new(name: name, members: members, tag: union_tag(node),
                          meta: meta_for(node))
       end
 
@@ -361,16 +361,23 @@ module Oapi
         Array(node.required).each { |name| required << name.to_s }
       end
 
-      sig { params(node: T.untyped, members: T::Array[Ir::Schema]).returns(Ir::UnionTag) }
-      def union_tag(node, members)
+      sig { params(node: T.untyped).returns(Ir::UnionTag) }
+      def union_tag(node)
         discriminator = node.discriminator
         return Ir::Untagged.new if discriminator.nil?
 
         mapping = (discriminator.mapping || {})
                   .to_h { |value, ref| [value.to_s, rename(ref.to_s.split("/").last.to_s)] }
-        mapping = members.filter_map { |m| [m.name, m.name] if m.is_a?(Ir::Ref) }.to_h if mapping.empty?
+        mapping = implicit_mapping(node) if mapping.empty?
 
         Ir::Tagged.new(property_name: discriminator.property_name, mapping: mapping)
+      end
+
+      sig { params(node: T.untyped).returns(T::Hash[String, String]) }
+      def implicit_mapping(node)
+        (node.one_of || node.any_of).to_a
+                                    .filter_map { |member| [member.name, rename(member.name)] if member.name }
+                                    .to_h
       end
 
       sig { params(node: T.untyped, nullable: T::Boolean).returns(Ir::Meta) }

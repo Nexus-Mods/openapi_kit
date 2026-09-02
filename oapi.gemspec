@@ -22,9 +22,8 @@ Gem::Specification.new do |spec|
   spec.files = Dir[
     "exe/oapi",
     "lib/oapi.rb",
-    "lib/oapi/*.rb",
-    "lib/oapi/{ir,analyzer,types,emit}/**/*.rb",
-    "lib/oapi/templates/**/*.erb",
+    "lib/oapi/codegen.rb",
+    "lib/oapi/codegen/**/*.rb",
     "LICENSE.txt",
     "README.md"
   ]

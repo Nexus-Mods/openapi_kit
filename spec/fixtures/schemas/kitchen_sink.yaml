@@ -40,3 +40,17 @@ components:
     Cat: { type: object, required: [kind], properties: { kind: { type: string }, lives: { type: integer } } }
     Dog: { type: object, required: [kind], properties: { kind: { type: string }, breed: { type: string } } }
     Loose: { anyOf: [{ type: string }, { type: integer }] }
+    Adversarial:
+      type: object
+      required: [serialize]
+      properties:
+        serialize: { type: string }
+        since: { type: string, format: date-time, default: "2020-01-01T00:00:00Z" }
+        cleared: { type: string, nullable: true, default: null }
+        rate: { type: number, default: 1 }
+      additionalProperties: { type: string, format: date-time }
+    snake_cat: { type: object, required: [kind], properties: { kind: { type: string } } }
+    snake_dog: { type: object, required: [kind], properties: { kind: { type: string } } }
+    SnakePet:
+      oneOf: [{ $ref: "#/components/schemas/snake_cat" }, { $ref: "#/components/schemas/snake_dog" }]
+      discriminator: { propertyName: kind }

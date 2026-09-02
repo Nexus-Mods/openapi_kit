@@ -4,7 +4,7 @@
 
 module KitchenSink
   module Codecs
-    class CatCodec
+    class Cat
       extend T::Sig
       extend T::Generic
       include ::Oapi::Codec
@@ -15,20 +15,21 @@ module KitchenSink
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
         KitchenSink::Types::Cat.new(
-          kind: ::Oapi::Decode.field(raw, "kind") { |v| ::Oapi::Codec::Scalar::String.from_wire(v) },
-          lives: ::Oapi::Decode.optional(raw, "lives") { |v| ::Oapi::Codec::Scalar::Integer.from_wire(v) },
+          kind: ::Oapi::Decode.field(raw, "kind") { |v| ::Oapi::Codec::Primitive::String::INSTANCE.from_wire(v) },
+          lives: ::Oapi::Decode.optional(raw, "lives") { |v| ::Oapi::Codec::Primitive::Integer::INSTANCE.from_wire(v) },
         )
       end
 
       sig { override.params(value: KitchenSink::Types::Cat).returns(::Oapi::Wire) }
       def to_wire(value)
         wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
-        wire["kind"] = ::Oapi::Codec::Scalar::String.to_wire(value.kind)
+        wire["kind"] = ::Oapi::Codec::Primitive::String::INSTANCE.to_wire(value.kind)
         lives = value.lives
-        wire["lives"] = ::Oapi::Codec::Scalar::Integer.to_wire(lives) unless lives.nil?
+        wire["lives"] = ::Oapi::Codec::Primitive::Integer::INSTANCE.to_wire(lives) unless lives.nil?
         wire
       end
+
+      INSTANCE = T.let(new, Cat)
     end
-    Cat = T.let(CatCodec.new, CatCodec)
   end
 end
