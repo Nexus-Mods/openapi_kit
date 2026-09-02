@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "oapi"
+require "oapi-runtime"
 require "fileutils"
 Dir[File.join(__dir__, "support", "**", "*.rb")].each { |f| require f }
 

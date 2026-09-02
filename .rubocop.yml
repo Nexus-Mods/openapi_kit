@@ -39,3 +39,10 @@ Metrics/PerceivedComplexity:
   Max: 15
 Naming/PredicateMethod:
   Enabled: false
+Style/RaiseArgs:
+  AllowedCompactTypes:
+    - Oapi::DecodeError
+    - DecodeError
+Naming/FileName:
+  Exclude:
+    - "lib/oapi-runtime.rb"
