@@ -57,7 +57,7 @@ module Oapi
         T::Hash[String, RubyType]
       )
 
-      TABLE = T.let(
+      DEFAULTS = T.let(
         BASES
           .merge(
             FORMATS_WITHOUT_OWN_TYPE.flat_map do |base, formats|
@@ -80,7 +80,7 @@ module Oapi
       )
 
       sig { params(key: String).returns(T.nilable(RubyType)) }
-      def self.[](key) = TABLE[key]
+      def self.[](key) = DEFAULTS[key]
 
       sig { params(key: String).returns(T.nilable(String)) }
       def self.refusal(key) = REFUSED[key]

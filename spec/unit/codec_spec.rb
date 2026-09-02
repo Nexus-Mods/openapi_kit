@@ -151,7 +151,7 @@ class MoneyCodecClass
 
   Value = type_member { { fixed: Money } }
 
-  sig { override.params(value: Oapi::Wire).returns(Money) }
+  sig { override.params(value: T.untyped).returns(Money) }
   def from_wire(value) = Money.new(Oapi::Codec::Scalar::Integer.from_wire(value))
 
   sig { override.params(value: Money).returns(Oapi::Wire) }
@@ -172,7 +172,7 @@ class SaltedIdCodec
     @salt = salt
   end
 
-  sig { override.params(value: Oapi::Wire).returns(Integer) }
+  sig { override.params(value: T.untyped).returns(Integer) }
   def from_wire(value) = Oapi::Codec::Scalar::String.from_wire(value).delete_prefix(@salt).to_i
 
   sig { override.params(value: Integer).returns(Oapi::Wire) }

@@ -23,6 +23,7 @@ Gem::Specification.new do |spec|
     "lib/oapi-runtime.rb",
     "lib/oapi/runtime.rb",
     "lib/oapi/runtime/**/*.rb",
+    "lib/oapi/rails.rb",
     "lib/oapi/version.rb",
     "LICENSE.txt",
     "README.md"

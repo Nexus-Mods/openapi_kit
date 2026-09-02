@@ -14,7 +14,7 @@ module Oapi
 
     Value = type_member
 
-    sig { abstract.params(value: Oapi::Wire).returns(Value) }
+    sig { abstract.params(value: T.untyped).returns(Value) }
     def from_wire(value); end
 
     sig { abstract.params(value: Value).returns(Oapi::Wire) }
@@ -30,7 +30,7 @@ module Oapi
 
         Value = type_member { { fixed: T.untyped } }
 
-        sig { override.params(value: Oapi::Wire).returns(T.untyped) }
+        sig { override.params(value: T.untyped).returns(T.untyped) }
         def from_wire(value) = value
 
         sig { override.params(value: T.untyped).returns(Oapi::Wire) }
@@ -44,7 +44,7 @@ module Oapi
 
         Value = type_member { { fixed: ::String } }
 
-        sig { override.params(value: Oapi::Wire).returns(::String) }
+        sig { override.params(value: T.untyped).returns(::String) }
         def from_wire(value)
           return value if value.is_a?(::String)
 
@@ -62,7 +62,7 @@ module Oapi
 
         Value = type_member { { fixed: ::Integer } }
 
-        sig { override.params(value: Oapi::Wire).returns(::Integer) }
+        sig { override.params(value: T.untyped).returns(::Integer) }
         def from_wire(value)
           return value if value.is_a?(::Integer)
           return value.to_i if value.is_a?(::String) && value.match?(/\A[+-]?\d+\z/)
@@ -81,7 +81,7 @@ module Oapi
 
         Value = type_member { { fixed: ::Float } }
 
-        sig { override.params(value: Oapi::Wire).returns(::Float) }
+        sig { override.params(value: T.untyped).returns(::Float) }
         def from_wire(value)
           return value.to_f if value.is_a?(::Numeric)
 
@@ -107,7 +107,7 @@ module Oapi
 
         Value = type_member { { fixed: ::BigDecimal } }
 
-        sig { override.params(value: Oapi::Wire).returns(::BigDecimal) }
+        sig { override.params(value: T.untyped).returns(::BigDecimal) }
         def from_wire(value)
           case value
           when ::Integer then Kernel.BigDecimal(value)
@@ -136,7 +136,7 @@ module Oapi
         TRUTHY = T.let(%w[true 1].freeze, T::Array[::String])
         FALSEY = T.let(%w[false 0].freeze, T::Array[::String])
 
-        sig { override.params(value: Oapi::Wire).returns(T::Boolean) }
+        sig { override.params(value: T.untyped).returns(T::Boolean) }
         def from_wire(value)
           return value if value.is_a?(::TrueClass) || value.is_a?(::FalseClass)
 
@@ -159,7 +159,7 @@ module Oapi
 
         Value = type_member { { fixed: ::Time } }
 
-        sig { override.params(value: Oapi::Wire).returns(::Time) }
+        sig { override.params(value: T.untyped).returns(::Time) }
         def from_wire(value)
           raise DecodeError.new("expected an RFC 3339 date-time, got #{value.inspect}") unless
             value.is_a?(::String)
@@ -182,7 +182,7 @@ module Oapi
 
         Value = type_member { { fixed: ::Date } }
 
-        sig { override.params(value: Oapi::Wire).returns(::Date) }
+        sig { override.params(value: T.untyped).returns(::Date) }
         def from_wire(value)
           raise DecodeError.new("expected an ISO 8601 date, got #{value.inspect}") unless value.is_a?(::String)
 
@@ -204,7 +204,7 @@ module Oapi
 
         Value = type_member { { fixed: ::String } }
 
-        sig { override.params(value: Oapi::Wire).returns(::String) }
+        sig { override.params(value: T.untyped).returns(::String) }
         def from_wire(value)
           return value if value.is_a?(::String) && value.match?(UUID)
 
@@ -222,7 +222,7 @@ module Oapi
 
         Value = type_member { { fixed: ::String } }
 
-        sig { override.params(value: Oapi::Wire).returns(::String) }
+        sig { override.params(value: T.untyped).returns(::String) }
         def from_wire(value)
           raise DecodeError.new("expected base64, got #{value.inspect}") unless value.is_a?(::String)
 

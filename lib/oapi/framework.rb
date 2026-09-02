@@ -18,8 +18,29 @@ module Oapi
       T::Hash[String, String]
     )
 
+    TYPE_MAPPINGS = T.let(
+      {
+        "rails" => {
+          "string:binary" => RubyType.new(
+            type: "::ActionDispatch::Http::UploadedFile",
+            codec: "::Oapi::Rails::Codec::UploadedFile"
+          )
+        }.freeze,
+        "rack" => {}.freeze
+      }.freeze,
+      T::Hash[String, T::Hash[String, RubyType]]
+    )
+
+    REQUIRES = T.let({ "rails" => "oapi/rails" }.freeze, T::Hash[String, String])
+
     sig { returns(String) }
     def request_type = T.must(REQUEST_TYPES[serialize])
+
+    sig { returns(T::Hash[String, RubyType]) }
+    def type_mappings = T.must(TYPE_MAPPINGS[serialize])
+
+    sig { returns(T.nilable(String)) }
+    def runtime_require = REQUIRES[serialize]
 
     sig { params(value: T.untyped).returns(Framework) }
     def self.parse(value)

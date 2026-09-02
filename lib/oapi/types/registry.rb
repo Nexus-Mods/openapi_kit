@@ -13,7 +13,7 @@ module Oapi
         params(namespace: String, type_mappings: T::Hash[String, RubyType],
                types: T::Hash[String, Ir::TypeDef]).void
       end
-      def initialize(namespace:, type_mappings: {}, types: {})
+      def initialize(namespace:, type_mappings: Builtins::DEFAULTS, types: {})
         @namespace = namespace
         @type_mappings = type_mappings
         @types = types
@@ -22,9 +22,12 @@ module Oapi
 
       sig { params(document: Ir::Document, config: Config).returns(Registry) }
       def self.for(document, config)
+        framework = config.framework
         new(
           namespace: config.namespace,
-          type_mappings: config.type_mappings,
+          type_mappings: Builtins::DEFAULTS
+                         .merge(framework ? framework.type_mappings : {})
+                         .merge(config.type_mappings),
           types: document.types.to_h { |type| [Ir::TypeDefs.name(type), type] }
         )
       end
@@ -110,15 +113,12 @@ module Oapi
 
         keys.each_with_index do |key, index|
           mapping = @type_mappings[key]
-          return mapping if mapping
+          if mapping
+            warn_unrecognised_format(requested, key) if index.positive?
+            return mapping
+          end
 
           raise SchemaError, unmapped_message(key) if Builtins.refusal(key)
-
-          builtin = Builtins[key]
-          next if builtin.nil?
-
-          warn_unrecognised_format(requested, key) if index.positive?
-          return builtin
         end
 
         raise SchemaError, unmapped_message(requested)
@@ -128,7 +128,7 @@ module Oapi
       def warn_unrecognised_format(requested, used)
         message = <<~MESSAGE.strip
           #{requested.inspect} has no Ruby type mapped, so it is treated as #{used.inspect}
-          (#{T.must(Builtins[used]).type}). If that is wrong, map it:
+          (#{T.must(@type_mappings[used]).type}). If that is wrong, map it:
 
             type_mappings:
               #{requested.inspect}:

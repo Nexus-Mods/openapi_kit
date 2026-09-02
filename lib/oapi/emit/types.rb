@@ -213,7 +213,7 @@ module Oapi
           buffer.line("Value = type_member { { fixed: #{qualified(name)} } }")
           buffer.blank
           emit_codec_constants(buffer, type)
-          buffer.line("sig { override.params(value: ::Oapi::Wire).returns(#{qualified(name)}) }")
+          buffer.line("sig { override.params(value: T.untyped).returns(#{qualified(name)}) }")
           emit_from_wire(buffer, type)
           buffer.blank
           buffer.line("sig { override.params(value: #{qualified(name)}).returns(::Oapi::Wire) }")

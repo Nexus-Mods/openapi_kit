@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 RSpec.describe Oapi::Types::Registry do
-  subject(:registry) { described_class.new(namespace: "API::V3", type_mappings: mappings) }
+  subject(:registry) do
+    described_class.new(namespace: "API::V3", type_mappings: Oapi::Types::Builtins::DEFAULTS.merge(mappings))
+  end
 
   let(:mappings) { {} }
 
@@ -103,9 +105,9 @@ RSpec.describe Oapi::Types::Registry do
     it "is satisfied by mapping the format itself" do
       mapped = described_class.new(
         namespace: "API::V3",
-        type_mappings: {
+        type_mappings: Oapi::Types::Builtins::DEFAULTS.merge(
           "string:binary" => Oapi::RubyType.new(type: "::Tempfile", codec: "MyApp::UploadCodec")
-        }
+        )
       )
 
       expect(mapped.sorbet_type(string("binary"))).to eq("::Tempfile")
@@ -114,7 +116,9 @@ RSpec.describe Oapi::Types::Registry do
     it "is not satisfied by mapping the base type, which would swallow binary into a String" do
       mapped = described_class.new(
         namespace: "API::V3",
-        type_mappings: { "string" => Oapi::RubyType.new(type: "::Text", codec: "MyApp::TextCodec") }
+        type_mappings: Oapi::Types::Builtins::DEFAULTS.merge(
+          "string" => Oapi::RubyType.new(type: "::Text", codec: "MyApp::TextCodec")
+        )
       )
 
       expect { mapped.sorbet_type(string("binary")) }

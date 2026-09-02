@@ -117,7 +117,7 @@ module KitchenSink
 
       VALUES = T.let(["live", "under-moderation", "hidden"].freeze, T::Array[::Oapi::Wire])
 
-      sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::ModStatus) }
+      sig { override.params(value: T.untyped).returns(KitchenSink::Types::ModStatus) }
       def from_wire(value)
         KitchenSink::Types::ModStatus.try_deserialize(value) ||
           raise(::Oapi::DecodeError.new("expected one of #{VALUES.join(", ")}, got #{value.inspect}"))
@@ -135,7 +135,7 @@ module KitchenSink
 
       Value = type_member { { fixed: KitchenSink::Types::User } }
 
-      sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::User) }
+      sig { override.params(value: T.untyped).returns(KitchenSink::Types::User) }
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
         KitchenSink::Types::User.new(
@@ -164,7 +164,7 @@ module KitchenSink
 
       Value = type_member { { fixed: KitchenSink::Types::ModMeta } }
 
-      sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::ModMeta) }
+      sig { override.params(value: T.untyped).returns(KitchenSink::Types::ModMeta) }
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
         KitchenSink::Types::ModMeta.new(
@@ -189,7 +189,7 @@ module KitchenSink
 
       Value = type_member { { fixed: KitchenSink::Types::Mod } }
 
-      sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::Mod) }
+      sig { override.params(value: T.untyped).returns(KitchenSink::Types::Mod) }
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
         KitchenSink::Types::Mod.new(
@@ -250,7 +250,7 @@ module KitchenSink
 
       Value = type_member { { fixed: KitchenSink::Types::Cat } }
 
-      sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::Cat) }
+      sig { override.params(value: T.untyped).returns(KitchenSink::Types::Cat) }
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
         KitchenSink::Types::Cat.new(
@@ -277,7 +277,7 @@ module KitchenSink
 
       Value = type_member { { fixed: KitchenSink::Types::Dog } }
 
-      sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::Dog) }
+      sig { override.params(value: T.untyped).returns(KitchenSink::Types::Dog) }
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
         KitchenSink::Types::Dog.new(
@@ -306,7 +306,7 @@ module KitchenSink
 
       TAGS = T.let(["cat", "dog"].freeze, T::Array[::String])
 
-      sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::Pet) }
+      sig { override.params(value: T.untyped).returns(KitchenSink::Types::Pet) }
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
         tag = raw["kind"]
@@ -335,7 +335,7 @@ module KitchenSink
 
       Value = type_member { { fixed: KitchenSink::Types::Loose } }
 
-      sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::Loose) }
+      sig { override.params(value: T.untyped).returns(KitchenSink::Types::Loose) }
       def from_wire(value)
         ::Oapi::Decode.first_of(value, "Loose", [
           ->(candidate) { ::Oapi::Codec::Scalar::String.from_wire(candidate) },

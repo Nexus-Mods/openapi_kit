@@ -70,7 +70,7 @@ module Server
 
       VALUES = T.let(["live", "hidden"].freeze, T::Array[::Oapi::Wire])
 
-      sig { override.params(value: ::Oapi::Wire).returns(Server::Types::ModStatus) }
+      sig { override.params(value: T.untyped).returns(Server::Types::ModStatus) }
       def from_wire(value)
         Server::Types::ModStatus.try_deserialize(value) ||
           raise(::Oapi::DecodeError.new("expected one of #{VALUES.join(", ")}, got #{value.inspect}"))
@@ -88,7 +88,7 @@ module Server
 
       Value = type_member { { fixed: Server::Types::Mod } }
 
-      sig { override.params(value: ::Oapi::Wire).returns(Server::Types::Mod) }
+      sig { override.params(value: T.untyped).returns(Server::Types::Mod) }
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
         Server::Types::Mod.new(
@@ -117,7 +117,7 @@ module Server
 
       Value = type_member { { fixed: Server::Types::ProblemDetails } }
 
-      sig { override.params(value: ::Oapi::Wire).returns(Server::Types::ProblemDetails) }
+      sig { override.params(value: T.untyped).returns(Server::Types::ProblemDetails) }
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
         Server::Types::ProblemDetails.new(
@@ -144,7 +144,7 @@ module Server
 
       Value = type_member { { fixed: Server::Types::NewMod } }
 
-      sig { override.params(value: ::Oapi::Wire).returns(Server::Types::NewMod) }
+      sig { override.params(value: T.untyped).returns(Server::Types::NewMod) }
       def from_wire(value)
         raw = ::Oapi::Decode.object(value)
         Server::Types::NewMod.new(
