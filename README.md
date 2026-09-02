@@ -195,8 +195,11 @@ documented behaviour, and the binary case warns.
 ## Development
 
 ```console
-$ bundle exec rake        # rspec, srb tc, rubocop
+$ bundle exec rake golden   # regenerate the output the specs compare against
+$ bundle exec rake          # rspec, srb tc, rubocop
 ```
+
+[ARCHITECTURE.md](ARCHITECTURE.md) covers the pipeline and where to change what.
 
 `srb tc` covers `spec/golden` as well as the generator, so output that does not typecheck
 fails the build. `spec/dummy` is a Rails application whose `app/api` is generated before

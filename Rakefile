@@ -17,4 +17,15 @@ task :lint do
   sh "bundle exec rubocop"
 end
 
+desc "Regenerate the golden output and the dummy application's API"
+task :golden do
+  require "pathname"
+  $LOAD_PATH.unshift("lib")
+  require "oapi"
+  require_relative "spec/support/golden"
+  require_relative "spec/dummy/generate"
+
+  (Golden.call + Dummy::Generate.call).each { |path| puts path.relative_path_from(Pathname.pwd) }
+end
+
 task default: %i[spec typecheck lint]
