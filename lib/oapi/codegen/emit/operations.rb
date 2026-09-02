@@ -14,19 +14,14 @@ module Oapi
           @config = config
         end
 
-        sig { returns(String) }
+        sig { returns(T::Array[SourceFile]) }
         def render
-          buffer = Buffer.new
-          buffer.line("# typed: strict")
-          buffer.line("# frozen_string_literal: true")
-          buffer.blank
-          buffer.nest_modules(@config.modules + ["Operations"]) do
-            @document.operations.each_with_index do |operation, index|
-              buffer.blank if index.positive?
+          @document.operations.map do |operation|
+            Source.file(path: "#{@config.module_path}/operations/#{Naming.snake(operation.id)}.rb",
+                        modules: @config.modules + ["Operations"]) do |buffer|
               emit_operation(buffer, operation)
             end
           end
-          buffer.to_s
         end
 
         sig { params(operation: Ir::Operation).returns(String) }

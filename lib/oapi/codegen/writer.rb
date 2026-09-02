@@ -36,6 +36,7 @@ module Oapi
         end
 
         existing.each(&:delete)
+        prune_empty_directories
       end
 
       sig { params(name: String, content: String).returns(Pathname) }
@@ -50,6 +51,13 @@ module Oapi
       end
 
       private
+
+      sig { void }
+      def prune_empty_directories
+        output.glob("**/*").select(&:directory?).sort.reverse_each do |directory|
+          directory.rmdir if directory.children.empty?
+        end
+      end
 
       sig { params(name: String, content: String).void }
       def verify_syntax!(name, content)

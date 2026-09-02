@@ -3,6 +3,7 @@
 # frozen_string_literal: true
 
 module KitchenSink
-  module Operations
+  module Types
+    Loose = T.type_alias { T.any(::String, ::Integer) }
   end
 end

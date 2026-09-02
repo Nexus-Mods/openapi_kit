@@ -14,3 +14,5 @@ group :development, :test do
   gem "rubocop-rspec", "~> 3.0", require: false
   gem "sorbet", "~> 0.5", require: false
 end
+
+gem "zeitwerk", "~> 2.8", groups: %i[development test]

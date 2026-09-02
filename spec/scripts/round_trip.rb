@@ -1,7 +1,12 @@
 # frozen_string_literal: true
 
 require "oapi-runtime"
-require File.expand_path("#{ARGV.fetch(0)}/types")
+require "zeitwerk"
+
+loader = Zeitwerk::Loader.new
+loader.push_dir(File.expand_path(ARGV.fetch(0)))
+loader.setup
+loader.eager_load
 
 WIRE = {
   "id" => 7,

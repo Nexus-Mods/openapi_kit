@@ -23,18 +23,5 @@ module Server
       end
       def create_mod(request:); end
     end
-
-    module System
-      extend T::Sig
-      extend T::Helpers
-      interface!
-
-      sig do
-        abstract
-          .params(request: Server::Operations::GetHealth::Request)
-          .returns(Server::Operations::GetHealth::Response)
-      end
-      def get_health(request:); end
-    end
   end
 end

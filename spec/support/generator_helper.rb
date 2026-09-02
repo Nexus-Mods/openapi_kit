@@ -22,6 +22,10 @@ module GeneratorHelper
   def golden(name)
     GOLDEN.join(name)
   end
+
+  def relative_paths(dir)
+    dir.glob("**/*.rb").map { |file| file.relative_path_from(dir).to_s }.sort
+  end
 end
 
 RSpec.configure do |config|

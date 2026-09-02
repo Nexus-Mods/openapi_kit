@@ -85,6 +85,9 @@ module Oapi
       sig { returns(String) }
       def namespace = modules.join("::")
 
+      sig { returns(String) }
+      def module_path = modules.map { |name| Naming.snake(name) }.join("/")
+
       sig { params(parts: String).returns(String) }
       def container_key(*parts)
         [container_prefix, *parts].compact.join(".")

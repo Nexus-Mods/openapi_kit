@@ -21,33 +21,25 @@ module Oapi
         registry = TypeRegistry.for(document, @config)
         writer = Writer.new(output: @config.output)
 
-        rendered = {
-          "types.rb" => Emit::Types.new(document: document, registry: registry, config: @config).render,
-          "operations.rb" => Emit::Operations.new(document: document, registry: registry, config: @config).render,
-          "handlers.rb" => Emit::Handlers.new(document: document, config: @config).render,
-          "container.rb" => Emit::Container.new(document: document, config: @config).render
-        }
+        files = emitters(document, registry).flat_map(&:render)
 
         writer.clean!
-        rendered.each { |name, contents| writer.write(name, contents) }
-        writer.write("api.rb", entry_point(rendered.keys))
+        files.each { |file| writer.write(file.path, file.contents) }
         @warnings = registry.warnings
         writer.written
       end
 
       private
 
-      sig { params(names: T::Array[String]).returns(String) }
-      def entry_point(names)
-        buffer = Emit::Buffer.new
-        buffer.line("# typed: strict")
-        buffer.line("# frozen_string_literal: true")
-        buffer.blank
-        buffer.line("require \"oapi-runtime\"")
-        buffer.line("require \"oapi/rails\"")
-        buffer.blank
-        names.each { |name| buffer.line("require_relative #{name.delete_suffix(".rb").inspect}") }
-        buffer.to_s
+      sig { params(document: Ir::Document, registry: TypeRegistry).returns(T::Array[T.untyped]) }
+      def emitters(document, registry)
+        [
+          Emit::Types.new(document: document, registry: registry, config: @config),
+          Emit::Codecs.new(document: document, registry: registry, config: @config),
+          Emit::Operations.new(document: document, registry: registry, config: @config),
+          Emit::Handlers.new(document: document, config: @config),
+          Emit::Container.new(document: document, config: @config)
+        ]
       end
     end
   end

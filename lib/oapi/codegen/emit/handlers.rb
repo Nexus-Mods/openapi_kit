@@ -16,19 +16,14 @@ module Oapi
         sig { params(tag: String).returns(String) }
         def self.module_name(tag) = Naming.pascal(tag)
 
-        sig { returns(String) }
+        sig { returns(T::Array[SourceFile]) }
         def render
-          buffer = Buffer.new
-          buffer.line("# typed: strict")
-          buffer.line("# frozen_string_literal: true")
-          buffer.blank
-          buffer.nest_modules(@config.modules + ["Handlers"]) do
-            by_tag.each_with_index do |(tag, operations), index|
-              buffer.blank if index.positive?
+          by_tag.map do |tag, operations|
+            Source.file(path: "#{@config.module_path}/handlers/#{Naming.snake(tag)}.rb",
+                        modules: @config.modules + ["Handlers"]) do |buffer|
               emit_interface(buffer, tag, operations)
             end
           end
-          buffer.to_s
         end
 
         private

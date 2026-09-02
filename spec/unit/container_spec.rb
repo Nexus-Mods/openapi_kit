@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
-require File.expand_path("../golden/server/api", __dir__)
+require "zeitwerk"
+
+GOLDEN_SERVER_LOADER = Zeitwerk::Loader.new
+GOLDEN_SERVER_LOADER.push_dir(File.expand_path("../golden/server", __dir__))
+GOLDEN_SERVER_LOADER.setup
+GOLDEN_SERVER_LOADER.eager_load
 
 RSpec.describe Oapi::Container do
   let(:complete) do

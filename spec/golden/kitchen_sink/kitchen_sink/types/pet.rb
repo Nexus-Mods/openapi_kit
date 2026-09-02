@@ -3,6 +3,7 @@
 # frozen_string_literal: true
 
 module KitchenSink
-  module Handlers
+  module Types
+    Pet = T.type_alias { T.any(KitchenSink::Types::Cat, KitchenSink::Types::Dog) }
   end
 end
