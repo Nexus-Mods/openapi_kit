@@ -107,8 +107,8 @@ module Oapi
 
     sig do
       params(names: T::Array[String],
-             lookup: T.proc.params(name: String).returns(T.nilable(String)))
-        .returns(T::Hash[String, String])
+             lookup: T.proc.params(name: String).returns(T.untyped))
+        .returns(T::Hash[String, T.untyped])
     end
     def self.gather(names, &lookup)
       names.each_with_object({}) do |name, found|

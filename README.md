@@ -113,16 +113,29 @@ module Api
   class BaseController < ApplicationController
     include Oapi::Rails::Rendering
 
+    rescue_from Oapi::DecodeError, with: :unprocessable
+
     private
 
     def oapi_container = Rails.configuration.x.api_container
+
+    def unprocessable(error)
+      render json: { title: "Unprocessable Content", detail: error.detail, pointer: error.json_pointer },
+             status: :unprocessable_content,
+             content_type: "application/problem+json"
+    end
   end
 end
 ```
 
-`Oapi::Rails::Rendering` supplies `render_openapi` and turns a `DecodeError` into a 422
-problem document. Including it is optional — a base class providing both methods itself
-works just as well, and nothing generated depends on the module.
+`Oapi::Rails::Rendering` supplies `render_openapi`, which turns a sealed response variant
+into a rendered response. Including it is optional — a base class providing that method
+itself works just as well, and nothing generated depends on the module.
+
+A request oapi cannot decode raises `Oapi::DecodeError`, carrying `detail` and a
+`json_pointer` naming the field. oapi takes no view on what that should look like on the
+wire, so rescue it wherever your application already handles errors. The example above
+answers RFC 9457, but nothing requires that.
 
 **5. Build the container and verify it at boot.**
 
@@ -200,6 +213,8 @@ price:
 - A request body may declare one content type.
 - Schema keyword validation (`minLength`, `pattern`, `minimum`) is not enforced; only
   types and formats are.
+- A request oapi cannot decode raises `Oapi::DecodeError`; mapping that to a response is
+  the application's job.
 - `modules` whose names are acronyms (`[API, V1]`) produce directories Zeitwerk's
   default inflector will not resolve. Use `[Api, V1]` or configure an inflection.
 

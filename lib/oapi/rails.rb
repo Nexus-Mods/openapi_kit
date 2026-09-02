@@ -3,7 +3,6 @@
 
 require "action_controller"
 require "action_dispatch"
-require "active_support/concern"
 
 require "oapi/runtime"
 
@@ -37,12 +36,7 @@ module Oapi
 
     module Rendering
       extend T::Sig
-      extend ::ActiveSupport::Concern
       include Kernel
-
-      included do
-        T.unsafe(self).rescue_from(Oapi::DecodeError, with: :render_openapi_decode_error)
-      end
 
       private
 
@@ -60,16 +54,6 @@ module Oapi
         return T.unsafe(self).head(response.status) if body.nil?
 
         T.unsafe(self).render(json: body, status: response.status, content_type: response.content_type)
-      end
-
-      sig { params(error: Oapi::DecodeError).void }
-      def render_openapi_decode_error(error)
-        T.unsafe(self).render(
-          json: { "title" => "Unprocessable Content", "status" => 422,
-                  "detail" => error.detail, "pointer" => error.json_pointer },
-          status: :unprocessable_content,
-          content_type: "application/problem+json"
-        )
       end
     end
   end

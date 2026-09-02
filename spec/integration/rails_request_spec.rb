@@ -61,9 +61,16 @@ CONTAINER = DummyContainer.new(
 class ApiBaseController < ActionController::API
   include Oapi::Rails::Rendering
 
+  rescue_from Oapi::DecodeError, with: :bad_request
+
   private
 
   def oapi_container = CONTAINER
+
+  def bad_request(error)
+    render json: { "error" => error.detail, "field" => error.json_pointer },
+           status: :bad_request
+  end
 end
 
 Server::Container.verify!(CONTAINER)
@@ -122,12 +129,12 @@ RSpec.describe "a generated API inside a Rails application" do
     expect(last_response.body).to be_empty
   end
 
-  it "reports an undecodable parameter as a problem document naming the field" do
+  # oapi raises and takes no view on the error body; the application decides.
+  it "raises a DecodeError the application handles however it likes" do
     get "/v1/games/skyrim/mods?page=banana"
 
-    expect(last_response.status).to eq(422)
-    expect(last_response.headers["content-type"]).to include("application/problem+json")
-    expect(parsed_body["pointer"]).to eq("/page")
-    expect(parsed_body["detail"]).to include("expected an integer")
+    expect(last_response.status).to eq(400)
+    expect(parsed_body["field"]).to eq("/page")
+    expect(parsed_body["error"]).to include("expected an integer")
   end
 end
