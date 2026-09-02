@@ -6,12 +6,20 @@ module Oapi
     module Builtins
       extend T::Sig
 
+      sig { params(type: T.any(Module, String), codec: Module).returns(RubyType) }
+      def self.entry(type, codec)
+        RubyType.new(
+          type: type.is_a?(Module) ? "::#{T.must(type.name)}" : type,
+          codec: "::#{T.must(codec.name)}"
+        )
+      end
+
       BASES = T.let(
         {
-          "string" => RubyType.new(type: "::String", coder: "Oapi::Coders::String"),
-          "integer" => RubyType.new(type: "::Integer", coder: "Oapi::Coders::Integer"),
-          "number" => RubyType.new(type: "::Float", coder: "Oapi::Coders::Float"),
-          "boolean" => RubyType.new(type: "T::Boolean", coder: "Oapi::Coders::Boolean")
+          "string" => entry(::String, Oapi::Codec::String),
+          "integer" => entry(::Integer, Oapi::Codec::Integer),
+          "number" => entry(::Float, Oapi::Codec::Float),
+          "boolean" => entry("T::Boolean", Oapi::Codec::Boolean)
         }.freeze,
         T::Hash[String, RubyType]
       )
@@ -31,13 +39,12 @@ module Oapi
 
       DISTINCT = T.let(
         {
-          "string:date-time" => RubyType.new(type: "::Time", coder: "Oapi::Coders::DateTime"),
-          "string:date" => RubyType.new(type: "::Date", coder: "Oapi::Coders::Date"),
-          "string:uuid" => RubyType.new(type: "::String", coder: "Oapi::Coders::Uuid"),
-          "string:byte" => RubyType.new(type: "::String", coder: "Oapi::Coders::Byte"),
-          "string:binary" => RubyType.new(type: "::Oapi::UploadedFile", coder: "Oapi::Coders::Binary"),
-          "string:decimal" => RubyType.new(type: "::BigDecimal", coder: "Oapi::Coders::Decimal"),
-          "number:decimal" => RubyType.new(type: "::BigDecimal", coder: "Oapi::Coders::Decimal")
+          "string:date-time" => entry(::Time, Oapi::Codec::DateTime),
+          "string:date" => entry(::Date, Oapi::Codec::Date),
+          "string:uuid" => entry(::String, Oapi::Codec::Uuid),
+          "string:byte" => entry(::String, Oapi::Codec::Byte),
+          "string:decimal" => entry(::BigDecimal, Oapi::Codec::Decimal),
+          "number:decimal" => entry(::BigDecimal, Oapi::Codec::Decimal)
         }.freeze,
         T::Hash[String, RubyType]
       )
@@ -54,8 +61,21 @@ module Oapi
         T::Hash[String, RubyType]
       )
 
+      REFUSED = T.let(
+        {
+          "string:binary" => "the Ruby type for binary content depends on your framework and " \
+                             "content type: Rails hands a multipart upload over as " \
+                             "ActionDispatch::Http::UploadedFile, while an octet-stream body is " \
+                             "just a String"
+        }.freeze,
+        T::Hash[String, String]
+      )
+
       sig { params(key: String).returns(T.nilable(RubyType)) }
       def self.[](key) = TABLE[key]
+
+      sig { params(key: String).returns(T.nilable(String)) }
+      def self.refusal(key) = REFUSED[key]
     end
   end
 end

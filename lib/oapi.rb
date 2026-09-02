@@ -3,6 +3,8 @@
 
 require "sorbet-runtime"
 
+require "oapi/runtime"
+
 require "oapi/version"
 require "oapi/errors"
 require "oapi/ruby_type"

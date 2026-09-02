@@ -7,10 +7,10 @@ RSpec.describe Oapi::Types::Builtins do
 
   it "gives formats with a distinct Ruby type that type" do
     expect(described_class["string:date-time"]).to be_ir(
-      Oapi::RubyType.new(type: "::Time", coder: "Oapi::Coders::DateTime")
+      Oapi::RubyType.new(type: "::Time", codec: "::Oapi::Codec::DateTime")
     )
-    expect(described_class["string:binary"]).to be_ir(
-      Oapi::RubyType.new(type: "::Oapi::UploadedFile", coder: "Oapi::Coders::Binary")
+    expect(described_class["string:decimal"]).to be_ir(
+      Oapi::RubyType.new(type: "::BigDecimal", codec: "::Oapi::Codec::Decimal")
     )
   end
 
@@ -25,16 +25,14 @@ RSpec.describe Oapi::Types::Builtins do
     expect(described_class["string:money"]).to be_nil
   end
 
-  it "names a coder that actually exists for every entry" do
-    described_class::TABLE.each_value do |ruby_type|
-      expect { Object.const_get(ruby_type.coder) }
-        .not_to raise_error, "#{ruby_type.coder} is not defined"
-    end
+  it "refuses to guess a type for binary content rather than owning a wrapper" do
+    expect(described_class["string:binary"]).to be_nil
+    expect(described_class.refusal("string:binary")).to match(/depends on your framework/)
   end
 
-  it "names a coder implementing Oapi::Coder for every entry" do
+  it "names a codec implementing Oapi::Codec for every entry" do
     described_class::TABLE.each_value do |ruby_type|
-      expect(Object.const_get(ruby_type.coder).singleton_class.ancestors).to include(Oapi::Coder)
+      expect(Object.const_get(ruby_type.codec).singleton_class.ancestors).to include(Oapi::Codec)
     end
   end
 end

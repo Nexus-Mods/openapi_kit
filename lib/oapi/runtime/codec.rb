@@ -6,23 +6,33 @@ require "date"
 require "time"
 
 module Oapi
-  module Coders
+  module Codec
+    extend T::Sig
+    extend T::Helpers
+    interface!
+
+    sig { abstract.params(value: Oapi::Wire).returns(T.untyped) }
+    def load(value); end
+
+    sig { abstract.params(value: T.untyped).returns(Oapi::Wire) }
+    def dump(value); end
+
     UUID = T.let(/\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/, Regexp)
 
     module Untyped
       extend T::Sig
-      extend Coder
+      extend Codec
 
       sig { override.params(value: Oapi::Wire).returns(T.untyped) }
       def self.load(value) = value
 
-      sig { override.params(value: T.untyped).returns(T.untyped) }
+      sig { override.params(value: T.untyped).returns(Oapi::Wire) }
       def self.dump(value) = value
     end
 
     module String
       extend T::Sig
-      extend Coder
+      extend Codec
 
       sig { override.params(value: Oapi::Wire).returns(::String) }
       def self.load(value)
@@ -31,13 +41,13 @@ module Oapi
         raise DecodeError.new("expected a string, got #{value.inspect}")
       end
 
-      sig { override.params(value: ::String).returns(::String) }
+      sig { override.params(value: ::String).returns(Oapi::Wire) }
       def self.dump(value) = value
     end
 
     module Integer
       extend T::Sig
-      extend Coder
+      extend Codec
 
       sig { override.params(value: Oapi::Wire).returns(::Integer) }
       def self.load(value)
@@ -47,13 +57,13 @@ module Oapi
         raise DecodeError.new("expected an integer, got #{value.inspect}")
       end
 
-      sig { override.params(value: ::Integer).returns(::Integer) }
+      sig { override.params(value: ::Integer).returns(Oapi::Wire) }
       def self.dump(value) = value
     end
 
     module Float
       extend T::Sig
-      extend Coder
+      extend Codec
 
       sig { override.params(value: Oapi::Wire).returns(::Float) }
       def self.load(value)
@@ -70,13 +80,13 @@ module Oapi
         raise DecodeError.new("expected a number, got #{value.inspect}")
       end
 
-      sig { override.params(value: ::Float).returns(::Float) }
+      sig { override.params(value: ::Float).returns(Oapi::Wire) }
       def self.dump(value) = value
     end
 
     module Decimal
       extend T::Sig
-      extend Coder
+      extend Codec
 
       sig { override.params(value: Oapi::Wire).returns(::BigDecimal) }
       def self.load(value)
@@ -94,13 +104,13 @@ module Oapi
         raise DecodeError.new("expected a decimal, got #{value.inspect}")
       end
 
-      sig { override.params(value: ::BigDecimal).returns(::String) }
+      sig { override.params(value: ::BigDecimal).returns(Oapi::Wire) }
       def self.dump(value) = value.to_s("F")
     end
 
     module Boolean
       extend T::Sig
-      extend Coder
+      extend Codec
 
       TRUTHY = T.let(%w[true 1].freeze, T::Array[::String])
       FALSEY = T.let(%w[false 0].freeze, T::Array[::String])
@@ -117,13 +127,13 @@ module Oapi
         raise DecodeError.new("expected a boolean, got #{value.inspect}")
       end
 
-      sig { override.params(value: T::Boolean).returns(T::Boolean) }
+      sig { override.params(value: T::Boolean).returns(Oapi::Wire) }
       def self.dump(value) = value
     end
 
     module DateTime
       extend T::Sig
-      extend Coder
+      extend Codec
 
       sig { override.params(value: Oapi::Wire).returns(::Time) }
       def self.load(value)
@@ -137,13 +147,13 @@ module Oapi
         end
       end
 
-      sig { override.params(value: ::Time).returns(::String) }
+      sig { override.params(value: ::Time).returns(Oapi::Wire) }
       def self.dump(value) = value.utc.iso8601
     end
 
     module Date
       extend T::Sig
-      extend Coder
+      extend Codec
 
       sig { override.params(value: Oapi::Wire).returns(::Date) }
       def self.load(value)
@@ -157,13 +167,13 @@ module Oapi
         end
       end
 
-      sig { override.params(value: ::Date).returns(::String) }
+      sig { override.params(value: ::Date).returns(Oapi::Wire) }
       def self.dump(value) = value.iso8601
     end
 
     module Uuid
       extend T::Sig
-      extend Coder
+      extend Codec
 
       sig { override.params(value: Oapi::Wire).returns(::String) }
       def self.load(value)
@@ -172,13 +182,13 @@ module Oapi
         raise DecodeError.new("expected a UUID, got #{value.inspect}")
       end
 
-      sig { override.params(value: ::String).returns(::String) }
+      sig { override.params(value: ::String).returns(Oapi::Wire) }
       def self.dump(value) = value
     end
 
     module Byte
       extend T::Sig
-      extend Coder
+      extend Codec
 
       sig { override.params(value: Oapi::Wire).returns(::String) }
       def self.load(value)
@@ -192,24 +202,8 @@ module Oapi
         raise DecodeError.new("expected base64, got #{value.inspect}")
       end
 
-      sig { override.params(value: ::String).returns(::String) }
+      sig { override.params(value: ::String).returns(Oapi::Wire) }
       def self.dump(value) = [value].pack("m0")
-    end
-
-    module Binary
-      extend T::Sig
-      extend Coder
-
-      sig { override.params(value: Oapi::Wire).returns(UploadedFile) }
-      def self.load(value)
-        return value if value.is_a?(UploadedFile)
-        return UploadedFile.new(io: value) if value.respond_to?(:read)
-
-        raise DecodeError.new("expected an uploaded file, got #{value.class}")
-      end
-
-      sig { override.params(value: UploadedFile).returns(T.untyped) }
-      def self.dump(value) = value.io
     end
   end
 end

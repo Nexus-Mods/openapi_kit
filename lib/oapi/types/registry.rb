@@ -34,7 +34,7 @@ module Oapi
       sig { params(schema: Ir::Schema, value: String).returns(String) }
       def load_expr(schema, value:)
         case schema
-        when Ir::Ref then "#{coder_for(schema)}.load(#{value})"
+        when Ir::Ref then "#{codec_for(schema)}.load(#{value})"
         when Ir::List
           "Oapi::Decode.each(#{value}) { |item| #{load_expr(schema.items, value: "item")} }"
         when Ir::Freeform
@@ -44,7 +44,7 @@ module Oapi
           "Oapi::Decode.values(#{value}) { |item| #{load_expr(values, value: "item")} }"
         when Ir::Untyped then value
         when Ir::StringSchema, Ir::IntegerSchema, Ir::NumberSchema, Ir::BooleanSchema
-          "#{scalar(schema).coder}.load(#{value})"
+          "#{scalar(schema).codec}.load(#{value})"
         else T.absurd(schema)
         end
       end
@@ -52,7 +52,7 @@ module Oapi
       sig { params(schema: Ir::Schema, value: String).returns(String) }
       def dump_expr(schema, value:)
         case schema
-        when Ir::Ref then "#{coder_for(schema)}.dump(#{value})"
+        when Ir::Ref then "#{codec_for(schema)}.dump(#{value})"
         when Ir::List
           inner = dump_expr(schema.items, value: "item")
           inner == "item" ? value : "#{value}.map { |item| #{inner} }"
@@ -64,13 +64,13 @@ module Oapi
           inner == "item" ? value : "#{value}.transform_values { |item| #{inner} }"
         when Ir::Untyped then value
         when Ir::StringSchema, Ir::IntegerSchema, Ir::NumberSchema, Ir::BooleanSchema
-          "#{scalar(schema).coder}.dump(#{value})"
+          "#{scalar(schema).codec}.dump(#{value})"
         else T.absurd(schema)
         end
       end
 
       sig { params(schema: Ir::Ref).returns(String) }
-      def coder_for(schema) = "#{@namespace}::Types::#{schema.name}::Coder"
+      def codec_for(schema) = "#{@namespace}::Types::#{schema.name}::Codec"
 
       private
 
@@ -82,20 +82,22 @@ module Oapi
         type, format = kind(schema)
         keys = format ? ["#{type}:#{format}", type] : [type]
 
-        keys.each do |key|
-          mapping = @type_mappings[key]
-          return mapping if mapping
-        end
+        requested = T.must(keys.first)
 
         keys.each_with_index do |key, index|
+          mapping = @type_mappings[key]
+          return mapping if mapping
+
+          raise SchemaError, unmapped_message(key) if Builtins.refusal(key)
+
           builtin = Builtins[key]
           next if builtin.nil?
 
-          warn_unrecognised_format(T.must(keys.first), key) if index.positive?
+          warn_unrecognised_format(requested, key) if index.positive?
           return builtin
         end
 
-        raise SchemaError, unmapped_message(T.must(keys.first))
+        raise SchemaError, unmapped_message(requested)
       end
 
       sig { params(requested: String, used: String).void }
@@ -107,7 +109,7 @@ module Oapi
             type_mappings:
               #{requested.inspect}:
                 type: "::YourType"
-                coder: "YourApp::YourTypeCoder"   # a module extending Oapi::Coder
+                codec: "YourApp::YourTypeCodec"   # a module extending Oapi::Codec
         MESSAGE
         @warnings << message unless @warnings.include?(message)
       end
@@ -125,13 +127,21 @@ module Oapi
 
       sig { params(key: String).returns(String) }
       def unmapped_message(key)
+        refusal = Builtins.refusal(key)
+        preamble =
+          if refusal
+            "oapi does not guess a Ruby type for #{key.inspect}, because #{refusal}. Map it:"
+          else
+            "No Ruby type is mapped for #{key.inspect}. Add one to your config:"
+          end
+
         <<~MESSAGE.strip
-          No Ruby type is mapped for #{key.inspect}. Add one to your config:
+          #{preamble}
 
             type_mappings:
               #{key.inspect}:
                 type: "::YourType"
-                coder: "YourApp::YourTypeCoder"   # a module extending Oapi::Coder
+                codec: "YourApp::YourTypeCodec"   # a module extending Oapi::Codec
         MESSAGE
       end
     end

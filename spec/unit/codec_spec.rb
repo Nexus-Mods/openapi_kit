@@ -10,7 +10,7 @@ class Money
   def ==(other) = other.is_a?(Money) && other.cents == cents
 end
 
-RSpec.describe Oapi::Coders do
+RSpec.describe Oapi::Codec do
   describe "Integer" do
     it "accepts an integer and the string form a query parameter arrives as" do
       expect(described_class::Integer.load(42)).to eq(42)
@@ -78,11 +78,11 @@ end
 RSpec.describe Oapi::Decode do
   describe ".field" do
     it "decodes a present value" do
-      expect(described_class.field({ "id" => "7" }, "id") { |v| Oapi::Coders::Integer.load(v) }).to eq(7)
+      expect(described_class.field({ "id" => "7" }, "id") { |v| Oapi::Codec::Integer.load(v) }).to eq(7)
     end
 
     it "attaches the pointer to a failure raised without one" do
-      expect { described_class.field({ "id" => "x" }, "id") { |v| Oapi::Coders::Integer.load(v) } }
+      expect { described_class.field({ "id" => "x" }, "id") { |v| Oapi::Codec::Integer.load(v) } }
         .to raise_error(Oapi::DecodeError, "/id: expected an integer, got \"x\"")
     end
 
@@ -114,14 +114,14 @@ RSpec.describe Oapi::Decode do
     end
 
     it "is Present(value) for a value" do
-      expect(described_class.tristate({ "bio" => "hi" }, "bio") { |v| Oapi::Coders::String.load(v) })
+      expect(described_class.tristate({ "bio" => "hi" }, "bio") { |v| Oapi::Codec::String.load(v) })
         .to eq(Oapi::Present.new(value: "hi"))
     end
   end
 
   describe ".each" do
     it "numbers the pointer by index" do
-      expect { described_class.field({ "tags" => %w[1 x] }, "tags") { |v| described_class.each(v) { |i| Oapi::Coders::Integer.load(i) } } }
+      expect { described_class.field({ "tags" => %w[1 x] }, "tags") { |v| described_class.each(v) { |i| Oapi::Codec::Integer.load(i) } } }
         .to raise_error(Oapi::DecodeError, "/tags/1: expected an integer, got \"x\"")
     end
   end
@@ -134,26 +134,26 @@ RSpec.describe Oapi::Decode do
   end
 end
 
-module MoneyCoder
+module MoneyCodec
   extend T::Sig
-  extend Oapi::Coder
+  extend Oapi::Codec
 
   sig { override.params(value: Oapi::Wire).returns(Money) }
-  def self.load(value) = Money.new(Oapi::Coders::Integer.load(value))
+  def self.load(value) = Money.new(Oapi::Codec::Integer.load(value))
 
   sig { override.params(value: Money).returns(Oapi::Wire) }
   def self.dump(value) = value.cents
 end
 
-RSpec.describe Oapi::Coder do
+RSpec.describe Oapi::Codec do
   it "converts a type it does not own, with nothing mixed into that type" do
     expect(Money.ancestors.map(&:to_s).grep(/Oapi/)).to be_empty
-    expect(MoneyCoder.load("500")).to eq(Money.new(500))
-    expect(MoneyCoder.dump(Money.new(500))).to eq(500)
+    expect(MoneyCodec.load("500")).to eq(Money.new(500))
+    expect(MoneyCodec.dump(Money.new(500))).to eq(500)
   end
 
-  it "is the one contract every coder implements, built-in or yours" do
-    [Oapi::Coders::DateTime, Oapi::Coders::Decimal, MoneyCoder].each do |coder|
+  it "is the one contract every codec implements, built-in or yours" do
+    [Oapi::Codec::DateTime, Oapi::Codec::Decimal, MoneyCodec].each do |coder|
       expect(coder.singleton_class.ancestors).to include(described_class)
     end
   end

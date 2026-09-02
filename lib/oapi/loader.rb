@@ -389,17 +389,17 @@ module Oapi
     sig { params(data: T::Hash[String, T.untyped]).returns(T.nilable(RubyType)) }
     def ruby_type_for(data)
       type = data["x-ruby-type"]
-      coder = data["x-ruby-coder"]
-      return nil if type.nil? && coder.nil?
+      codec = data["x-ruby-codec"]
+      return nil if type.nil? && codec.nil?
 
-      if type.nil? || coder.nil?
+      if type.nil? || codec.nil?
         raise SchemaError,
-              "x-ruby-type and x-ruby-coder must be given together (found only " \
-              "#{type.nil? ? "x-ruby-coder" : "x-ruby-type"}). `x-ruby-type` is what appears in " \
-              "signatures, `x-ruby-coder` is the module extending Oapi::Coder that converts it."
+              "x-ruby-type and x-ruby-codec must be given together (found only " \
+              "#{type.nil? ? "x-ruby-codec" : "x-ruby-type"}). `x-ruby-type` is what appears in " \
+              "signatures, `x-ruby-codec` is the module extending Oapi::Codec that converts it."
       end
 
-      RubyType.new(type: type.to_s, coder: coder.to_s)
+      RubyType.new(type: type.to_s, codec: codec.to_s)
     end
 
     sig { params(name: String).returns(String) }

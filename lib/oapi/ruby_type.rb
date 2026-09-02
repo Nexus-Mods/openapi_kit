@@ -5,32 +5,41 @@ module Oapi
   class RubyType < T::Struct
     extend T::Sig
 
+    CONSTANT_PATH = T.let(/\A(::)?[A-Z]\w*(::[A-Z]\w*)*\z/, Regexp)
+
     const :type, String
-    const :coder, String
+    const :codec, String
 
     sig { params(where: String, value: T.untyped).returns(RubyType) }
     def self.parse(where, value)
       unless value.is_a?(Hash)
         raise ConfigError,
-              "#{where} must be a mapping with `type` and `coder`, got #{value.inspect}.\n  " \
-              "#{where}:\n    type: \"::YourType\"\n    coder: \"YourApp::YourTypeCoder\""
+              "#{where} must be a mapping with `type` and `codec`, got #{value.inspect}.\n  " \
+              "#{where}:\n    type: \"::YourType\"\n    codec: \"YourApp::YourTypeCodec\""
       end
 
-      unknown = value.keys.map(&:to_s) - %w[type coder]
+      unknown = value.keys.map(&:to_s) - %w[type codec]
       unless unknown.empty?
         raise ConfigError,
               "#{where} has unknown key#{"s" if unknown.size > 1} #{unknown.sort.join(", ")}. " \
-              "Valid keys: type, coder."
+              "Valid keys: type, codec."
       end
 
-      missing = %w[type coder].reject { |key| value[key] }
+      missing = %w[type codec].reject { |key| value[key] }
       unless missing.empty?
         raise ConfigError,
               "#{where} is missing #{missing.join(" and ")}. Both are required: `type` is what " \
-              "appears in signatures, `coder` is the module extending Oapi::Coder that converts it."
+              "appears in signatures, `codec` is the module extending Oapi::Codec that converts it."
       end
 
-      new(type: value.fetch("type").to_s, coder: value.fetch("coder").to_s)
+      codec = value.fetch("codec").to_s
+      unless codec.match?(CONSTANT_PATH)
+        raise ConfigError,
+              "#{where}.codec is #{codec.inspect}, which is not a Ruby constant path. " \
+              "It must name a module extending Oapi::Codec, e.g. \"YourApp::YourTypeCodec\"."
+      end
+
+      new(type: value.fetch("type").to_s, codec: codec)
     end
   end
 end
