@@ -1,85 +1,12 @@
 # frozen_string_literal: true
 
-require "rack/test"
-require "action_controller/railtie"
+require "rails_helper"
 
-class DummyApp < Rails::Application
-  config.root = Pathname.new(__dir__).join("../..")
-  config.eager_load = false
-  config.secret_key_base = "oapi-integration"
-  config.logger = Logger.new(IO::NULL)
-  config.hosts.clear
-  config.autoload_paths << Pathname.new(__dir__).join("../golden/server").to_s
-end
-
-DummyApp.initialize!
-
-class ModsHandler
-  include Server::Handlers::Mods
-
-  def list_mods(request:)
-    if request.query.page < 1
-      return Server::Operations::ListMods::BadRequest.new(
-        body: Server::Types::ProblemDetails.new(title: "bad page")
-      )
-    end
-
-    Server::Operations::ListMods::Ok.new(
-      body: [Server::Types::Mod.new(id: 1, name: "#{request.path.game_domain}:#{request.query.page}",
-                                    status: Server::Types::ModStatus::Live)]
-    )
-  end
-
-  def create_mod(request:)
-    Server::Operations::CreateMod::Created.new(
-      body: Server::Types::Mod.new(id: 2, name: request.body.name, status: nil)
-    )
-  end
-end
-
-class SystemHandler
-  include Server::Handlers::System
-
-  def get_health(request:) = Server::Operations::GetHealth::Ok.new
-end
-
-class DummyContainer
-  def initialize(registrations)
-    @registrations = registrations
-  end
-
-  def resolve(key) = @registrations.fetch(key) { raise KeyError, "nothing registered for #{key.inspect}" }
-end
-
-CONTAINER = DummyContainer.new(
-  "v1.handlers.mods" => ModsHandler.new,
-  "v1.handlers.system" => SystemHandler.new
-)
-
-class ApiBaseController
-  rescue_from Oapi::DecodeError, with: :bad_request
-
-  private
-
-  def oapi_container = CONTAINER
-
-  def bad_request(error)
-    render json: { "error" => error.detail, "field" => error.json_pointer },
-           status: :bad_request
-  end
-end
-
-Server::Container.verify!(CONTAINER)
-
-DummyApp.routes.draw { scope("/v1") { Server::Routes.draw(self) } }
-
-# The generated code is loaded by Rails' own autoloader from spec/golden/server, so
-# this exercises routing, parameter decoding, handler dispatch and response rendering
-# through the real stack rather than a harness.
+# Generated code loaded by Rails' own autoloader out of the dummy application's
+# app/api, so routing, parameter decoding, handler dispatch and rendering all run
+# through the real stack.
 RSpec.describe "a generated API inside a Rails application" do
-  include Rack::Test::Methods
-
-  def app = DummyApp
+  def app = Dummy::Application
 
   def parsed_body = JSON.parse(last_response.body)
 

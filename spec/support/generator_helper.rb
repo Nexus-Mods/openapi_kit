@@ -26,9 +26,12 @@ module GeneratorHelper
   # Drives the generator from an inline document and returns the generated sources
   # keyed by relative path, so behaviour is asserted on the product rather than on
   # the intermediate model.
+  def scratch_dir
+    Pathname.new(Dir.mktmpdir).tap { |dir| @generated_dirs << dir }
+  end
+
   def generate_from(yaml, modules: %w[Api], **options)
-    dir = Pathname.new(Dir.mktmpdir)
-    @generated_dirs << dir
+    dir = scratch_dir
     dir.join("api.yaml").write(yaml)
 
     config = Oapi::Codegen::Config.from_hash(

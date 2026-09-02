@@ -13,8 +13,7 @@ RSpec.describe "translating a document" do
   def indent(body, columns) = body.strip.lines.map { |line| "#{" " * columns}#{line.chomp}" }
 
   def multi_file_document
-    dir = Pathname.new(Dir.mktmpdir)
-    @generated_dirs << dir
+    dir = scratch_dir
     dir.join("shared.yaml").write(<<~YAML)
       openapi: 3.0.3
       info: { title: S, version: "1.0" }

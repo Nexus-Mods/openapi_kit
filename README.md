@@ -231,5 +231,9 @@ $ bundle exec rake        # rspec, srb tc, rubocop
 ```
 
 `srb tc` covers the generated output in `spec/golden` as well as the generator, so
-output that does not typecheck fails the build. `spec/integration` boots a real Rails
-application over the generated tree and issues requests through it.
+output that does not typecheck fails the build.
+
+`spec/dummy` is a Rails application laid out the usual way. Its `app/api` is generated
+before the suite runs and autoloaded by Rails with no extra configuration, its
+`config/routes.rb` draws the generated routes, and an initializer builds a container and
+verifies it. `spec/generated/rails_request_spec.rb` issues real requests against it.

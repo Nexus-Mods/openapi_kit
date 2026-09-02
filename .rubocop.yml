@@ -67,7 +67,6 @@ RSpec/InstanceVariable:
   Exclude:
     - "spec/oapi/codegen/writer_spec.rb"
     - "spec/oapi/codegen/config_spec.rb"
-    - "spec/generated/**/*"
 RSpec/DescribeClass:
   Enabled: false
 Metrics/ModuleLength:
@@ -76,3 +75,11 @@ Naming/BlockForwarding:
   EnforcedStyle: explicit
 Style/ArgumentsForwarding:
   Enabled: false
+# type_member must be assigned to a constant in the class body; on an anonymous class
+# nothing leaks out of the example.
+Lint/ConstantDefinitionInBlock:
+  Exclude:
+    - "spec/oapi/codec/contract_spec.rb"
+RSpec/LeakyConstantDeclaration:
+  Exclude:
+    - "spec/oapi/codec/contract_spec.rb"
