@@ -286,15 +286,18 @@ module Oapi
           case node.type
           when "apiKey"
             Model::ApiKeyScheme.new(name: name, location: Model::ApiKeyLocation.deserialize(node.in),
-                                    parameter_name: node.name, description: node.description)
+                                    parameter_name: node.name, description: node.description,
+                                    extensions: extensions(node))
           when "http"
             Model::HttpScheme.new(name: name, scheme: node.scheme.to_s.downcase,
-                                  bearer_format: node.bearer_format, description: node.description)
+                                  bearer_format: node.bearer_format, description: node.description,
+                                  extensions: extensions(node))
           when "oauth2"
-            Model::OAuth2Scheme.new(name: name, scopes: oauth_scopes(node), description: node.description)
+            Model::OAuth2Scheme.new(name: name, scopes: oauth_scopes(node), description: node.description,
+                                    extensions: extensions(node))
           when "openIdConnect"
             Model::OpenIdConnectScheme.new(name: name, url: node.open_id_connect_url.to_s,
-                                           description: node.description)
+                                           description: node.description, extensions: extensions(node))
           else
             raise SchemaError, "Security scheme #{name.inspect} has unsupported type #{node.type.inspect}."
           end

@@ -43,6 +43,7 @@ module Oapi
       const :name, String
       const :location, ApiKeyLocation
       const :parameter_name, String
+      const :extensions, T::Hash[String, T.untyped], default: {}
     end
 
     class Http < T::Struct
@@ -50,18 +51,21 @@ module Oapi
       const :name, String
       const :scheme, String
       const :bearer_format, T.nilable(String), default: nil
+      const :extensions, T::Hash[String, T.untyped], default: {}
     end
 
     class OAuth2 < T::Struct
       include Scheme
       const :name, String
       const :scopes, T::Hash[String, String], default: {}
+      const :extensions, T::Hash[String, T.untyped], default: {}
     end
 
     class OpenIdConnect < T::Struct
       include Scheme
       const :name, String
       const :url, String
+      const :extensions, T::Hash[String, T.untyped], default: {}
     end
   end
 end

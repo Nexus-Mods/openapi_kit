@@ -173,6 +173,14 @@ module Oapi
           else T.absurd(scheme)
           end
         end
+
+        sig { params(scheme: SecurityScheme).returns(T::Hash[String, T.untyped]) }
+        def self.extensions_of(scheme)
+          case scheme
+          when ApiKeyScheme, HttpScheme, OAuth2Scheme, OpenIdConnectScheme then scheme.extensions
+          else T.absurd(scheme)
+          end
+        end
       end
 
       class StatusCode < T::Struct
@@ -218,6 +226,7 @@ module Oapi
         const :location, ApiKeyLocation
         const :parameter_name, String
         const :description, T.nilable(String), default: nil
+        const :extensions, T::Hash[String, T.untyped], default: {}
       end
 
       class HttpScheme < T::Struct
@@ -226,6 +235,7 @@ module Oapi
         const :scheme, String
         const :bearer_format, T.nilable(String), default: nil
         const :description, T.nilable(String), default: nil
+        const :extensions, T::Hash[String, T.untyped], default: {}
       end
 
       class OAuth2Scheme < T::Struct
@@ -233,6 +243,7 @@ module Oapi
         const :name, String
         const :scopes, T::Hash[String, String], default: {}
         const :description, T.nilable(String), default: nil
+        const :extensions, T::Hash[String, T.untyped], default: {}
       end
 
       class OpenIdConnectScheme < T::Struct
@@ -240,6 +251,7 @@ module Oapi
         const :name, String
         const :url, String
         const :description, T.nilable(String), default: nil
+        const :extensions, T::Hash[String, T.untyped], default: {}
       end
 
       class Operation < T::Struct

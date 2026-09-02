@@ -300,6 +300,49 @@ RSpec.describe "translating a document" do
     end
   end
 
+  describe "security schemes" do
+    def secured(scheme)
+      document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
+               "  /a:", "    get:", "      operationId: getA", "      tags: [t]",
+               "      security: [{ customAuth: [] }]",
+               %(      responses: { "204": { description: done } }),
+               "components:", "  securitySchemes:", *indent(scheme, 4))
+    end
+
+    # OpenAPI 3.0 fixes the four scheme types, but `http` takes any scheme name, so a
+    # bespoke scheme reaches the controller as the name the document gave it.
+    it "carries a custom http scheme name through" do
+      generated = secured("customAuth: { type: http, scheme: HMAC-SHA256 }")
+
+      expect(generated["api/security.rb"]).to include(%(scheme: "hmac-sha256"))
+    end
+
+    # x- is where anything the four types cannot express has to go, so it must survive.
+    it "carries x- extensions on a scheme through" do
+      generated = secured(<<~YAML)
+        customAuth:
+          type: http
+          scheme: bearer
+          x-signing-key: SIGNING_KEY
+      YAML
+
+      expect(generated["api/security.rb"]).to include(%(extensions: {"x-signing-key" => "SIGNING_KEY"}))
+    end
+
+    it "gives an operation the requirements it declares" do
+      generated = secured("customAuth: { type: apiKey, in: cookie, name: session }")
+
+      expect(generated["api/operations/get_a.rb"])
+        .to include(%(::Oapi::Security::Requirement.new(schemes: {"customAuth" => []})))
+      expect(generated["api/t_controller.rb"]).to include("oapi_authenticate!(Api::Operations::GetA::SECURITY)")
+    end
+
+    it "refuses a scheme type it does not know" do
+      expect { secured("customAuth: { type: mutualTLS }") }
+        .to raise_error(Oapi::SchemaError, /unsupported type "mutualTLS"/)
+    end
+  end
+
   describe "documents it refuses to generate" do
     def operation(body)
       document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:", *indent(body, 2))

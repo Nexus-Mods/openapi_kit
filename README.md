@@ -145,6 +145,31 @@ end
 credential from the scheme rather than hardcoding where it lives. oapi does no
 authenticating of its own, holds no principal, and takes no view on the refusal body.
 
+OpenAPI 3.0 fixes the four scheme types, so a bespoke scheme is an `http` one with your
+own name, and anything the type cannot express goes in `x-` keys, which reach the scheme
+as `extensions`:
+
+```yaml
+securitySchemes:
+  hmacAuth:
+    type: http
+    scheme: HMAC-SHA256
+    x-signing-key: SIGNING_KEY
+```
+
+```ruby
+def credential(scheme)
+  case scheme
+  when Oapi::Security::ApiKey then request.headers[scheme.parameter_name]
+  when Oapi::Security::Http
+    case scheme.scheme
+    when "hmac-sha256" then verify(request, key: ENV.fetch(scheme.extensions["x-signing-key"]))
+    when "bearer" then request.headers["Authorization"]&.delete_prefix("Bearer ")
+    end
+  end
+end
+```
+
 Build the container and verify it at boot, so a missing registration fails boot rather
 than the first request that needs it. Use `to_prepare`, or a reload leaves handlers
 holding stale constants:

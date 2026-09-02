@@ -38,6 +38,8 @@ module Oapi
             buffer.line("#{Security.constant(Model::SecurityScheme.name_of(scheme))} = T.let(")
             buffer.indent do
               type, arguments = constructor(scheme)
+              extensions = Model::SecurityScheme.extensions_of(scheme)
+              arguments += [["extensions", extensions.inspect]] unless extensions.empty?
               buffer.nest_call("#{type}.new", arguments)
               buffer.line("::Oapi::Security::Scheme")
             end
