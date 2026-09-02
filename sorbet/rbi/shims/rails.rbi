@@ -42,26 +42,26 @@ end
 module ActionDispatch
   module Routing
     class Mapper
-      sig { params(path: String, to: String).void }
-      def get(path, to:); end
+      sig { params(path: String, to: String, format: T::Boolean).void }
+      def get(path, to:, format: true); end
 
-      sig { params(path: String, to: String).void }
-      def post(path, to:); end
+      sig { params(path: String, to: String, format: T::Boolean).void }
+      def post(path, to:, format: true); end
 
-      sig { params(path: String, to: String).void }
-      def put(path, to:); end
+      sig { params(path: String, to: String, format: T::Boolean).void }
+      def put(path, to:, format: true); end
 
-      sig { params(path: String, to: String).void }
-      def patch(path, to:); end
+      sig { params(path: String, to: String, format: T::Boolean).void }
+      def patch(path, to:, format: true); end
 
-      sig { params(path: String, to: String).void }
-      def delete(path, to:); end
+      sig { params(path: String, to: String, format: T::Boolean).void }
+      def delete(path, to:, format: true); end
 
-      sig { params(path: String, to: String).void }
-      def options(path, to:); end
+      sig { params(path: String, to: String, format: T::Boolean).void }
+      def options(path, to:, format: true); end
 
-      sig { params(path: String, to: String).void }
-      def head(path, to:); end
+      sig { params(path: String, to: String, format: T::Boolean).void }
+      def head(path, to:, format: true); end
     end
   end
 end

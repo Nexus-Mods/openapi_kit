@@ -10,6 +10,13 @@ module Oapi
 
       VERBS = T.let(%w[get put post delete options head patch trace].freeze, T::Array[String])
 
+      # The media types Rails parses into request_parameters and oapi renders as JSON.
+      # Anything else would decode a Hash that was never there, so it is refused.
+      DECODABLE_MEDIA_TYPES = T.let(
+        %w[application/json application/x-www-form-urlencoded multipart/form-data].freeze,
+        T::Array[String]
+      )
+
       sig { params(config: Config).void }
       def initialize(config:)
         @config = config
@@ -154,8 +161,11 @@ module Oapi
 
       sig { params(node: T.untyped, hint: String).returns(Model::RequestBody) }
       def build_request_body(node, hint:)
-        Model::RequestBody.new(contents: contents(node.content, hint: "#{hint}Body"),
-                               required: !!node.required?, description: node.description)
+        Model::RequestBody.new(
+          contents: contents(node.content, hint: "#{hint}Body", where: "the request body of #{hint}"),
+          required: !!node.required?,
+          description: node.description
+        )
       end
 
       sig { params(node: T.untyped, hint: String).returns(T::Array[Model::Response]) }
@@ -167,7 +177,9 @@ module Oapi
           scoped = "#{hint}#{Model::Status.constant(status)}"
           Model::Response.new(
             status: status,
-            contents: contents(response.content, hint: scoped),
+            contents: contents(
+              response.content, hint: scoped, where: "the #{raw_status} response of #{hint}"
+            ),
             headers: (response.headers || {}).map do |name, header|
               Model::Header.new(name: name, identifier: Naming.identifier(name),
                                 schema: schema_for(header.schema, hint: "#{scoped}#{Naming.pascal(name)}"),
@@ -178,16 +190,28 @@ module Oapi
         end
       end
 
-      sig { params(node: T.untyped, hint: String).returns(T::Array[Model::Content]) }
-      def contents(node, hint:)
+      sig { params(node: T.untyped, hint: String, where: String).returns(T::Array[Model::Content]) }
+      def contents(node, hint:, where:)
         return [] if node.nil?
 
         multiple = node.keys.size > 1
         node.map do |media_type, media|
+          reject_undecodable_media_type!(media_type, where: where)
           suffix = multiple ? Naming.pascal(media_type.split("/").last.to_s.split("+").first.to_s) : ""
           Model::Content.new(media_type: media_type,
                              schema: (schema_for(media.schema, hint: "#{hint}#{suffix}") if media.schema))
         end
+      end
+
+      sig { params(media_type: String, where: String).void }
+      def reject_undecodable_media_type!(media_type, where:)
+        base = T.must(media_type.split(";").first).strip.downcase
+        return if DECODABLE_MEDIA_TYPES.include?(base) || base.end_with?("+json")
+
+        raise SchemaError,
+              "#{where} declares the content type #{media_type}, which oapi cannot decode or " \
+              "render. Supported content types are #{DECODABLE_MEDIA_TYPES.join(", ")} and any " \
+              "+json media type."
       end
 
       sig { params(document: T.untyped).returns(T::Array[Model::SecurityScheme]) }

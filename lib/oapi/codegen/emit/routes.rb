@@ -32,8 +32,22 @@ module Oapi
           buffer.blank
           buffer.line("sig { params(mapper: ::ActionDispatch::Routing::Mapper).void }")
           buffer.nest("def self.draw(mapper)") do
-            @document.operations.each { |operation| buffer.line(route_for(operation)) }
+            ordered(@document.operations).each { |operation| buffer.line(route_for(operation)) }
           end
+        end
+
+        # Rails matches routes in declaration order, so a templated segment declared first
+        # swallows a concrete one: /mods/{id} would answer GET /mods/featured. OpenAPI paths
+        # are unordered, so the emitter imposes concrete-before-templated per segment.
+        sig { params(operations: T::Array[Model::Operation]).returns(T::Array[Model::Operation]) }
+        def ordered(operations)
+          operations.each_with_index.sort_by { |operation, index| [template_flags(operation), index] }
+                    .map(&:first)
+        end
+
+        sig { params(operation: Model::Operation).returns(T::Array[Integer]) }
+        def template_flags(operation)
+          operation.path.split("/").reject(&:empty?).map { |segment| segment.start_with?("{") ? 1 : 0 }
         end
 
         sig { params(operation: Model::Operation).returns(String) }
@@ -41,11 +55,21 @@ module Oapi
           verb = operation.http_method.serialize
           target = "#{@config.module_path}/#{Naming.snake(operation.tag)}##{Naming.identifier(operation.id)}"
 
-          "mapper.#{verb}(#{path_for(operation).inspect}, to: #{target.inspect})"
+          "mapper.#{verb}(#{path_for(operation).inspect}, to: #{target.inspect}, format: false)"
         end
 
         sig { params(operation: Model::Operation).returns(String) }
-        def path_for(operation) = operation.path.gsub(/\{(\w+)\}/, ':\1')
+        def path_for(operation)
+          operation.path.scan(/\{([^}]*)\}/).flatten.each do |name|
+            next if name.match?(/\A\w+\z/)
+
+            raise SchemaError,
+                  "#{operation.path} has the path template {#{name}}, which Rails cannot route. " \
+                  "A path parameter name may contain only letters, digits and underscores."
+          end
+
+          operation.path.gsub(/\{(\w+)\}/, ':\1')
+        end
       end
     end
   end

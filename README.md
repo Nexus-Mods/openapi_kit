@@ -222,7 +222,9 @@ price:
   parses repeated keys as a single last-one-wins value, so send `?tags[]=a&tags[]=b`
   rather than the spec's `?tags=a&tags=b`, and `?filter[lat]=1` rather than an exploded
   `?lat=1`. A request using the spec form raises `Oapi::DecodeError`.
-- A request body may declare one content type.
+- A request body may declare one content type, and it must be one oapi can decode:
+  `application/json`, any `+json` type, `application/x-www-form-urlencoded` or
+  `multipart/form-data`. Anything else is refused at generation time.
 - Schema keyword validation (`minLength`, `pattern`, `minimum`) is not enforced; only
   types and formats are.
 - A request oapi cannot decode raises `Oapi::DecodeError`; mapping that to a response is

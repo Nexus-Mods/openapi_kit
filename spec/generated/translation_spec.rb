@@ -209,6 +209,32 @@ RSpec.describe "translating a document" do
     end
   end
 
+  # Rails matches in declaration order, so a templated segment declared first would
+  # swallow a concrete sibling.
+  it "declares concrete paths before the templated ones that would swallow them" do
+    generated = document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
+                         "  /mods/{id}:", "    get:", "      operationId: getMod", "      tags: [mods]",
+                         "      parameters:",
+                         "        - { name: id, in: path, required: true, schema: { type: string } }",
+                         %(      responses: { "204": { description: done } }),
+                         "  /mods/featured:", "    get:", "      operationId: getFeatured",
+                         "      tags: [mods]",
+                         %(      responses: { "204": { description: done } }))
+
+    routes = generated["api/routes.rb"].lines.grep(/mapper\./).map(&:strip)
+    expect(routes.first).to include("/mods/featured")
+    expect(routes.last).to include("/mods/:id")
+  end
+
+  # Without this a GET /mods/1.json truncates the id instead of 404ing.
+  it "turns off Rails' format segment so a dotted path parameter stays intact" do
+    generated = document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
+                         "  /health:", "    get:", "      operationId: getHealth", "      tags: [system]",
+                         %(      responses: { "204": { description: done } }))
+
+    expect(generated["api/routes.rb"]).to include("format: false")
+  end
+
   it "emits no routes, controllers or container for a components-only document" do
     generated = schemas("Mod: { type: object, properties: { id: { type: integer } } }")
 
@@ -291,6 +317,39 @@ RSpec.describe "translating a document" do
       expect { schemas(<<~YAML) }.to raise_error(Oapi::SchemaError, /A is defined in terms of itself.*A -> B -> A/m)
         A: { type: array, items: { $ref: "#/components/schemas/B" } }
         B: { type: array, items: { $ref: "#/components/schemas/A" } }
+      YAML
+    end
+
+    it "refuses a path template Rails cannot route" do
+      expect { operation(<<~YAML) }.to raise_error(Oapi::SchemaError, /path template \{game-domain\}/)
+        /g/{game-domain}:
+          get:
+            operationId: getGame
+            responses: { "204": { description: done } }
+      YAML
+    end
+
+    it "refuses a content type it can neither decode nor render" do
+      expect { operation(<<~YAML) }.to raise_error(Oapi::SchemaError, %r{content type text/plain})
+        /a:
+          post:
+            operationId: postA
+            requestBody:
+              content: { text/plain: { schema: { type: string } } }
+            responses: { "204": { description: done } }
+      YAML
+    end
+
+    it "accepts a +json content type" do
+      expect { operation(<<~YAML) }.not_to raise_error
+        /a:
+          post:
+            operationId: postA
+            requestBody:
+              content:
+                application/vnd.api+json:
+                  schema: { type: object, properties: { a: { type: string } } }
+            responses: { "204": { description: done } }
       YAML
     end
 

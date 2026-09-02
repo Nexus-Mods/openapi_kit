@@ -8,9 +8,9 @@ module Server
 
     sig { params(mapper: ::ActionDispatch::Routing::Mapper).void }
     def self.draw(mapper)
-      mapper.get("/games/:gameDomain/mods", to: "server/mods#list_mods")
-      mapper.post("/games/:gameDomain/mods", to: "server/mods#create_mod")
-      mapper.get("/health", to: "server/system#get_health")
+      mapper.get("/health", to: "server/system#get_health", format: false)
+      mapper.get("/games/:gameDomain/mods", to: "server/mods#list_mods", format: false)
+      mapper.post("/games/:gameDomain/mods", to: "server/mods#create_mod", format: false)
     end
   end
 end
