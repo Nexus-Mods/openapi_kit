@@ -10,7 +10,6 @@ module Oapi
       def self.primitive(type, codec)
         RubyType.new(type: type, codec: "::Oapi::Codec::#{codec}::CODEC")
       end
-      private_class_method :primitive
 
       sig { returns(T::Hash[String, RubyType]) }
       def self.build_default_type_mappings
@@ -48,7 +47,6 @@ module Oapi
           )
         }.merge(plain_string_formats.to_h { |format| ["string:#{format}", string] }).freeze
       end
-      private_class_method :build_default_type_mappings
 
       DEFAULT_TYPE_MAPPINGS = T.let(build_default_type_mappings, T::Hash[String, RubyType])
 

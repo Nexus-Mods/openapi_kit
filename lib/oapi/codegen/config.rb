@@ -80,8 +80,6 @@ module Oapi
         (value || {}).to_h { |k, v| [k.to_s, v.to_s] }
       end
 
-      private_class_method :parse_type_mappings, :stringify
-
       sig { returns(String) }
       def namespace = modules.join("::")
 

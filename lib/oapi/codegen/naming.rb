@@ -25,8 +25,6 @@ module Oapi
           .reject(&:empty?)
       end
 
-      private_class_method :words
-
       sig { params(string: String).returns(String) }
       def self.snake(string) = words(string).map(&:downcase).join("_")
 

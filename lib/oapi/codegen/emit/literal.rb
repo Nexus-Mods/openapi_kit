@@ -17,20 +17,11 @@ module Oapi
         sig { params(parts: T.any(String, Expr)).returns(String) }
         def self.string(*parts)
           body = parts.map do |part|
-            case part
-            when Expr then "\#{#{part.code}}"
-            else escape(part)
-            end
+            part.is_a?(Expr) ? "\#{#{part.code}}" : T.must(part.dump[1..-2])
           end
 
           %("#{body.join}")
         end
-
-        sig { params(text: String).returns(String) }
-        def self.escape(text)
-          text.gsub("\\", "\\\\\\\\").gsub('"', '\\"').gsub("#", "\\#")
-        end
-        private_class_method :escape
       end
     end
   end
