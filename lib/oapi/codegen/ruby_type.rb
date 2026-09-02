@@ -30,7 +30,7 @@ module Oapi
         unless missing.empty?
           raise ConfigError,
                 "#{where} is missing #{missing.join(" and ")}. Both are required: `type` is what " \
-                "appears in signatures, `codec` is what converts it -- a module extending, or an " \
+                "appears in signatures, `codec` is what converts it: a module extending, or an " \
                 "instance of a class including, Oapi::Codec."
         end
 
