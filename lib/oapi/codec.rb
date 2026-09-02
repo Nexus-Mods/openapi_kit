@@ -6,6 +6,11 @@ require "date"
 require "time"
 
 module Oapi
+  Wire = T.type_alias do
+    T.any(NilClass, String, Integer, Float, T::Boolean,
+          T::Array[T.untyped], T::Hash[String, T.untyped])
+  end
+
   module Codec
     extend T::Sig
     extend T::Generic

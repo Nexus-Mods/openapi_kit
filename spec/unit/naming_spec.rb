@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Oapi::Naming do
+RSpec.describe Oapi::Codegen::Naming do
   describe ".snake" do
     {
       "gameDomainName" => "game_domain_name",

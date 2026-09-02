@@ -2,7 +2,7 @@
 
 require "open3"
 
-RSpec.describe Oapi::Generator do
+RSpec.describe Oapi::Codegen::Generator do
   describe "the server schema" do
     let(:result) { generate("server.yaml", modules: %w[Server], "container_prefix" => "v1") }
 
@@ -33,8 +33,8 @@ RSpec.describe Oapi::Generator do
     let(:types) { result[:dir].join("types.rb").read }
 
     it "marks every file as generated" do
-      expect(result[:dir].glob("*.rb")).to all(satisfy { |f| f.read.start_with?("#{Oapi::MARKER}\n") })
-      expect(types).to start_with("#{Oapi::MARKER}\n# typed: strict\n")
+      expect(result[:dir].glob("*.rb")).to all(satisfy { |f| f.read.start_with?("#{Oapi::Codegen::MARKER}\n") })
+      expect(types).to start_with("#{Oapi::Codegen::MARKER}\n# typed: strict\n")
     end
 
     it "matches the golden file" do

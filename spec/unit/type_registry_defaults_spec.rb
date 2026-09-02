@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Oapi::TypeRegistry::Defaults do
+RSpec.describe Oapi::Codegen::TypeRegistry::Defaults do
   def mapping(key) = described_class[key]
 
   it "covers every base type" do
@@ -9,10 +9,10 @@ RSpec.describe Oapi::TypeRegistry::Defaults do
 
   it "gives formats with a distinct Ruby type that type" do
     expect(mapping("string:date-time")).to be_ir(
-      Oapi::RubyType.new(type: "::Time", codec: "::Oapi::Codec::Scalar::DateTime")
+      Oapi::Codegen::RubyType.new(type: "::Time", codec: "::Oapi::Codec::Scalar::DateTime")
     )
     expect(mapping("string:decimal")).to be_ir(
-      Oapi::RubyType.new(type: "::BigDecimal", codec: "::Oapi::Codec::Scalar::Decimal")
+      Oapi::Codegen::RubyType.new(type: "::BigDecimal", codec: "::Oapi::Codec::Scalar::Decimal")
     )
   end
 
@@ -29,13 +29,13 @@ RSpec.describe Oapi::TypeRegistry::Defaults do
 
   it "maps binary content to the Rails upload type" do
     expect(mapping("string:binary")).to be_ir(
-      Oapi::RubyType.new(type: "::ActionDispatch::Http::UploadedFile",
-                         codec: "::Oapi::Rails::Codec::UploadedFile")
+      Oapi::Codegen::RubyType.new(type: "::ActionDispatch::Http::UploadedFile",
+                                  codec: "::Oapi::Rails::Codec::UploadedFile")
     )
   end
 
   it "is overridden by merging, with no ordering rule" do
-    mapped = Oapi::RubyType.new(type: "::Tempfile", codec: "MyApp::UploadCodec")
+    mapped = Oapi::Codegen::RubyType.new(type: "::Tempfile", codec: "MyApp::UploadCodec")
 
     expect(described_class::TABLE.merge("string:binary" => mapped)["string:binary"]).to be(mapped)
   end

@@ -2,7 +2,7 @@
 
 require "tmpdir"
 
-RSpec.describe Oapi::Config do
+RSpec.describe Oapi::Codegen::Config do
   around do |example|
     Dir.mktmpdir do |dir|
       @dir = Pathname.new(dir)

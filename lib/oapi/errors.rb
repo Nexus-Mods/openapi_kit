@@ -2,6 +2,12 @@
 # frozen_string_literal: true
 
 module Oapi
+  class Error < StandardError; end
+
+  class ConfigError < Error; end
+
+  class SchemaError < Error; end
+
   class DecodeError < Error
     extend T::Sig
 
@@ -22,5 +28,19 @@ module Oapi
 
     sig { params(prefix: String).returns(DecodeError) }
     def at(prefix) = DecodeError.new(detail, json_pointer: "#{prefix}#{json_pointer}")
+  end
+
+  class ContainerError < Error
+    extend T::Sig
+
+    sig { returns(T::Array[String]) }
+    attr_reader :problems
+
+    sig { params(problems: T::Array[String]).void }
+    def initialize(problems)
+      @problems = problems
+      listed = problems.map { |problem| "  - #{problem}" }.join("\n")
+      super("The container does not satisfy the generated API:\n#{listed}")
+    end
   end
 end

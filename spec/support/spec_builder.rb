@@ -13,11 +13,11 @@ module SpecBuilder
     end
     dir.join("api.yaml").write(yaml)
 
-    config = Oapi::Config.from_hash(
+    config = Oapi::Codegen::Config.from_hash(
       { "spec" => "api.yaml", "output" => "out", "modules" => ["API"] }.merge(config_options),
       base: dir
     )
-    Oapi::Loader.new(config: config).parse
+    Oapi::Codegen::Loader.new(config: config).parse
   end
 
   def openapi(paths: nil, components: nil)
@@ -32,7 +32,7 @@ module SpecBuilder
   end
 
   def type_named(document, name)
-    document.types.find { |t| Oapi::Ir::TypeDef.name_of(t) == name }
+    document.types.find { |t| Oapi::Codegen::Ir::TypeDef.name_of(t) == name }
   end
 
   def property(object_def, name)

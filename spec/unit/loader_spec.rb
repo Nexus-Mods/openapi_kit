@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Oapi::Loader do
+RSpec.describe Oapi::Codegen::Loader do
   describe "schemas the old generator silently mistyped" do
     it "hoists an inline object property into a named type instead of String" do
       doc = load_spec(openapi(components: <<~YAML))
@@ -12,8 +12,8 @@ RSpec.describe Oapi::Loader do
               properties: { note: { type: string } }
       YAML
 
-      expect(property(type_named(doc, "Mod"), "meta").schema).to be_ir(Oapi::Ir::Ref.new(name: "ModMeta"))
-      expect(type_named(doc, "ModMeta")).to be_a(Oapi::Ir::ObjectDef)
+      expect(property(type_named(doc, "Mod"), "meta").schema).to be_ir(Oapi::Codegen::Ir::Ref.new(name: "ModMeta"))
+      expect(type_named(doc, "ModMeta")).to be_a(Oapi::Codegen::Ir::ObjectDef)
     end
 
     it "hoists an inline enum into a T::Enum instead of discarding the values" do
@@ -25,7 +25,7 @@ RSpec.describe Oapi::Loader do
       YAML
 
       enum = type_named(doc, "ModStatus")
-      expect(enum).to be_a(Oapi::Ir::EnumDef)
+      expect(enum).to be_a(Oapi::Codegen::Ir::EnumDef)
       expect(enum.members.map(&:constant)).to eq(%w[Live Hidden])
       expect(enum.members.map(&:value)).to eq(%w[live hidden])
     end
@@ -39,7 +39,7 @@ RSpec.describe Oapi::Loader do
       YAML
 
       items = property(type_named(doc, "Mod"), "dates").schema.items
-      expect(items).to be_a(Oapi::Ir::StringSchema)
+      expect(items).to be_a(Oapi::Codegen::Ir::StringSchema)
       expect(items.format).to eq("date-time")
     end
 
@@ -54,8 +54,8 @@ RSpec.describe Oapi::Loader do
             responses: { "204": { description: done } }
       YAML
 
-      schema = Oapi::Ir::Parameter.info(doc.operations.first.parameters.first).schema
-      expect(schema.meta.default).to be_ir(Oapi::Ir::Default.new(value: 1))
+      schema = Oapi::Codegen::Ir::Parameter.info(doc.operations.first.parameters.first).schema
+      expect(schema.meta.default).to be_ir(Oapi::Codegen::Ir::Default.new(value: 1))
       expect(schema.minimum).to eq(1)
     end
 
@@ -70,7 +70,7 @@ RSpec.describe Oapi::Loader do
             responses: { "204": { description: done } }
       YAML
 
-      expect(doc.operations.first.parameters.first).to be_a(Oapi::Ir::CookieParameter)
+      expect(doc.operations.first.parameters.first).to be_a(Oapi::Codegen::Ir::CookieParameter)
     end
 
     it "names a default response Default rather than Jsondefault" do
@@ -85,7 +85,7 @@ RSpec.describe Oapi::Loader do
               default: { description: fallback }
       YAML
 
-      constants = doc.operations.first.responses.map { |r| Oapi::Ir::Status.constant(r.status) }
+      constants = doc.operations.first.responses.map { |r| Oapi::Codegen::Ir::Status.constant(r.status) }
       expect(constants).to eq(%w[Ok Status4xx Default])
     end
   end
@@ -122,7 +122,7 @@ RSpec.describe Oapi::Loader do
       YAML
 
       owner = property(type_named(doc, "Mod"), "owner").schema
-      expect(owner).to be_a(Oapi::Ir::Ref)
+      expect(owner).to be_a(Oapi::Codegen::Ir::Ref)
       expect(owner.name).to eq("User")
       expect(owner.meta.nullable).to be(true)
     end
@@ -141,7 +141,7 @@ RSpec.describe Oapi::Loader do
       YAML
 
       expect(type_named(doc, "Pet").tag)
-        .to be_ir(Oapi::Ir::Tagged.new(property_name: "kind", mapping: { "cat" => "Cat", "dog" => "Dog" }))
+        .to be_ir(Oapi::Codegen::Ir::Tagged.new(property_name: "kind", mapping: { "cat" => "Cat", "dog" => "Dog" }))
     end
 
     it "infers an implicit discriminator mapping from the ref names" do
@@ -161,7 +161,7 @@ RSpec.describe Oapi::Loader do
         Loose: { anyOf: [{ type: string }, { type: integer }] }
       YAML
 
-      expect(type_named(doc, "Loose").tag).to be_a(Oapi::Ir::Untagged)
+      expect(type_named(doc, "Loose").tag).to be_a(Oapi::Codegen::Ir::Untagged)
     end
 
     it "terminates on a self-referential schema" do
@@ -174,8 +174,8 @@ RSpec.describe Oapi::Loader do
       YAML
 
       node = type_named(doc, "Node")
-      expect(property(node, "next").schema).to be_ir(Oapi::Ir::Ref.new(name: "Node"))
-      expect(property(node, "kids").schema.items).to be_ir(Oapi::Ir::Ref.new(name: "Node"))
+      expect(property(node, "next").schema).to be_ir(Oapi::Codegen::Ir::Ref.new(name: "Node"))
+      expect(property(node, "kids").schema.items).to be_ir(Oapi::Codegen::Ir::Ref.new(name: "Node"))
     end
 
     it "follows refs into another file" do
@@ -194,8 +194,9 @@ RSpec.describe Oapi::Loader do
             error: { $ref: "shared/components.yaml#/components/schemas/ProblemDetails" }
       YAML
 
-      expect(property(type_named(doc, "Mod"), "error").schema).to be_ir(Oapi::Ir::Ref.new(name: "ProblemDetails"))
-      expect(type_named(doc, "ProblemDetails")).to be_a(Oapi::Ir::ObjectDef)
+      expect(property(type_named(doc, "Mod"),
+                      "error").schema).to be_ir(Oapi::Codegen::Ir::Ref.new(name: "ProblemDetails"))
+      expect(type_named(doc, "ProblemDetails")).to be_a(Oapi::Codegen::Ir::ObjectDef)
     end
   end
 
@@ -212,9 +213,9 @@ RSpec.describe Oapi::Loader do
       YAML
 
       parameter = doc.operations.first.parameters.first
-      expect(parameter).to be_a(Oapi::Ir::PathParameter)
-      expect(Oapi::Ir::Parameter.required?(parameter)).to be(true)
-      expect(Oapi::Ir::PathParameter.props.keys).not_to include(:required)
+      expect(parameter).to be_a(Oapi::Codegen::Ir::PathParameter)
+      expect(Oapi::Codegen::Ir::Parameter.required?(parameter)).to be(true)
+      expect(Oapi::Codegen::Ir::PathParameter.props.keys).not_to include(:required)
     end
 
     it "rejects a path parameter that is not required" do
@@ -245,7 +246,7 @@ RSpec.describe Oapi::Loader do
             responses: { "204": { description: done } }
       YAML
 
-      expect(doc.operations.first.parameters.map { |p| Oapi::Ir::Parameter.info(p).name })
+      expect(doc.operations.first.parameters.map { |p| Oapi::Codegen::Ir::Parameter.info(p).name })
         .to contain_exactly("id", "expand")
     end
   end
@@ -263,9 +264,9 @@ RSpec.describe Oapi::Loader do
       YAML
 
       expect(doc.security_schemes).to contain_ir(
-        Oapi::Ir::ApiKeyScheme.new(name: "apiKeyAuth", location: Oapi::Ir::ApiKeyLocation::Header,
-                                   parameter_name: "apikey"),
-        Oapi::Ir::HttpScheme.new(name: "bearerAuth", scheme: "bearer", bearer_format: "JWT")
+        Oapi::Codegen::Ir::ApiKeyScheme.new(name: "apiKeyAuth", location: Oapi::Codegen::Ir::ApiKeyLocation::Header,
+                                            parameter_name: "apikey"),
+        Oapi::Codegen::Ir::HttpScheme.new(name: "bearerAuth", scheme: "bearer", bearer_format: "JWT")
       )
     end
 

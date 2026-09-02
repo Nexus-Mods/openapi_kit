@@ -3,4 +3,4 @@
 
 require "oapi"
 
-exit(Oapi::Cli.run(ARGV))
+exit(Oapi::Codegen::Cli.run(ARGV))

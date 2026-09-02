@@ -2,7 +2,7 @@
 
 require "tmpdir"
 
-RSpec.describe Oapi::Writer do
+RSpec.describe Oapi::Codegen::Writer do
   subject(:writer) { described_class.new(output: @dir.join("out")) }
 
   around do |example|
@@ -15,7 +15,7 @@ RSpec.describe Oapi::Writer do
   it "marks every file it writes as generated" do
     path = writer.write("types.rb", "module Types; end")
 
-    expect(path.read).to start_with("#{Oapi::MARKER}\n")
+    expect(path.read).to start_with("#{Oapi::Codegen::MARKER}\n")
     expect(path.read).to end_with("module Types; end\n")
   end
 

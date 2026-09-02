@@ -9,12 +9,12 @@ module GeneratorHelper
   def generate(fixture, modules: %w[Demo V1], **options)
     dir = Pathname.new(Dir.mktmpdir)
     @generated_dirs << dir
-    config = Oapi::Config.from_hash(
+    config = Oapi::Codegen::Config.from_hash(
       { "spec" => FIXTURES.join(fixture).to_s, "output" => dir.join("generated").to_s,
         "modules" => modules }.merge(options),
       base: dir
     )
-    generator = Oapi::Generator.new(config: config)
+    generator = Oapi::Codegen::Generator.new(config: config)
     generator.generate
     { dir: dir.join("generated"), warnings: generator.warnings }
   end
