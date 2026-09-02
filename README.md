@@ -218,6 +218,10 @@ price:
   handlers.
 - Parameter styles other than `simple` for path and `form` for query are refused at
   generation time rather than silently mis-decoded.
+- Array and object query parameters follow Rails' conventions, not OpenAPI's. Rails
+  parses repeated keys as a single last-one-wins value, so send `?tags[]=a&tags[]=b`
+  rather than the spec's `?tags=a&tags=b`, and `?filter[lat]=1` rather than an exploded
+  `?lat=1`. A request using the spec form raises `Oapi::DecodeError`.
 - A request body may declare one content type.
 - Schema keyword validation (`minLength`, `pattern`, `minimum`) is not enforced; only
   types and formats are.
