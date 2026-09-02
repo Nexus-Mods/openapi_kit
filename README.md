@@ -183,6 +183,8 @@ price:
   `?tags[]=a&tags[]=b` and `?filter[lat]=1`, not `?tags=a&tags=b` or an exploded `?lat=1`.
 - One content type per request body, and it must be `application/json`, a `+json` type,
   `application/x-www-form-urlencoded` or `multipart/form-data`.
+- `format: binary` in a response. It maps to a multipart upload, which a response cannot
+  produce. Use `format: byte`, or map `string:binary` yourself.
 - Schema keyword validation (`minLength`, `pattern`, `minimum`). Types and formats only.
 - Codecs coerce strings, since path, query and header values arrive as strings. That
   leniency also applies to bodies, so `{"count": "42"}` satisfies `type: integer`.

@@ -67,7 +67,58 @@ module Oapi
           subject: "tags",
           consequence: "each tag needs its own handler interface and controller"
         )
+        operations.each { |operation| reject_binary_response!(operation) }
         operations
+      end
+
+      # format: binary maps to a file Rails wrote to disk while parsing a multipart
+      # request. A response cannot produce one, and rendering it would send the filename
+      # in place of the bytes the document promises.
+      sig { params(operation: Model::Operation).void }
+      def reject_binary_response!(operation)
+        return if @config.type_mappings.key?("string:binary")
+
+        operation.responses.each do |response|
+          response.contents.each do |content|
+            schema = content.schema
+            walk_for_binary(schema, Set.new, operation) unless schema.nil?
+          end
+        end
+      end
+
+      sig do
+        params(schema: Model::Schema, seen: T::Set[String], operation: Model::Operation).void
+      end
+      def walk_for_binary(schema, seen, operation)
+        case schema
+        when Model::StringSchema
+          return unless schema.format == "binary" && Model::Schema.meta(schema).ruby_type.nil?
+
+          raise SchemaError,
+                "A response of #{operation.id} declares format: binary. oapi renders responses " \
+                "as JSON, so it has no bytes to send: use format: byte to base64 the content, " \
+                "or set a type_mappings entry for string:binary."
+        when Model::Ref then walk_type_for_binary(schema.name, seen, operation)
+        when Model::List then walk_for_binary(schema.items, seen, operation)
+        when Model::Freeform
+          values = schema.values
+          walk_for_binary(values, seen, operation) unless values.nil?
+        end
+      end
+
+      sig { params(name: String, seen: T::Set[String], operation: Model::Operation).void }
+      def walk_type_for_binary(name, seen, operation)
+        return unless seen.add?(name)
+
+        key = @keys_by_name[name]
+        case (type = key && @types[key])
+        when Model::ObjectDef
+          type.properties.each { |property| walk_for_binary(property.schema, seen, operation) }
+          extra = type.additional_properties
+          walk_for_binary(extra, seen, operation) unless extra.nil?
+        when Model::UnionDef then type.members.each { |m| walk_for_binary(m, seen, operation) }
+        when Model::AliasDef then walk_for_binary(type.target, seen, operation)
+        end
       end
 
       sig { params(names: T::Array[String], subject: String, consequence: String).void }

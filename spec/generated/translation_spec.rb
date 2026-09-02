@@ -327,6 +327,39 @@ RSpec.describe "translating a document" do
       YAML
     end
 
+    # A binary maps to a file Rails wrote to disk parsing a multipart request. A response
+    # cannot produce one, and rendering it sends the filename instead of the bytes.
+    it "refuses format: binary in a response, however deeply nested" do
+      expect { operation(<<~YAML) }.to raise_error(Oapi::SchemaError, /declares format: binary/)
+        /f:
+          get:
+            operationId: getFile
+            responses:
+              "200":
+                description: ok
+                content:
+                  application/json:
+                    schema:
+                      type: array
+                      items:
+                        type: object
+                        properties: { blob: { type: string, format: binary } }
+      YAML
+    end
+
+    it "accepts format: binary in a request body" do
+      expect { operation(<<~YAML) }.not_to raise_error
+        /f:
+          post:
+            operationId: postFile
+            requestBody:
+              content:
+                multipart/form-data:
+                  schema: { type: object, properties: { upload: { type: string, format: binary } } }
+            responses: { "204": { description: done } }
+      YAML
+    end
+
     it "refuses a discriminated union member that has no name to map onto" do
       expect { schemas(<<~YAML) }.to raise_error(Oapi::SchemaError, /is an inline schema/)
         Pet:
