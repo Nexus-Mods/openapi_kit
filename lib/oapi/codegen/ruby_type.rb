@@ -8,8 +8,19 @@ module Oapi
 
       CONSTANT_PATH = T.let(/\A(::)?[A-Z]\w*(::[A-Z]\w*)*\z/, Regexp)
 
+      # Every codec, built in or generated, holds its shared instance in this constant.
+      CODEC_CONSTANT = "CODEC"
+
       const :type, String
       const :codec, String
+
+      sig { params(path: String).returns(String) }
+      def self.codec_in(path) = "#{path}::#{CODEC_CONSTANT}"
+
+      sig { params(type: String, codec: T::Module[T.anything]).returns(RubyType) }
+      def self.for_codec(type:, codec:)
+        new(type: type, codec: codec_in("::#{T.must(codec.name)}"))
+      end
 
       sig { params(where: String, value: T.untyped).returns(RubyType) }
       def self.parse(where, value)

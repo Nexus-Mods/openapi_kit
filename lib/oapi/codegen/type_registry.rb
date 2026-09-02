@@ -6,49 +6,47 @@ module Oapi
     class TypeRegistry
       extend T::Sig
 
-      sig { params(type: String, codec: String).returns(RubyType) }
-      def self.primitive(type, codec)
-        RubyType.new(type: type, codec: "::Oapi::Codec::#{codec}::CODEC")
-      end
+      sig { params(type: String, codec: T::Module[T.anything]).returns(RubyType) }
+      def self.primitive(type, codec) = RubyType.for_codec(type: type, codec: codec)
 
       DEFAULT_TYPE_MAPPINGS = T.let(
         {
-          "string" => primitive("::String", "String"),
-          "integer" => primitive("::Integer", "Integer"),
-          "number" => primitive("::Float", "Float"),
-          "boolean" => primitive("T::Boolean", "Boolean"),
+          "string" => primitive("::String", Oapi::Codec::String),
+          "integer" => primitive("::Integer", Oapi::Codec::Integer),
+          "number" => primitive("::Float", Oapi::Codec::Float),
+          "boolean" => primitive("T::Boolean", Oapi::Codec::Boolean),
 
-          "string:date-time" => primitive("::Time", "DateTime"),
-          "string:date" => primitive("::Date", "Date"),
-          "string:uuid" => primitive("::String", "Uuid"),
-          "string:byte" => primitive("::String", "Byte"),
-          "string:decimal" => primitive("::BigDecimal", "Decimal"),
-          "string:binary" => RubyType.new(type: "::ActionDispatch::Http::UploadedFile",
-                                          codec: "::Oapi::Codec::UploadedFile::CODEC"),
+          "string:date-time" => primitive("::Time", Oapi::Codec::DateTime),
+          "string:date" => primitive("::Date", Oapi::Codec::Date),
+          "string:uuid" => primitive("::String", Oapi::Codec::Uuid),
+          "string:byte" => primitive("::String", Oapi::Codec::Byte),
+          "string:decimal" => primitive("::BigDecimal", Oapi::Codec::Decimal),
+          "string:binary" => primitive("::ActionDispatch::Http::UploadedFile",
+                                       Oapi::Codec::UploadedFile),
 
-          "string:time" => primitive("::String", "String"),
-          "string:duration" => primitive("::String", "String"),
-          "string:email" => primitive("::String", "String"),
-          "string:idn-email" => primitive("::String", "String"),
-          "string:hostname" => primitive("::String", "String"),
-          "string:idn-hostname" => primitive("::String", "String"),
-          "string:ipv4" => primitive("::String", "String"),
-          "string:ipv6" => primitive("::String", "String"),
-          "string:uri" => primitive("::String", "String"),
-          "string:uri-reference" => primitive("::String", "String"),
-          "string:uri-template" => primitive("::String", "String"),
-          "string:iri" => primitive("::String", "String"),
-          "string:json-pointer" => primitive("::String", "String"),
-          "string:relative-json-pointer" => primitive("::String", "String"),
-          "string:regex" => primitive("::String", "String"),
-          "string:password" => primitive("::String", "String"),
+          "string:time" => primitive("::String", Oapi::Codec::String),
+          "string:duration" => primitive("::String", Oapi::Codec::String),
+          "string:email" => primitive("::String", Oapi::Codec::String),
+          "string:idn-email" => primitive("::String", Oapi::Codec::String),
+          "string:hostname" => primitive("::String", Oapi::Codec::String),
+          "string:idn-hostname" => primitive("::String", Oapi::Codec::String),
+          "string:ipv4" => primitive("::String", Oapi::Codec::String),
+          "string:ipv6" => primitive("::String", Oapi::Codec::String),
+          "string:uri" => primitive("::String", Oapi::Codec::String),
+          "string:uri-reference" => primitive("::String", Oapi::Codec::String),
+          "string:uri-template" => primitive("::String", Oapi::Codec::String),
+          "string:iri" => primitive("::String", Oapi::Codec::String),
+          "string:json-pointer" => primitive("::String", Oapi::Codec::String),
+          "string:relative-json-pointer" => primitive("::String", Oapi::Codec::String),
+          "string:regex" => primitive("::String", Oapi::Codec::String),
+          "string:password" => primitive("::String", Oapi::Codec::String),
 
-          "integer:int32" => primitive("::Integer", "Integer"),
-          "integer:int64" => primitive("::Integer", "Integer"),
+          "integer:int32" => primitive("::Integer", Oapi::Codec::Integer),
+          "integer:int64" => primitive("::Integer", Oapi::Codec::Integer),
 
-          "number:float" => primitive("::Float", "Float"),
-          "number:double" => primitive("::Float", "Float"),
-          "number:decimal" => primitive("::BigDecimal", "Decimal")
+          "number:float" => primitive("::Float", Oapi::Codec::Float),
+          "number:double" => primitive("::Float", Oapi::Codec::Float),
+          "number:decimal" => primitive("::BigDecimal", Oapi::Codec::Decimal)
         }.freeze,
         T::Hash[String, RubyType]
       )
@@ -145,6 +143,9 @@ module Oapi
 
       # Rails only hands back request_parameters verbatim for a JSON object; anything else it
       # wraps under "_json". The emitters need to know which shape a body will arrive in.
+      sig { params(name: String).returns(String) }
+      def codec_reference(name) = RubyType.codec_in("#{@namespace}::Types::#{name}")
+
       sig { params(schema: Model::Schema).returns(T::Boolean) }
       def object?(schema)
         case schema
@@ -202,7 +203,7 @@ module Oapi
       end
 
       sig { params(schema: Model::Ref).returns(String) }
-      def codec_for(schema) = "#{@namespace}::Types::#{schema.name}::CODEC"
+      def codec_for(schema) = codec_reference(schema.name)
 
       sig { params(schema: Model::Ref).returns(T::Boolean) }
       def union?(schema) = @types[schema.name].is_a?(Model::UnionDef)

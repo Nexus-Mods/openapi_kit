@@ -37,7 +37,7 @@ module Oapi
             emit_to_wire(buffer, type)
           end
           buffer.blank
-          buffer.line("CODEC = T.let(Codec.new, Codec)")
+          buffer.line("#{RubyType::CODEC_CONSTANT} = T.let(Codec.new, Codec)")
         end
 
         sig { params(buffer: Buffer, type: Model::TypeDef).void }
@@ -221,7 +221,7 @@ module Oapi
         end
 
         sig { params(name: String).returns(String) }
-        def codec_for(name) = "#{@config.namespace}::Types::#{name}::CODEC"
+        def codec_for(name) = @registry.codec_reference(name)
       end
     end
   end
