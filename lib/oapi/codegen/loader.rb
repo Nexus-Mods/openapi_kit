@@ -42,13 +42,13 @@ module Oapi
           types: @types.values,
           operations: operations,
           security_schemes: build_security_schemes(document),
-          security: requirements(document.security) || []
+          security: requirements(document) || []
         )
       end
 
       private
 
-      sig { params(document: T.untyped).returns(T::Array[Model::Operation]) }
+      sig { params(document: Openapi3Parser::Document).returns(T::Array[Model::Operation]) }
       def build_operations(document)
         operations = document.paths.flat_map do |path, item|
           VERBS.filter_map do |verb|
@@ -81,7 +81,10 @@ module Oapi
         end
       end
 
-      sig { params(node: T.untyped, path: String, verb: String, item: T.untyped).returns(Model::Operation) }
+      sig do
+        params(node: Openapi3Parser::Node::Operation, path: String, verb: String,
+               item: Openapi3Parser::Node::PathItem).returns(Model::Operation)
+      end
       def build_operation(node, path:, verb:, item:)
         id = node.operation_id
         if id.nil? || id.to_s.empty?
@@ -91,9 +94,12 @@ module Oapi
         end
 
         base = Naming.pascal(id)
-        parameters = (Array(node.parameters) + Array(item.parameters))
-                     .uniq { |p| [p.name, p.in] }
-                     .map { |p| build_parameter(p, hint: base) }
+        body = node.request_body
+        own = node.parameters
+        from_path_item = item.parameters
+        declared = (own ? own.to_a : []) + (from_path_item ? from_path_item.to_a : [])
+        parameters = declared.uniq { |p| [p.name, p.in] }
+                             .map { |p| build_parameter(p, hint: base) }
 
         Model::Operation.new(
           id: id,
@@ -101,9 +107,9 @@ module Oapi
           path: path,
           tag: node.tags&.first || "default",
           parameters: parameters,
-          request_body: (build_request_body(node.request_body, hint: base) if node.request_body),
-          responses: build_responses(node.responses, hint: base),
-          security: requirements(node.security, declared: raw(node).key?("security")),
+          request_body: body && build_request_body(body, hint: base),
+          responses: build_responses(node, hint: base),
+          security: requirements(node, declared: raw(node).key?("security")),
           summary: node.summary,
           description: node.description,
           deprecated: !!node.deprecated?,
@@ -111,7 +117,7 @@ module Oapi
         )
       end
 
-      sig { params(node: T.untyped, hint: String).returns(Model::Parameter) }
+      sig { params(node: Openapi3Parser::Node::Parameter, hint: String).returns(Model::Parameter) }
       def build_parameter(node, hint:)
         info = Model::ParameterInfo.new(
           name: node.name,
@@ -139,7 +145,7 @@ module Oapi
         end
       end
 
-      sig { params(node: T.untyped).returns(Model::PathStyle) }
+      sig { params(node: Openapi3Parser::Node::Parameter).returns(Model::PathStyle) }
       def path_style(node)
         return Model::PathStyle::Simple if node.style.nil?
 
@@ -149,7 +155,7 @@ module Oapi
                 "Path parameters support simple, label or matrix.")
       end
 
-      sig { params(node: T.untyped).returns(Model::QueryStyle) }
+      sig { params(node: Openapi3Parser::Node::Parameter).returns(Model::QueryStyle) }
       def query_style(node)
         return Model::QueryStyle::Form if node.style.nil?
 
@@ -159,26 +165,27 @@ module Oapi
                 "Query parameters support form, spaceDelimited, pipeDelimited or deepObject.")
       end
 
-      sig { params(node: T.untyped, hint: String).returns(Model::RequestBody) }
+      sig { params(node: Openapi3Parser::Node::RequestBody, hint: String).returns(Model::RequestBody) }
       def build_request_body(node, hint:)
         Model::RequestBody.new(
-          contents: contents(node.content, hint: "#{hint}Body", where: "the request body of #{hint}"),
+          contents: contents(node, hint: "#{hint}Body", where: "the request body of #{hint}"),
           required: !!node.required?,
           description: node.description
         )
       end
 
-      sig { params(node: T.untyped, hint: String).returns(T::Array[Model::Response]) }
+      sig { params(node: Openapi3Parser::Node::Operation, hint: String).returns(T::Array[Model::Response]) }
       def build_responses(node, hint:)
-        return [] if node.nil?
+        responses = node.responses
+        return [] if responses.nil?
 
-        node.map do |raw_status, response|
+        responses.map do |raw_status, response|
           status = Model::Status.parse(raw_status.to_s)
           scoped = "#{hint}#{Model::Status.constant(status)}"
           Model::Response.new(
             status: status,
             contents: contents(
-              response.content, hint: scoped, where: "the #{raw_status} response of #{hint}"
+              response, hint: scoped, where: "the #{raw_status} response of #{hint}"
             ),
             headers: (response.headers || {}).map do |name, header|
               Model::Header.new(name: name, identifier: Naming.identifier(name),
@@ -190,12 +197,16 @@ module Oapi
         end
       end
 
-      sig { params(node: T.untyped, hint: String, where: String).returns(T::Array[Model::Content]) }
+      sig do
+        params(node: T.any(Openapi3Parser::Node::RequestBody, Openapi3Parser::Node::Response), hint: String,
+               where: String).returns(T::Array[Model::Content])
+      end
       def contents(node, hint:, where:)
-        return [] if node.nil?
+        content = node.content
+        return [] if content.nil?
 
-        multiple = node.keys.size > 1
-        node.map do |media_type, media|
+        multiple = content.keys.size > 1
+        content.map do |media_type, media|
           reject_undecodable_media_type!(media_type, where: where)
           suffix = multiple ? Naming.pascal(media_type.split("/").last.to_s.split("+").first.to_s) : ""
           Model::Content.new(media_type: media_type,
@@ -214,7 +225,7 @@ module Oapi
               "+json media type."
       end
 
-      sig { params(document: T.untyped).returns(T::Array[Model::SecurityScheme]) }
+      sig { params(document: Openapi3Parser::Document).returns(T::Array[Model::SecurityScheme]) }
       def build_security_schemes(document)
         (document.components&.security_schemes || {}).map do |name, node|
           case node.type
@@ -235,7 +246,7 @@ module Oapi
         end
       end
 
-      sig { params(node: T.untyped).returns(T::Hash[String, String]) }
+      sig { params(node: Openapi3Parser::Node::SecurityScheme).returns(T::Hash[String, String]) }
       def oauth_scopes(node)
         flows = node.flows
         return {} if flows.nil?
@@ -246,11 +257,15 @@ module Oapi
         end
       end
 
-      sig { params(node: T.untyped, declared: T::Boolean).returns(T.nilable(T::Array[Model::SecurityRequirement])) }
+      sig do
+        params(node: T.any(Openapi3Parser::Document, Openapi3Parser::Node::Operation),
+               declared: T::Boolean).returns(T.nilable(T::Array[Model::SecurityRequirement]))
+      end
       def requirements(node, declared: true)
-        return nil if node.nil? || !declared
+        security = node.security
+        return nil if security.nil? || !declared
 
-        node.map do |requirement|
+        security.map do |requirement|
           Model::SecurityRequirement.new(
             schemes: requirement.to_h.transform_values { |scopes| Array(scopes).map(&:to_s) }
           )
@@ -258,14 +273,16 @@ module Oapi
       end
 
       sig do
-        params(node: T.untyped, hint: String, nullable: T::Boolean,
+        params(node: T.nilable(Openapi3Parser::Node::Schema), hint: String, nullable: T::Boolean,
                inherited: T.nilable(Model::Meta)).returns(Model::Schema)
       end
       def schema_for(node, hint:, nullable: false, inherited: nil)
         return Model::Untyped.new if node.nil?
 
-        members = Array(node.all_of)
-        if members.size == 1 && (node.properties.nil? || node.properties.empty?)
+        all_of = node.all_of
+        members = all_of ? all_of.to_a : []
+        properties = node.properties
+        if members.size == 1 && (properties.nil? || properties.empty?)
           return schema_for(
             members.first,
             hint: hint,
@@ -275,11 +292,13 @@ module Oapi
         end
 
         meta = merge_meta(inherited, meta_for(node, nullable: nullable))
-        name = if node.name
-                 rename(node.name)
-               else
-                 (named_shape?(node) ? rename(hint) : nil)
-               end
+        declared = node.name
+        name =
+          if declared
+            rename(declared)
+          elsif named_shape?(node)
+            rename(hint)
+          end
         if name
           register(node, name: name)
           return Model::Ref.new(name: name, meta: meta)
@@ -304,14 +323,15 @@ module Oapi
         )
       end
 
-      sig { params(node: T.untyped).returns(T::Boolean) }
+      sig { params(node: Openapi3Parser::Node::Schema).returns(T::Boolean) }
       def named_shape?(node)
         return true if node.enum || node.one_of || node.any_of || node.all_of&.any?
 
-        !(node.properties.nil? || node.properties.empty?)
+        properties = node.properties
+        !(properties.nil? || properties.empty?)
       end
 
-      sig { params(node: T.untyped, hint: String, meta: Model::Meta).returns(Model::Schema) }
+      sig { params(node: Openapi3Parser::Node::Schema, hint: String, meta: Model::Meta).returns(Model::Schema) }
       def structural(node, hint:, meta:)
         case node.type
         when "string"
@@ -342,7 +362,7 @@ module Oapi
         end
       end
 
-      sig { params(node: T.untyped, name: String).void }
+      sig { params(node: Openapi3Parser::Node::Schema, name: String).void }
       def register(node, name:)
         key = type_key(node)
         existing = @keys_by_name[name]
@@ -362,7 +382,7 @@ module Oapi
         end
       end
 
-      sig { params(node: T.untyped, name: String).returns(Model::TypeDef) }
+      sig { params(node: Openapi3Parser::Node::Schema, name: String).returns(Model::TypeDef) }
       def build_type_def(node, name:)
         return enum_def(node, name: name) if node.enum
         return union_def(node, name: name) if node.one_of || node.any_of
@@ -372,7 +392,7 @@ module Oapi
                             meta: meta_for(node))
       end
 
-      sig { params(node: T.untyped, name: String).returns(Model::TypeDef) }
+      sig { params(node: Openapi3Parser::Node::Schema, name: String).returns(Model::TypeDef) }
       def enum_def(node, name:)
         values = node.enum.to_a
         kinds = values.map(&:class).uniq
@@ -390,18 +410,19 @@ module Oapi
         )
       end
 
-      sig { params(node: T.untyped, name: String).returns(Model::TypeDef) }
+      sig { params(node: Openapi3Parser::Node::Schema, name: String).returns(Model::TypeDef) }
       def union_def(node, name:)
-        raw = node.one_of || node.any_of
+        declared = node.one_of || node.any_of
+        raw = declared ? declared.to_a : []
         members = raw.each_with_index.map { |m, i| schema_for(m, hint: "#{name}Member#{i + 1}") }
 
         Model::UnionDef.new(name: name, members: members, tag: union_tag(node),
                             meta: meta_for(node))
       end
 
-      sig { params(node: T.untyped, name: String).returns(Model::TypeDef) }
+      sig { params(node: Openapi3Parser::Node::Schema, name: String).returns(Model::TypeDef) }
       def object_def(node, name:)
-        properties = T.let({}, T::Hash[String, T.untyped])
+        properties = T.let({}, T::Hash[String, Openapi3Parser::Node::Schema])
         required = T.let(Set.new, T::Set[String])
         collect_properties(node, properties, required)
 
@@ -417,7 +438,7 @@ module Oapi
         )
       end
 
-      sig { params(node: T.untyped, name: String).returns(T.nilable(Model::Schema)) }
+      sig { params(node: Openapi3Parser::Node::Schema, name: String).returns(T.nilable(Model::Schema)) }
       def additional_properties_for(node, name)
         schema = node.additional_properties_schema
         return nil if schema.nil?
@@ -425,33 +446,47 @@ module Oapi
         schema_for(schema, hint: "#{name}Value")
       end
 
-      sig { params(node: T.untyped, properties: T::Hash[String, T.untyped], required: T::Set[String]).void }
+      sig do
+        params(node: Openapi3Parser::Node::Schema, properties: T::Hash[String, Openapi3Parser::Node::Schema],
+               required: T::Set[String]).void
+      end
       def collect_properties(node, properties, required)
-        Array(node.all_of).each { |member| collect_properties(member, properties, required) }
+        all_of = node.all_of
+        all_of&.each { |member| collect_properties(member, properties, required) }
         (node.properties || {}).each { |pname, pnode| properties[pname] = pnode }
-        Array(node.required).each { |name| required << name.to_s }
+        node.required&.each { |name| required << name.to_s }
       end
 
-      sig { params(node: T.untyped).returns(Model::UnionTag) }
+      sig { params(node: Openapi3Parser::Node::Schema).returns(Model::UnionTag) }
       def union_tag(node)
         discriminator = node.discriminator
         return Model::Untagged.new if discriminator.nil?
 
-        mapping = (discriminator.mapping || {})
-                  .to_h { |value, ref| [value.to_s, rename(ref.to_s.split("/").last.to_s)] }
+        declared = discriminator.mapping
+        mapping = declared ? declared.to_h { |value, ref| [value.to_s, rename(ref.to_s.split("/").last.to_s)] } : {}
         mapping = implicit_mapping(node) if mapping.empty?
 
         Model::Tagged.new(property_name: discriminator.property_name, mapping: mapping)
       end
 
-      sig { params(node: T.untyped).returns(T::Hash[String, String]) }
+      sig { params(node: Openapi3Parser::Node::Schema).returns(T::Hash[String, String]) }
       def implicit_mapping(node)
-        (node.one_of || node.any_of).to_a
-                                    .filter_map { |member| [member.name, rename(member.name)] if member.name }
-                                    .to_h
+        declared = node.one_of || node.any_of
+        members = declared ? declared.to_a : []
+        members.to_h do |member|
+          name = member.name
+          if name.nil?
+            raise SchemaError,
+                  "A member of the discriminated union #{node.name || "(inline)"} is an inline " \
+                  "schema, so there is no name to map a discriminator value to. Move it into " \
+                  "components/schemas, or declare an explicit discriminator mapping."
+          end
+
+          [name, rename(name)]
+        end
       end
 
-      sig { params(node: T.untyped, nullable: T::Boolean).returns(Model::Meta) }
+      sig { params(node: Openapi3Parser::Node::Schema, nullable: T::Boolean).returns(Model::Meta) }
       def meta_for(node, nullable: false)
         data = raw(node)
         Model::Meta.new(
@@ -466,7 +501,7 @@ module Oapi
         )
       end
 
-      sig { params(node: T.untyped).returns(String) }
+      sig { params(node: Openapi3Parser::Node::Schema).returns(String) }
       def type_key(node)
         location = node.node_context.source_location
         "#{location.source.source_input.path}#{location.pointer}"
@@ -492,12 +527,12 @@ module Oapi
       sig { params(name: String).returns(String) }
       def rename(name) = Naming.constant(@config.name_overrides.fetch(name, name))
 
-      sig { params(node: T.untyped).returns(T::Hash[String, T.untyped]) }
+      sig { params(node: Openapi3Parser::Node::Object).returns(T::Hash[String, T.untyped]) }
       def extensions(node)
         raw(node).select { |k, _| k.to_s.start_with?("x-") }
       end
 
-      sig { params(node: T.untyped).returns(T::Hash[String, T.untyped]) }
+      sig { params(node: Openapi3Parser::Node::Object).returns(T::Hash[String, T.untyped]) }
       def raw(node)
         input = node.node_context.input
         input.is_a?(Hash) ? input : {}

@@ -11,44 +11,47 @@ module Oapi
         RubyType.new(type: type, codec: "::Oapi::Codec::#{codec}::CODEC")
       end
 
-      sig { returns(T::Hash[String, RubyType]) }
-      def self.build_default_type_mappings
-        string = primitive("::String", "String")
-        integer = primitive("::Integer", "Integer")
-        number = primitive("::Float", "Float")
-        decimal = primitive("::BigDecimal", "Decimal")
-
-        plain_string_formats = %w[
-          time duration email idn-email hostname idn-hostname ipv4 ipv6
-          uri uri-reference uri-template iri json-pointer relative-json-pointer
-          regex password
-        ]
-
+      DEFAULT_TYPE_MAPPINGS = T.let(
         {
-          "string" => string,
-          "integer" => integer,
-          "number" => number,
+          "string" => primitive("::String", "String"),
+          "integer" => primitive("::Integer", "Integer"),
+          "number" => primitive("::Float", "Float"),
           "boolean" => primitive("T::Boolean", "Boolean"),
 
           "string:date-time" => primitive("::Time", "DateTime"),
           "string:date" => primitive("::Date", "Date"),
           "string:uuid" => primitive("::String", "Uuid"),
           "string:byte" => primitive("::String", "Byte"),
-          "string:decimal" => decimal,
-          "number:decimal" => decimal,
-          "integer:int32" => integer,
-          "integer:int64" => integer,
-          "number:float" => number,
-          "number:double" => number,
+          "string:decimal" => primitive("::BigDecimal", "Decimal"),
+          "string:binary" => RubyType.new(type: "::ActionDispatch::Http::UploadedFile",
+                                          codec: "::Oapi::Codec::UploadedFile::CODEC"),
 
-          "string:binary" => RubyType.new(
-            type: "::ActionDispatch::Http::UploadedFile",
-            codec: "::Oapi::Codec::UploadedFile::CODEC"
-          )
-        }.merge(plain_string_formats.to_h { |format| ["string:#{format}", string] }).freeze
-      end
+          "string:time" => primitive("::String", "String"),
+          "string:duration" => primitive("::String", "String"),
+          "string:email" => primitive("::String", "String"),
+          "string:idn-email" => primitive("::String", "String"),
+          "string:hostname" => primitive("::String", "String"),
+          "string:idn-hostname" => primitive("::String", "String"),
+          "string:ipv4" => primitive("::String", "String"),
+          "string:ipv6" => primitive("::String", "String"),
+          "string:uri" => primitive("::String", "String"),
+          "string:uri-reference" => primitive("::String", "String"),
+          "string:uri-template" => primitive("::String", "String"),
+          "string:iri" => primitive("::String", "String"),
+          "string:json-pointer" => primitive("::String", "String"),
+          "string:relative-json-pointer" => primitive("::String", "String"),
+          "string:regex" => primitive("::String", "String"),
+          "string:password" => primitive("::String", "String"),
 
-      DEFAULT_TYPE_MAPPINGS = T.let(build_default_type_mappings, T::Hash[String, RubyType])
+          "integer:int32" => primitive("::Integer", "Integer"),
+          "integer:int64" => primitive("::Integer", "Integer"),
+
+          "number:float" => primitive("::Float", "Float"),
+          "number:double" => primitive("::Float", "Float"),
+          "number:decimal" => primitive("::BigDecimal", "Decimal")
+        }.freeze,
+        T::Hash[String, RubyType]
+      )
 
       sig { params(document: Model::Document, config: Config).returns(TypeRegistry) }
       def self.for(document, config)
@@ -58,8 +61,18 @@ module Oapi
           types: document.types.to_h { |type| [Model::TypeDef.name_of(type), type] }
         )
 
-        document.types.grep(Model::AliasDef).each { |type| registry.sorbet_type(type.target) }
+        registry.reject_alias_cycles!
         registry
+      end
+
+      # An alias contributes no constant of its own: every reference to it expands to its
+      # target. A loop of them therefore has nothing to expand to, and would otherwise
+      # recur until the stack ran out.
+      sig { void }
+      def reject_alias_cycles!
+        @types.values.grep(Model::AliasDef).sort_by(&:name).each do |type|
+          walk_aliases(type.target, [type.name])
+        end
       end
 
       sig { returns(T::Array[String]) }
@@ -74,7 +87,6 @@ module Oapi
         @type_mappings = type_mappings
         @types = types
         @warnings = T.let(Set.new, T::Set[String])
-        @expanding = T.let(Set.new, T::Set[String])
       end
 
       sig { params(schema: Model::Schema).returns(String) }
@@ -82,7 +94,7 @@ module Oapi
         case schema
         when Model::Ref
           aliased = alias_target(schema)
-          return while_expanding(schema.name) { sorbet_type(aliased) } if aliased
+          return sorbet_type(aliased) if aliased
 
           union?(schema) ? "#{@namespace}::Types::#{schema.name}::Value" : "#{@namespace}::Types::#{schema.name}"
         when Model::List then "T::Array[#{sorbet_type(schema.items)}]"
@@ -101,11 +113,7 @@ module Oapi
         case schema
         when Model::Ref
           aliased = alias_target(schema)
-          if aliased
-            while_expanding(schema.name) { from_wire_expr(aliased, value: value) }
-          else
-            "#{codec_for(schema)}.from_wire(#{value})"
-          end
+          aliased ? from_wire_expr(aliased, value: value) : "#{codec_for(schema)}.from_wire(#{value})"
         when Model::List
           "Oapi::Decode.each(#{value}) { |item| #{from_wire_expr(schema.items, value: "item")} }"
         when Model::Freeform
@@ -154,11 +162,7 @@ module Oapi
         case schema
         when Model::Ref
           aliased = alias_target(schema)
-          if aliased
-            while_expanding(schema.name) { to_wire_expr(aliased, value: value) }
-          else
-            "#{codec_for(schema)}.to_wire(#{value})"
-          end
+          aliased ? to_wire_expr(aliased, value: value) : "#{codec_for(schema)}.to_wire(#{value})"
         when Model::List
           inner = to_wire_expr(schema.items, value: "item")
           inner == "item" ? value : "#{value}.map { |item| #{inner} }"
@@ -177,6 +181,26 @@ module Oapi
 
       private
 
+      sig { params(schema: T.nilable(Model::Schema), seen: T::Array[String]).void }
+      def walk_aliases(schema, seen)
+        case schema
+        when Model::Ref
+          found = @types[schema.name]
+          return unless found.is_a?(Model::AliasDef)
+
+          if seen.include?(schema.name)
+            raise SchemaError,
+                  "#{schema.name} is defined in terms of itself, through " \
+                  "#{seen.join(" -> ")} -> #{schema.name}. A schema that is only an alias for " \
+                  "another cannot form a cycle: give one of them properties, or break the loop."
+          end
+
+          walk_aliases(found.target, seen + [schema.name])
+        when Model::List then walk_aliases(schema.items, seen)
+        when Model::Freeform then walk_aliases(schema.values, seen)
+        end
+      end
+
       sig { params(schema: Model::Ref).returns(String) }
       def codec_for(schema) = "#{@namespace}::Types::#{schema.name}::CODEC"
 
@@ -192,7 +216,7 @@ module Oapi
         when Model::ObjectDef then true
         when Model::EnumDef then false
         when Model::UnionDef then found.members.all? { |member| object?(member) }
-        when Model::AliasDef then while_expanding(schema.name) { object?(found.target) }
+        when Model::AliasDef then object?(found.target)
         else T.absurd(found)
         end
       end
@@ -200,31 +224,7 @@ module Oapi
       sig { params(schema: Model::Ref).returns(T.nilable(Model::Schema)) }
       def alias_target(schema)
         found = @types[schema.name]
-        return nil unless found.is_a?(Model::AliasDef)
-
-        if @expanding.include?(schema.name)
-          raise SchemaError,
-                "#{schema.name} is defined in terms of itself, through " \
-                "#{@expanding.to_a.join(" -> ")} -> #{schema.name}. A schema that is only an " \
-                "alias for another cannot form a cycle: give one of them properties, or break " \
-                "the loop."
-        end
-
-        found.target
-      end
-
-      sig do
-        type_parameters(:Result)
-          .params(name: String, block: T.proc.returns(T.type_parameter(:Result)))
-          .returns(T.type_parameter(:Result))
-      end
-      def while_expanding(name, &block)
-        @expanding << name
-        begin
-          block.call
-        ensure
-          @expanding.delete(name)
-        end
+        found.is_a?(Model::AliasDef) ? found.target : nil
       end
 
       sig { params(schema: Model::Schema).returns(RubyType) }

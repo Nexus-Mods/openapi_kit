@@ -181,6 +181,13 @@ RSpec.describe "translating a document" do
       end
     end
 
+    # multipleOf is any positive number in OpenAPI, including on an integer schema.
+    it "accepts a fractional multipleOf on an integer schema" do
+      generated = schemas("Mod: { type: object, properties: { n: { type: integer, multipleOf: 0.5 } } }")
+
+      expect(generated.type("mod")).to include("const :n, T.nilable(::Integer)")
+    end
+
     it "falls back to the base type for an unrecognised format, and says so" do
       generated = property("{ type: integer, format: unix-time }")
 
@@ -317,6 +324,15 @@ RSpec.describe "translating a document" do
       expect { schemas(<<~YAML) }.to raise_error(Oapi::SchemaError, /A is defined in terms of itself.*A -> B -> A/m)
         A: { type: array, items: { $ref: "#/components/schemas/B" } }
         B: { type: array, items: { $ref: "#/components/schemas/A" } }
+      YAML
+    end
+
+    it "refuses a discriminated union member that has no name to map onto" do
+      expect { schemas(<<~YAML) }.to raise_error(Oapi::SchemaError, /is an inline schema/)
+        Pet:
+          oneOf:
+            - { type: object, required: [kind], properties: { kind: { type: string } } }
+          discriminator: { propertyName: kind }
       YAML
     end
 

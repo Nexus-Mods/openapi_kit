@@ -57,7 +57,7 @@ module Oapi
         const :maximum, T.nilable(Integer), default: nil
         const :exclusive_minimum, T::Boolean, default: false
         const :exclusive_maximum, T::Boolean, default: false
-        const :multiple_of, T.nilable(Integer), default: nil
+        const :multiple_of, T.nilable(Numeric), default: nil
         const :meta, Meta, factory: -> { Meta.new }
       end
 
