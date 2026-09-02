@@ -19,12 +19,6 @@ module Oapi
 
         private
 
-        sig { params(property: Ir::Property).returns(T::Boolean) }
-        def tristate?(property)
-          meta = Ir::Schema.meta(property.schema)
-          !property.required && meta.nullable && meta.default.nil?
-        end
-
         sig { params(buffer: Buffer, type: Ir::TypeDef).void }
         def emit_codec(buffer, type)
           name = Ir::TypeDef.name_of(type)
@@ -130,20 +124,8 @@ module Oapi
 
         sig { params(property: Ir::Property).returns(String) }
         def decode_expr(property)
-          meta = Ir::Schema.meta(property.schema)
-          inner = @registry.from_wire_expr(property.schema, value: "v")
-          key = property.name.inspect
-          default = meta.default
-
-          if default && !property.required
-            fallback = Defaults.expression(schema: property.schema, default: default, registry: @registry)
-            return "::Oapi::Decode.defaulted(raw, #{key}, #{fallback}) { |v| #{inner} }"
-          end
-          return "::Oapi::Decode.tristate(raw, #{key}) { |v| #{inner} }" if tristate?(property)
-          return "::Oapi::Decode.nullable_field(raw, #{key}) { |v| #{inner} }" if property.required && meta.nullable
-          return "::Oapi::Decode.field(raw, #{key}) { |v| #{inner} }" if property.required
-
-          "::Oapi::Decode.optional(raw, #{key}) { |v| #{inner} }"
+          Decode.expression(source: "raw", key: property.name, schema: property.schema,
+                            required: property.required, registry: @registry)
         end
 
         sig { params(buffer: Buffer, type: Ir::ObjectDef).void }
@@ -163,7 +145,7 @@ module Oapi
           key = property.name.inspect
           reader = property.identifier.to_s
 
-          if tristate?(property)
+          if Decode.tristate?(required: property.required, meta: Ir::Schema.meta(property.schema))
             buffer.line("#{reader} = value.#{reader}")
             buffer.nest("if #{reader}.is_a?(::Oapi::Present)") do
               buffer.line("inner = #{reader}.value")

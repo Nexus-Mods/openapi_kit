@@ -37,7 +37,9 @@ module Oapi
           Emit::Types.new(document: document, registry: registry, config: @config),
           Emit::Operations.new(document: document, registry: registry, config: @config),
           Emit::Handlers.new(document: document, config: @config),
-          Emit::Container.new(document: document, config: @config)
+          Emit::Container.new(document: document, config: @config),
+          Emit::Routes.new(document: document, config: @config),
+          Emit::Controllers.new(document: document, registry: registry, config: @config)
         ]
       end
     end

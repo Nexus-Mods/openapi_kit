@@ -16,3 +16,5 @@ group :development, :test do
 end
 
 gem "zeitwerk", "~> 2.8", groups: %i[development test]
+
+gem "railties", "~> 8.1", groups: %i[development test]

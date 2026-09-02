@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 PACKAGING_ROOT = Pathname.new(__dir__).join("../..")
-PACKAGING_GEM_FOR_REQUIRE = { "action_dispatch" => "actionpack" }.freeze
+PACKAGING_GEM_FOR_REQUIRE = {
+  "action_dispatch" => "actionpack", "action_controller" => "actionpack", "rails" => "railties"
+}.freeze
 PACKAGING_STDLIB = %w[date time set json yaml pathname fileutils optparse].freeze
 
 # Nothing in CI installs the built gems, so a stale files glob is invisible until a

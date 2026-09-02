@@ -23,6 +23,7 @@ Gem::Specification.new do |spec|
     "lib/oapi-runtime.rb",
     "lib/oapi/runtime.rb",
     "lib/oapi/{codec,container,decode,errors,optional,rails,version}.rb",
+    "lib/oapi/rails/railtie.rb",
     "LICENSE.txt",
     "README.md"
   ]
@@ -30,5 +31,6 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "actionpack", ">= 7.1"
   spec.add_dependency "bigdecimal", "~> 4.0"
+  spec.add_dependency "railties", ">= 7.1"
   spec.add_dependency "sorbet-runtime", "~> 0.5"
 end

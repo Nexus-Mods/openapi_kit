@@ -102,7 +102,8 @@ module Oapi
 
           default = meta.default
           return "#{declaration}, #{default_clause(property, default)}" if default && !property.required
-          return "#{declaration}, factory: -> { ::Oapi::Absent.new }" if tristate?(property)
+          return "#{declaration}, factory: -> { ::Oapi::Absent.new }" if Decode.tristate?(required: property.required,
+                                                                                          meta: Ir::Schema.meta(property.schema))
 
           declaration
         end
@@ -112,17 +113,13 @@ module Oapi
           Defaults.clause(schema: property.schema, default: default, registry: @registry)
         end
 
-        sig { params(property: Ir::Property).returns(T::Boolean) }
-        def tristate?(property)
-          meta = Ir::Schema.meta(property.schema)
-          !property.required && meta.nullable && meta.default.nil?
-        end
-
         sig { params(property: Ir::Property).returns(String) }
         def prop_type(property)
           meta = Ir::Schema.meta(property.schema)
           base = @registry.sorbet_type(property.schema)
-          return "::Oapi::Optional[T.nilable(#{base})]" if tristate?(property)
+          if Decode.tristate?(required: property.required, meta: Ir::Schema.meta(property.schema))
+            return "::Oapi::Optional[T.nilable(#{base})]"
+          end
           return "T.nilable(#{base})" if Defaults.nilable?(required: property.required, meta: meta)
 
           base

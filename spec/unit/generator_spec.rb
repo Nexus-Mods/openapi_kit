@@ -4,15 +4,17 @@ require "open3"
 
 RSpec.describe Oapi::Codegen::Generator do
   describe "the server schema" do
-    let(:result) { generate("server.yaml", modules: %w[Server], "container_prefix" => "v1") }
+    let(:result) { generate("server.yaml", modules: %w[Server], "container_prefix" => "v1", "route_prefix" => "/v1") }
 
     it "writes one file per constant, at the path the constant implies" do
       expect(relative_paths(result[:dir])).to eq(
         %w[
           server/container.rb
           server/handlers/mods.rb server/handlers/system.rb
+          server/mods_controller.rb
           server/operations/create_mod.rb server/operations/get_health.rb
           server/operations/list_mods.rb
+          server/routes.rb server/system_controller.rb
           server/types/mod.rb server/types/mod_status.rb server/types/new_mod.rb
           server/types/problem_details.rb
         ]
