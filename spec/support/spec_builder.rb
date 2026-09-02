@@ -14,7 +14,8 @@ module SpecBuilder
     dir.join("api.yaml").write(yaml)
 
     config = Oapi::Codegen::Config.from_hash(
-      { "spec" => "api.yaml", "output" => "out", "modules" => ["API"] }.merge(config_options),
+      { "spec" => "api.yaml", "output" => "out", "modules" => ["Api"],
+        "controller_base" => "ApiBaseController" }.merge(config_options),
       base: dir
     )
     Oapi::Codegen::Loader.new(config: config).parse

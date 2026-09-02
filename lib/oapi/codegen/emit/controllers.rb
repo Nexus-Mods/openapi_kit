@@ -108,10 +108,17 @@ module Oapi
           case group
           when "Path" then "path_params = request.path_parameters.transform_keys(&:to_s)"
           when "Query" then "query_params = request.query_parameters"
-          when "Headers" then "header_params = ::Oapi::Decode.gather(request.headers, #{names.inspect})"
-          when "Cookies" then "cookie_params = ::Oapi::Decode.gather(request.cookie_jar, #{names.inspect})"
+          when "Headers" then "header_params = #{lookup_hash("request.headers", names)}"
+          when "Cookies" then "cookie_params = #{lookup_hash("request.cookie_jar", names)}"
           else raise SchemaError, "unknown parameter group #{group}"
           end
+        end
+
+        sig { params(source: String, names: T::Array[String]).returns(String) }
+        def lookup_hash(source, names)
+          entries = names.map { |name| "#{name.inspect} => #{source}[#{name.inspect}]" }
+
+          "{ #{entries.join(", ")} }.compact"
         end
 
         sig { params(operation: Ir::Operation).returns(T::Hash[String, T::Array[Ir::Parameter]]) }

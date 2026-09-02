@@ -27,6 +27,7 @@ Write an `oapi.yml` beside your spec:
 spec: openapi/mods.yaml
 output: app/api
 modules: [Mods, V1]
+controller_base: Api::BaseController
 route_prefix: /v1
 container_prefix: v1
 ```
@@ -38,7 +39,7 @@ container_prefix: v1
 | `modules` | namespace for every generated constant, so `Mods::V1::Types::Mod` |
 | `route_prefix` | prefixed onto every generated route |
 | `container_prefix` | prefixed onto every container key, so `v1.handlers.mods` |
-| `controller_base` | class the generated controllers inherit; defaults to `::Oapi::Rails::Controller` |
+| `controller_base` | your controller class the generated controllers inherit from |
 | `type_mappings` | your Ruby type for a `type:format` pair |
 | `name_overrides` | a different Ruby name for a schema |
 
@@ -102,19 +103,16 @@ end
 Miss an operation and Sorbet reports the abstract method you did not implement. Return a
 variant the spec does not declare and it will not compile.
 
-**4. Give the controllers a container.** Generated controllers call `oapi_container`
-and nothing else — oapi holds no global state and does not know where your container
-lives. Point `controller_base` at a class of your own that answers it:
-
-```yaml
-# oapi.yml
-controller_base: "Api::BaseController"
-```
+**4. Give the controllers a base class.** Generated controllers inherit the class named
+by `controller_base` and call `oapi_container` on it. oapi ships no controller and holds
+no global state, so the base is yours:
 
 ```ruby
 # app/controllers/api/base_controller.rb
 module Api
-  class BaseController < Oapi::Rails::Controller
+  class BaseController < ApplicationController
+    include Oapi::Rails::Rendering
+
     private
 
     def oapi_container = Rails.configuration.x.api_container
@@ -122,9 +120,9 @@ module Api
 end
 ```
 
-`Oapi::Rails::Controller` gives you `render_openapi` and turns a `DecodeError` into a
-422 problem document. Inheriting from it is optional; a base class of your own that
-provides both works just as well.
+`Oapi::Rails::Rendering` supplies `render_openapi` and turns a `DecodeError` into a 422
+problem document. Including it is optional — a base class providing both methods itself
+works just as well, and nothing generated depends on the module.
 
 **5. Build the container and verify it at boot.**
 

@@ -2,7 +2,7 @@
 
 PACKAGING_ROOT = Pathname.new(__dir__).join("../..")
 PACKAGING_GEM_FOR_REQUIRE = {
-  "action_dispatch" => "actionpack", "action_controller" => "actionpack"
+  "action_dispatch" => "actionpack", "action_controller" => "actionpack", "active_support/concern" => "activesupport"
 }.freeze
 PACKAGING_STDLIB = %w[date time set json yaml pathname fileutils optparse].freeze
 

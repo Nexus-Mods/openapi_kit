@@ -105,14 +105,6 @@ module Oapi
       raise DecodeError.new(e.message, json_pointer: prefix)
     end
 
-    sig { params(source: T.untyped, names: T::Array[String]).returns(T::Hash[String, String]) }
-    def self.gather(source, names)
-      names.each_with_object({}) do |name, found|
-        value = source[name]
-        found[name] = value.to_s unless value.nil?
-      end
-    end
-
     sig { params(raw: T.untyped).returns(T::Hash[String, T.untyped]) }
     def self.object(raw)
       return raw if raw.is_a?(Hash)

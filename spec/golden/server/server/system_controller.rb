@@ -3,7 +3,7 @@
 # frozen_string_literal: true
 
 module Server
-  class SystemController < ::Oapi::Rails::Controller
+  class SystemController < ApiBaseController
     extend T::Sig
 
     sig { void }

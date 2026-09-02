@@ -14,14 +14,14 @@ module Oapi
       const :modules, T::Array[String]
       const :route_prefix, T.nilable(String), default: nil
       const :container_prefix, T.nilable(String), default: nil
-      const :controller_base, String, default: "::Oapi::Rails::Controller"
+      const :controller_base, String
       const :type_mappings, T::Hash[String, RubyType], default: {}
       const :security_schemes, T::Hash[String, String], default: {}
       const :name_overrides, T::Hash[String, String], default: {}
 
       KNOWN_KEYS = T.let(
         %w[
-          spec output modules route_prefix container_prefix
+          spec output modules controller_base route_prefix container_prefix
           type_mappings security_schemes name_overrides
         ].freeze,
         T::Array[String]
@@ -52,7 +52,7 @@ module Oapi
                 "Known options: #{KNOWN_KEYS.join(", ")}."
         end
 
-        %w[spec output modules].each do |key|
+        %w[spec output modules controller_base].each do |key|
           raise ConfigError, "#{where}`#{key}` is required." unless raw[key]
         end
 
@@ -65,7 +65,7 @@ module Oapi
           modules: modules,
           route_prefix: raw["route_prefix"]&.to_s,
           container_prefix: raw["container_prefix"]&.to_s,
-          controller_base: raw.fetch("controller_base", "::Oapi::Rails::Controller").to_s,
+          controller_base: raw.fetch("controller_base").to_s,
           type_mappings: parse_type_mappings(raw["type_mappings"]),
           security_schemes: stringify(raw["security_schemes"]),
           name_overrides: stringify(raw["name_overrides"])

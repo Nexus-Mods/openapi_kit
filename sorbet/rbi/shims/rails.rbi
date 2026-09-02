@@ -75,3 +75,10 @@ module ActionController
     def request; end
   end
 end
+
+module ActiveSupport
+  module Concern
+    sig { params(block: T.proc.bind(T.untyped).void).void }
+    def included(&block); end
+  end
+end

@@ -58,14 +58,12 @@ CONTAINER = DummyContainer.new(
   "v1.handlers.system" => SystemHandler.new
 )
 
-module Oapi
-  module Rails
-    class Controller
-      private
+class ApiBaseController < ActionController::API
+  include Oapi::Rails::Rendering
 
-      def oapi_container = CONTAINER
-    end
-  end
+  private
+
+  def oapi_container = CONTAINER
 end
 
 Server::Container.verify!(CONTAINER)

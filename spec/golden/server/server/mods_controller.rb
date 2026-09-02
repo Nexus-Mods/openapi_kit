@@ -3,14 +3,14 @@
 # frozen_string_literal: true
 
 module Server
-  class ModsController < ::Oapi::Rails::Controller
+  class ModsController < ApiBaseController
     extend T::Sig
 
     sig { void }
     def list_mods
       path_params = request.path_parameters.transform_keys(&:to_s)
       query_params = request.query_parameters
-      header_params = ::Oapi::Decode.gather(request.headers, ["Application-Name"])
+      header_params = { "Application-Name" => request.headers["Application-Name"] }.compact
 
       decoded = Server::Operations::ListMods::Request.new(
         path: Server::Operations::ListMods::Path.new(

@@ -3,6 +3,7 @@
 
 require "action_controller"
 require "action_dispatch"
+require "active_support/concern"
 
 require "oapi/runtime"
 
@@ -34,19 +35,23 @@ module Oapi
 
     class MissingContainer < Error; end
 
-    class Controller < ::ActionController::API
+    module Rendering
       extend T::Sig
+      extend ::ActiveSupport::Concern
+      include Kernel
 
-      rescue_from DecodeError, with: :render_openapi_decode_error
+      included do
+        T.unsafe(self).rescue_from(Oapi::DecodeError, with: :render_openapi_decode_error)
+      end
 
       private
 
       sig { returns(T.untyped) }
       def oapi_container
         raise MissingContainer,
-              "#{self.class} needs a container. Define #oapi_container on the controller base " \
-              "class named by `controller_base` in your oapi.yml, returning something that " \
-              "responds to resolve(key)."
+              "#{self.class} needs a container. Define #oapi_container on the controller named " \
+              "by `controller_base` in your oapi.yml, returning something that responds to " \
+              "resolve(key)."
       end
 
       sig { params(response: T.untyped).void }
@@ -57,7 +62,7 @@ module Oapi
         T.unsafe(self).render(json: body, status: response.status, content_type: response.content_type)
       end
 
-      sig { params(error: DecodeError).void }
+      sig { params(error: Oapi::DecodeError).void }
       def render_openapi_decode_error(error)
         T.unsafe(self).render(
           json: { "title" => "Unprocessable Content", "status" => 422,

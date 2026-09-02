@@ -20,19 +20,21 @@ RSpec.describe Oapi::Codegen::Config do
     config = described_class.from_file(write(<<~YAML))
       spec: specs/api.yaml
       output: generated
-      modules: [API, V3]
+      modules: [Api, V3]
+      controller_base: ApiBaseController
     YAML
 
     expect(config.spec).to eq(@dir.join("specs/api.yaml"))
     expect(config.output).to eq(@dir.join("generated"))
-    expect(config.namespace).to eq("API::V3")
+    expect(config.namespace).to eq("Api::V3")
   end
 
   it "builds container keys from the prefix" do
     config = described_class.from_file(write(<<~YAML))
       spec: api.yaml
       output: out
-      modules: [API]
+      modules: [Api]
+      controller_base: ApiBaseController
       container_prefix: v3
     YAML
 
@@ -43,7 +45,8 @@ RSpec.describe Oapi::Codegen::Config do
     config = described_class.from_file(write(<<~YAML))
       spec: api.yaml
       output: out
-      modules: [API]
+      modules: [Api]
+      controller_base: ApiBaseController
     YAML
 
     expect(config.container_key("handlers", "mods")).to eq("handlers.mods")
@@ -51,7 +54,7 @@ RSpec.describe Oapi::Codegen::Config do
 
   describe "options it refuses to guess at" do
     it "names the unknown option and lists the valid ones" do
-      expect { described_class.from_file(write("spec: a\noutput: b\nmodules: [A]\nmodules_: x\n")) }
+      expect { described_class.from_file(write("spec: a\noutput: b\nmodules: [A]\ncontroller_base: C\nmodules_: x\n")) }
         .to raise_error(Oapi::ConfigError, /unknown option modules_\. Known options: spec, output/)
     end
 
@@ -61,7 +64,7 @@ RSpec.describe Oapi::Codegen::Config do
     end
 
     it "rejects an empty modules list" do
-      expect { described_class.from_file(write("spec: a\noutput: b\nmodules: []\n")) }
+      expect { described_class.from_file(write("spec: a\noutput: b\nmodules: []\ncontroller_base: C\n")) }
         .to raise_error(Oapi::ConfigError, /must name at least one namespace, e\.g\. \[API, V3\]/)
     end
 

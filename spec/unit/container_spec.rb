@@ -8,7 +8,8 @@ Oapi::Codegen::Generator.new(
   config: Oapi::Codegen::Config.from_hash(
     { "spec" => Pathname.new(__dir__).join("../fixtures/schemas/server.yaml").to_s,
       "output" => CONTAINED_DIR.join("generated").to_s,
-      "modules" => %w[Contained], "container_prefix" => "v1" },
+      "modules" => %w[Contained], "container_prefix" => "v1",
+      "controller_base" => "ApiBaseController" },
     base: Pathname.pwd
   )
 ).generate
