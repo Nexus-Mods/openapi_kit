@@ -20,7 +20,7 @@ module KitchenSink
 
         VALUES = T.let(["live", "under-moderation", "hidden"].freeze, T::Array[::Oapi::Wire])
 
-        sig { override.params(value: T.untyped).returns(KitchenSink::Types::ModStatus) }
+        sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::ModStatus) }
         def self.from_wire(value)
           KitchenSink::Types::ModStatus.try_deserialize(value) ||
             raise(::Oapi::DecodeError.new("expected one of #{VALUES.join(", ")}, got #{value.inspect}"))

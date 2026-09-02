@@ -155,7 +155,7 @@ module MyApp::MoneyCodec
 
   Value = type_template { { fixed: ::Money } }
 
-  sig { override.params(value: T.untyped).returns(::Money) }
+  sig { override.params(value: Oapi::Wire).returns(::Money) }
   def self.from_wire(value) = ::Money.parse(Oapi::Codec::String.from_wire(value))
 
   sig { override.params(value: ::Money).returns(Oapi::Wire) }

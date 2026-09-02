@@ -14,7 +14,7 @@ module Oapi
 
       Value = type_template { { fixed: ::Time } }
 
-      sig { override.params(value: T.untyped).returns(::Time) }
+      sig { override.params(value: Oapi::Wire).returns(::Time) }
       def self.from_wire(value)
         raise DecodeError.new("expected an RFC 3339 date-time, got #{value.inspect}") unless
           value.is_a?(::String)

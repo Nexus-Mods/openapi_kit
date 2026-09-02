@@ -13,7 +13,7 @@ module Oapi
 
       Value = type_member
 
-      sig { abstract.params(value: T.untyped).returns(Value) }
+      sig { abstract.params(value: Oapi::Wire).returns(Value) }
       def from_wire(value); end
 
       sig { abstract.params(value: Value).returns(Oapi::Wire) }

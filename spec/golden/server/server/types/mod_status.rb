@@ -19,7 +19,7 @@ module Server
 
         VALUES = T.let(["live", "hidden"].freeze, T::Array[::Oapi::Wire])
 
-        sig { override.params(value: T.untyped).returns(Server::Types::ModStatus) }
+        sig { override.params(value: ::Oapi::Wire).returns(Server::Types::ModStatus) }
         def self.from_wire(value)
           Server::Types::ModStatus.try_deserialize(value) ||
             raise(::Oapi::DecodeError.new("expected one of #{VALUES.join(", ")}, got #{value.inspect}"))

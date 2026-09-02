@@ -14,7 +14,7 @@ module Oapi
 
       PATTERN = T.let(/\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/, Regexp)
 
-      sig { override.params(value: T.untyped).returns(::String) }
+      sig { override.params(value: Oapi::Wire).returns(::String) }
       def self.from_wire(value)
         return value if value.is_a?(::String) && value.match?(PATTERN)
 
