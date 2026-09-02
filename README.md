@@ -155,10 +155,10 @@ module MyApp::MoneyCodec
 
   Value = type_template { { fixed: ::Money } }
 
-  sig { override.params(value: Oapi::Wire::Out).returns(::Money) }
+  sig { override.params(value: Oapi::Wire).returns(::Money) }
   def self.from_wire(value) = ::Money.parse(Oapi::Codec::String.from_wire(value))
 
-  sig { override.params(value: ::Money).returns(Oapi::Wire::Out) }
+  sig { override.params(value: ::Money).returns(Oapi::Wire) }
   def self.to_wire(value) = value.format
 end
 ```

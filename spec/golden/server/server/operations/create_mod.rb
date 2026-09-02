@@ -28,7 +28,7 @@ module Server
         sig { abstract.returns(::Integer) }
         def status; end
 
-        sig { abstract.returns(::Oapi::Wire::Out) }
+        sig { abstract.returns(::Oapi::Wire) }
         def to_wire; end
 
         sig { abstract.returns(T.nilable(::String)) }
@@ -44,7 +44,7 @@ module Server
         sig { override.returns(::Integer) }
         def status = 201
 
-        sig { override.returns(::Oapi::Wire::Out) }
+        sig { override.returns(::Oapi::Wire) }
         def to_wire = Server::Types::Mod::Codec.to_wire(body)
 
         sig { override.returns(T.nilable(::String)) }
@@ -58,7 +58,7 @@ module Server
         sig { override.returns(::Integer) }
         def status = 204
 
-        sig { override.returns(::Oapi::Wire::Out) }
+        sig { override.returns(::Oapi::Wire) }
         def to_wire = nil
 
         sig { override.returns(T.nilable(::String)) }
@@ -75,7 +75,7 @@ module Server
         sig { override.returns(::Integer) }
         def status = status_code
 
-        sig { override.returns(::Oapi::Wire::Out) }
+        sig { override.returns(::Oapi::Wire) }
         def to_wire = Server::Types::ProblemDetails::Codec.to_wire(body)
 
         sig { override.returns(T.nilable(::String)) }

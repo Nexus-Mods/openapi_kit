@@ -14,7 +14,7 @@ module KitchenSink
 
         Value = type_template { { fixed: KitchenSink::Types::Loose::Value } }
 
-        sig { override.params(value: ::Oapi::Wire::In).returns(KitchenSink::Types::Loose::Value) }
+        sig { override.params(value: T.untyped).returns(KitchenSink::Types::Loose::Value) }
         def self.from_wire(value)
           ::Oapi::Decode.first_of(value, "Loose", [
             ->(candidate) { ::Oapi::Codec::String.from_wire(candidate) },
@@ -22,7 +22,7 @@ module KitchenSink
           ])
         end
 
-        sig { override.params(value: KitchenSink::Types::Loose::Value).returns(::Oapi::Wire::Out) }
+        sig { override.params(value: KitchenSink::Types::Loose::Value).returns(::Oapi::Wire) }
         def self.to_wire(value)
           case value
           when ::String then ::Oapi::Codec::String.to_wire(value)

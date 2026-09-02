@@ -14,7 +14,7 @@ module Oapi
 
       Value = type_template { { fixed: ::BigDecimal } }
 
-      sig { override.params(value: Oapi::Wire::In).returns(::BigDecimal) }
+      sig { override.params(value: T.untyped).returns(::BigDecimal) }
       def self.from_wire(value)
         case value
         when ::Integer then Kernel.BigDecimal(value)
@@ -29,7 +29,7 @@ module Oapi
         end
       end
 
-      sig { override.params(value: ::BigDecimal).returns(Oapi::Wire::Out) }
+      sig { override.params(value: ::BigDecimal).returns(Oapi::Wire) }
       def self.to_wire(value) = value.to_s("F")
     end
   end

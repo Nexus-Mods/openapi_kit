@@ -30,10 +30,10 @@ module Oapi
             buffer.line("Value = type_template { { fixed: #{qualified(name)} } }")
             buffer.blank
             emit_codec_constants(buffer, type)
-            buffer.line("sig { override.params(value: ::Oapi::Wire::In).returns(#{qualified(name)}) }")
+            buffer.line("sig { override.params(value: T.untyped).returns(#{qualified(name)}) }")
             emit_from_wire(buffer, type)
             buffer.blank
-            buffer.line("sig { override.params(value: #{qualified(name)}).returns(::Oapi::Wire::Out) }")
+            buffer.line("sig { override.params(value: #{qualified(name)}).returns(::Oapi::Wire) }")
             emit_to_wire(buffer, type)
           end
         end
@@ -42,7 +42,7 @@ module Oapi
         def emit_codec_constants(buffer, type)
           if type.is_a?(Model::EnumDef)
             values = type.members.map { |member| member.value.inspect }.join(", ")
-            buffer.line("VALUES = T.let([#{values}].freeze, T::Array[::Oapi::Wire::Out])")
+            buffer.line("VALUES = T.let([#{values}].freeze, T::Array[::Oapi::Wire])")
             buffer.blank
           end
 
@@ -129,7 +129,7 @@ module Oapi
         sig { params(buffer: Buffer, type: Model::ObjectDef).void }
         def emit_object_to_wire(buffer, type)
           buffer.nest("def self.to_wire(value)") do
-            buffer.line("wire = T.let({}, T::Hash[::String, ::Oapi::Wire::Out])")
+            buffer.line("wire = T.let({}, T::Hash[::String, ::Oapi::Wire])")
             type.properties.each { |property| emit_property_to_wire(buffer, property) }
             extra = type.additional_properties
             buffer.line("wire.merge!(#{additional_encode(extra)})") if extra

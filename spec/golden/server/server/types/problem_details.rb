@@ -26,7 +26,7 @@ module Server
 
         Value = type_template { { fixed: Server::Types::ProblemDetails } }
 
-        sig { override.params(value: ::Oapi::Wire::In).returns(Server::Types::ProblemDetails) }
+        sig { override.params(value: T.untyped).returns(Server::Types::ProblemDetails) }
         def self.from_wire(value)
           raw = ::Oapi::Decode.object(value)
           Server::Types::ProblemDetails.new(
@@ -35,9 +35,9 @@ module Server
           )
         end
 
-        sig { override.params(value: Server::Types::ProblemDetails).returns(::Oapi::Wire::Out) }
+        sig { override.params(value: Server::Types::ProblemDetails).returns(::Oapi::Wire) }
         def self.to_wire(value)
-          wire = T.let({}, T::Hash[::String, ::Oapi::Wire::Out])
+          wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
           wire["title"] = ::Oapi::Codec::String.to_wire(value.title)
           detail = value.detail
           wire["detail"] = ::Oapi::Codec::String.to_wire(detail) unless detail.nil?

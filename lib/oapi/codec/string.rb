@@ -12,14 +12,14 @@ module Oapi
 
       Value = type_template { { fixed: ::String } }
 
-      sig { override.params(value: Oapi::Wire::In).returns(::String) }
+      sig { override.params(value: T.untyped).returns(::String) }
       def self.from_wire(value)
         return value if value.is_a?(::String)
 
         raise DecodeError.new("expected a string, got #{value.inspect}")
       end
 
-      sig { override.params(value: ::String).returns(Oapi::Wire::Out) }
+      sig { override.params(value: ::String).returns(Oapi::Wire) }
       def self.to_wire(value) = value
     end
   end

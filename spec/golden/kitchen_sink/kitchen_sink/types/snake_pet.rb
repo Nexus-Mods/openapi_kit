@@ -16,7 +16,7 @@ module KitchenSink
 
         TAGS = T.let(["snake_cat", "snake_dog"].freeze, T::Array[::String])
 
-        sig { override.params(value: ::Oapi::Wire::In).returns(KitchenSink::Types::SnakePet::Value) }
+        sig { override.params(value: T.untyped).returns(KitchenSink::Types::SnakePet::Value) }
         def self.from_wire(value)
           raw = ::Oapi::Decode.object(value)
           tag = raw["kind"]
@@ -27,7 +27,7 @@ module KitchenSink
           end
         end
 
-        sig { override.params(value: KitchenSink::Types::SnakePet::Value).returns(::Oapi::Wire::Out) }
+        sig { override.params(value: KitchenSink::Types::SnakePet::Value).returns(::Oapi::Wire) }
         def self.to_wire(value)
           case value
           when KitchenSink::Types::SnakeCat then KitchenSink::Types::SnakeCat::Codec.to_wire(value)

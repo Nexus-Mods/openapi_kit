@@ -11,6 +11,6 @@ class MismatchedCodec
   sig { override.params(value: T.untyped).returns(::Time) }
   def from_wire(value) = ::Time.at(0)
 
-  sig { override.params(value: ::String).returns(Oapi::Wire::Out) }
+  sig { override.params(value: ::String).returns(Oapi::Wire) }
   def to_wire(value) = value
 end
