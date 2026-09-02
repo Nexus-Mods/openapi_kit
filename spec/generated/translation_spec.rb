@@ -188,6 +188,32 @@ RSpec.describe "translating a document" do
       expect(generated.type("mod")).to include("const :n, T.nilable(::Integer)")
     end
 
+    # A binary maps to a file Rails wrote to disk parsing a multipart request, so a
+    # response renders its name rather than its bytes. It warns rather than refusing,
+    # because the same component may be a legitimate request body elsewhere.
+    it "warns about format: binary in a response, however deeply nested" do
+      generated = document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
+                           "  /f:", "    get:", "      operationId: getFile", "      tags: [files]",
+                           "      responses:", %(        "200":), "          description: ok",
+                           "          content:", "            application/json:",
+                           "              schema:", "                type: array",
+                           "                items:", "                  type: object",
+                           "                  properties: { blob: { type: string, format: binary } }")
+
+      expect(generated.warnings.join).to include("A response of getFile declares format: binary")
+    end
+
+    it "says nothing about format: binary in a request body" do
+      generated = document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
+                           "  /f:", "    post:", "      operationId: postFile", "      tags: [files]",
+                           "      requestBody:", "        content:", "          multipart/form-data:",
+                           "            schema:", "              type: object",
+                           "              properties: { upload: { type: string, format: binary } }",
+                           %(      responses: { "204": { description: done } }))
+
+      expect(generated.warnings).to be_empty
+    end
+
     it "falls back to the base type for an unrecognised format, and says so" do
       generated = property("{ type: integer, format: unix-time }")
 
@@ -324,39 +350,6 @@ RSpec.describe "translating a document" do
       expect { schemas(<<~YAML) }.to raise_error(Oapi::SchemaError, /A is defined in terms of itself.*A -> B -> A/m)
         A: { type: array, items: { $ref: "#/components/schemas/B" } }
         B: { type: array, items: { $ref: "#/components/schemas/A" } }
-      YAML
-    end
-
-    # A binary maps to a file Rails wrote to disk parsing a multipart request. A response
-    # cannot produce one, and rendering it sends the filename instead of the bytes.
-    it "refuses format: binary in a response, however deeply nested" do
-      expect { operation(<<~YAML) }.to raise_error(Oapi::SchemaError, /declares format: binary/)
-        /f:
-          get:
-            operationId: getFile
-            responses:
-              "200":
-                description: ok
-                content:
-                  application/json:
-                    schema:
-                      type: array
-                      items:
-                        type: object
-                        properties: { blob: { type: string, format: binary } }
-      YAML
-    end
-
-    it "accepts format: binary in a request body" do
-      expect { operation(<<~YAML) }.not_to raise_error
-        /f:
-          post:
-            operationId: postFile
-            requestBody:
-              content:
-                multipart/form-data:
-                  schema: { type: object, properties: { upload: { type: string, format: binary } } }
-            responses: { "204": { description: done } }
       YAML
     end
 

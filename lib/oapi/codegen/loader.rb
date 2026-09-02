@@ -17,9 +17,13 @@ module Oapi
         T::Array[String]
       )
 
+      sig { returns(T::Array[String]) }
+      def warnings = @warnings.to_a
+
       sig { params(config: Config).void }
       def initialize(config:)
         @config = config
+        @warnings = T.let(Set.new, T::Set[String])
         @types = T.let({}, T::Hash[String, Model::TypeDef])
         @keys_by_name = T.let({}, T::Hash[String, String])
         @in_progress = T.let(Set.new, T::Set[String])
@@ -67,15 +71,16 @@ module Oapi
           subject: "tags",
           consequence: "each tag needs its own handler interface and controller"
         )
-        operations.each { |operation| reject_binary_response!(operation) }
+        operations.each { |operation| warn_binary_response(operation) }
         operations
       end
 
       # format: binary maps to a file Rails wrote to disk while parsing a multipart
-      # request. A response cannot produce one, and rendering it would send the filename
-      # in place of the bytes the document promises.
+      # request. A response cannot produce one, and rendering it sends the filename in
+      # place of the bytes the document promises. This warns rather than refuses, because
+      # the same component may be a legitimate multipart request body elsewhere.
       sig { params(operation: Model::Operation).void }
-      def reject_binary_response!(operation)
+      def warn_binary_response(operation)
         return if @config.type_mappings.key?("string:binary")
 
         operation.responses.each do |response|
@@ -94,10 +99,9 @@ module Oapi
         when Model::StringSchema
           return unless schema.format == "binary" && Model::Schema.meta(schema).ruby_type.nil?
 
-          raise SchemaError,
-                "A response of #{operation.id} declares format: binary. oapi renders responses " \
-                "as JSON, so it has no bytes to send: use format: byte to base64 the content, " \
-                "or set a type_mappings entry for string:binary."
+          @warnings << "A response of #{operation.id} declares format: binary, which oapi " \
+                       "renders as the uploaded file's name, not its bytes. Use format: byte " \
+                       "to base64 the content, or map string:binary to a type of your own."
         when Model::Ref then walk_type_for_binary(schema.name, seen, operation)
         when Model::List then walk_for_binary(schema.items, seen, operation)
         when Model::Freeform

@@ -17,14 +17,15 @@ module Oapi
 
       sig { returns(T::Array[Pathname]) }
       def generate
-        document = Loader.new(config: @config).parse
+        loader = Loader.new(config: @config)
+        document = loader.parse
         registry = TypeRegistry.for(document, @config)
         writer = Writer.new(output: @config.output)
 
         files = emitters(document, registry).flat_map(&:render)
         written = writer.write_all(files)
 
-        @warnings = registry.warnings
+        @warnings = loader.warnings + registry.warnings
         written
       end
 
