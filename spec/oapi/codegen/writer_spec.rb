@@ -41,7 +41,6 @@ RSpec.describe Oapi::Codegen::Writer do
 
     it "writes nothing when the syntax check fails" do
       expect { writer.write("types.rb", "class Broken") }.to raise_error(Oapi::Error)
-      expect(writer.written).to be_empty
       expect(@dir.join("out/types.rb")).not_to exist
     end
 

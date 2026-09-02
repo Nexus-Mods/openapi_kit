@@ -10,13 +10,9 @@ module Oapi
     class Writer
       extend T::Sig
 
-      sig { returns(T::Array[Pathname]) }
-      attr_reader :written
-
       sig { params(output: Pathname).void }
       def initialize(output:)
         @output = output
-        @written = T.let([], T::Array[Pathname])
       end
 
       sig { void }
@@ -42,8 +38,7 @@ module Oapi
         reject_duplicate_paths!(files)
 
         clean!
-        files.each { |file| write(file.path, file.contents) }
-        written
+        files.map { |file| write(file.path, file.contents) }
       end
 
       sig { params(name: String, content: String).returns(Pathname) }
@@ -53,7 +48,6 @@ module Oapi
         FileUtils.mkdir_p(path.dirname)
         body = content.end_with?("\n") ? content : "#{content}\n"
         path.write("#{MARKER}\n#{body}")
-        @written << path
         path
       end
 
