@@ -39,24 +39,24 @@ RSpec.describe Oapi::Types::Registry do
   describe "#from_wire_expr / #to_wire_expr" do
     it "calls the codec for a built-in scalar" do
       expect(registry.from_wire_expr(string("date-time"), value: "v"))
-        .to eq("::Oapi::Codec::DateTime.from_wire(v)")
+        .to eq("::Oapi::Codec::Scalar::DateTime.from_wire(v)")
       expect(registry.to_wire_expr(string("date-time"), value: "at"))
-        .to eq("::Oapi::Codec::DateTime.to_wire(at)")
+        .to eq("::Oapi::Codec::Scalar::DateTime.to_wire(at)")
     end
 
     it "calls the generated type's nested codec for a ref" do
       ref = Oapi::Ir::Ref.new(name: "Mod")
       expect(registry.from_wire_expr(ref, value: "v"))
-        .to eq("API::V3::Types::Mod::Codec.from_wire(v)")
-      expect(registry.to_wire_expr(ref, value: "mod")).to eq("API::V3::Types::Mod::Codec.to_wire(mod)")
+        .to eq("API::V3::Codecs::Mod.from_wire(v)")
+      expect(registry.to_wire_expr(ref, value: "mod")).to eq("API::V3::Codecs::Mod.to_wire(mod)")
     end
 
     it "maps over a list, and stays identity when the element needs no conversion" do
       list = Oapi::Ir::List.new(items: Oapi::Ir::Ref.new(name: "Mod"))
       expect(registry.from_wire_expr(list, value: "v"))
-        .to eq("Oapi::Decode.each(v) { |item| API::V3::Types::Mod::Codec.from_wire(item) }")
+        .to eq("Oapi::Decode.each(v) { |item| API::V3::Codecs::Mod.from_wire(item) }")
       expect(registry.to_wire_expr(list, value: "mods"))
-        .to eq("mods.map { |item| API::V3::Types::Mod::Codec.to_wire(item) }")
+        .to eq("mods.map { |item| API::V3::Codecs::Mod.to_wire(item) }")
       expect(registry.to_wire_expr(Oapi::Ir::Untyped.new, value: "x")).to eq("x")
     end
 

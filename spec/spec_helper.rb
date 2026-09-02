@@ -3,6 +3,7 @@
 require "oapi"
 require "oapi-runtime"
 require "fileutils"
+require "pathname"
 Dir[File.join(__dir__, "support", "**", "*.rb")].each { |f| require f }
 
 RSpec.configure do |config|

@@ -1,0 +1,67 @@
+# frozen_string_literal: true
+
+require "oapi-runtime"
+require File.expand_path("#{ARGV.fetch(0)}/types")
+
+WIRE = {
+  "id" => 7,
+  "name" => "Cool Mod",
+  "status" => "under-moderation",
+  "updatedAt" => "2026-09-02T10:00:00Z",
+  "deletedAt" => nil,
+  "bio" => nil,
+  "owner" => { "id" => "0f3a2b1c-1111-2222-3333-444455556666", "name" => "jack" },
+  "tags" => %w[a b],
+  "meta" => { "note" => "hi" },
+  "extra" => { "downloads" => 12 }
+}.freeze
+
+def check(label)
+  raise "failed: #{label}" unless yield
+end
+
+mod = Demo::V1::Codecs::Mod.from_wire(WIRE)
+
+check("id") { mod.id == 7 }
+check("inline enum hoisted") { mod.status == Demo::V1::Types::ModStatus::UnderModeration }
+check("date-time") { mod.updated_at == Time.utc(2026, 9, 2, 10) }
+check("required nullable") { mod.deleted_at.nil? }
+check("absent optional") { mod.summary.nil? }
+check("default applied") { mod.page_size == 20 }
+check("tristate present nil") { mod.bio == Oapi::Present.new(value: nil) }
+check("tristate present value") { mod.owner.value_or(nil)&.name == "jack" }
+check("alias inlined to String") { mod.owner.value_or(nil)&.id.is_a?(String) }
+check("array items") { mod.tags == %w[a b] }
+check("inline object hoisted") { mod.meta&.note == "hi" }
+check("additionalProperties") { mod.extra == { "downloads" => 12 } }
+check("generated equality") { Demo::V1::Codecs::Mod.from_wire(WIRE) == mod }
+
+wire = Demo::V1::Codecs::Mod.to_wire(mod)
+check("dumped date-time") { wire["updatedAt"] == "2026-09-02T10:00:00Z" }
+check("dumped enum") { wire["status"] == "under-moderation" }
+check("required nullable stays null") { wire.key?("deletedAt") && wire["deletedAt"].nil? }
+check("absent optional omitted") { !wire.key?("summary") }
+check("tristate null kept") { wire.key?("bio") && wire["bio"].nil? }
+
+cat = Demo::V1::Codecs::Pet.from_wire({ "kind" => "cat", "lives" => 9 })
+check("discriminated union") { cat.is_a?(Demo::V1::Types::Cat) }
+check("union dump") { Demo::V1::Codecs::Pet.to_wire(cat)["kind"] == "cat" }
+
+check("untagged union string") { Demo::V1::Codecs::Loose.from_wire("x") == "x" }
+check("untagged union integer") { Demo::V1::Codecs::Loose.from_wire(3) == 3 }
+
+begin
+  Demo::V1::Codecs::Mod.from_wire(WIRE.merge("id" => "not a number"))
+  raise "failed: expected a DecodeError"
+rescue Oapi::DecodeError => e
+  check("error names the field") { e.json_pointer == "/id" }
+end
+
+begin
+  Demo::V1::Codecs::Mod.from_wire(WIRE.merge("tags" => ["a", 2]))
+  raise "failed: expected a DecodeError"
+rescue Oapi::DecodeError => e
+  check("error indexes the element: #{e.json_pointer}") { e.json_pointer == "/tags/1" }
+end
+
+puts "round trip ok"

@@ -9,17 +9,32 @@ module Oapi
       sig { returns(T::Array[String]) }
       attr_reader :warnings
 
-      sig { params(namespace: String, type_mappings: T::Hash[String, RubyType]).void }
-      def initialize(namespace:, type_mappings: {})
+      sig do
+        params(namespace: String, type_mappings: T::Hash[String, RubyType],
+               types: T::Hash[String, Ir::TypeDef]).void
+      end
+      def initialize(namespace:, type_mappings: {}, types: {})
         @namespace = namespace
         @type_mappings = type_mappings
+        @types = types
         @warnings = T.let([], T::Array[String])
+      end
+
+      sig { params(document: Ir::Document, config: Config).returns(Registry) }
+      def self.for(document, config)
+        new(
+          namespace: config.namespace,
+          type_mappings: config.type_mappings,
+          types: document.types.to_h { |type| [Ir::TypeDefs.name(type), type] }
+        )
       end
 
       sig { params(schema: Ir::Schema).returns(String) }
       def sorbet_type(schema)
         case schema
-        when Ir::Ref then "#{@namespace}::Types::#{schema.name}"
+        when Ir::Ref
+          aliased = alias_target(schema)
+          aliased ? sorbet_type(aliased) : "#{@namespace}::Types::#{schema.name}"
         when Ir::List then "T::Array[#{sorbet_type(schema.items)}]"
         when Ir::Freeform
           values = schema.values
@@ -34,7 +49,9 @@ module Oapi
       sig { params(schema: Ir::Schema, value: String).returns(String) }
       def from_wire_expr(schema, value:)
         case schema
-        when Ir::Ref then "#{codec_for(schema)}.from_wire(#{value})"
+        when Ir::Ref
+          aliased = alias_target(schema)
+          aliased ? from_wire_expr(aliased, value: value) : "#{codec_for(schema)}.from_wire(#{value})"
         when Ir::List
           "Oapi::Decode.each(#{value}) { |item| #{from_wire_expr(schema.items, value: "item")} }"
         when Ir::Freeform
@@ -52,7 +69,9 @@ module Oapi
       sig { params(schema: Ir::Schema, value: String).returns(String) }
       def to_wire_expr(schema, value:)
         case schema
-        when Ir::Ref then "#{codec_for(schema)}.to_wire(#{value})"
+        when Ir::Ref
+          aliased = alias_target(schema)
+          aliased ? to_wire_expr(aliased, value: value) : "#{codec_for(schema)}.to_wire(#{value})"
         when Ir::List
           inner = to_wire_expr(schema.items, value: "item")
           inner == "item" ? value : "#{value}.map { |item| #{inner} }"
@@ -70,7 +89,13 @@ module Oapi
       end
 
       sig { params(schema: Ir::Ref).returns(String) }
-      def codec_for(schema) = "#{@namespace}::Types::#{schema.name}::Codec"
+      def codec_for(schema) = "#{@namespace}::Codecs::#{schema.name}"
+
+      sig { params(schema: Ir::Ref).returns(T.nilable(Ir::Schema)) }
+      def alias_target(schema)
+        found = @types[schema.name]
+        found.is_a?(Ir::AliasDef) ? found.target : nil
+      end
 
       private
 
@@ -108,7 +133,7 @@ module Oapi
             type_mappings:
               #{requested.inspect}:
                 type: "::YourType"
-                codec: "YourApp::YourTypeCodec"   # extends or includes Oapi::Codec::Interface
+                codec: "YourApp::YourTypeCodec"   # extends or includes Oapi::Codec
         MESSAGE
         @warnings << message unless @warnings.include?(message)
       end
@@ -140,7 +165,7 @@ module Oapi
             type_mappings:
               #{key.inspect}:
                 type: "::YourType"
-                codec: "YourApp::YourTypeCodec"   # extends or includes Oapi::Codec::Interface
+                codec: "YourApp::YourTypeCodec"   # extends or includes Oapi::Codec
         MESSAGE
       end
     end

@@ -30,7 +30,7 @@ module Oapi
         raise ConfigError,
               "#{where} is missing #{missing.join(" and ")}. Both are required: `type` is what " \
               "appears in signatures, `codec` is what converts it -- a module extending, or an " \
-              "instance of a class including, Oapi::Codec::Interface."
+              "instance of a class including, Oapi::Codec."
       end
 
       codec = value.fetch("codec").to_s

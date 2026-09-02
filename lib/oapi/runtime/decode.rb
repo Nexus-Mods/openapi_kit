@@ -24,6 +24,34 @@ module Oapi
                 block: T.proc.params(value: T.untyped).returns(T.type_parameter(:T)))
         .returns(T.nilable(T.type_parameter(:T)))
     end
+    def self.nullable_field(raw, key, &block)
+      raise DecodeError.new("is required", json_pointer: "/#{key}") unless raw.key?(key)
+
+      value = raw[key]
+      return nil if value.nil?
+
+      at("/#{key}") { block.call(value) }
+    end
+
+    sig do
+      type_parameters(:T)
+        .params(raw: T::Hash[String, T.untyped], key: String, fallback: T.type_parameter(:T),
+                block: T.proc.params(value: T.untyped).returns(T.type_parameter(:T)))
+        .returns(T.type_parameter(:T))
+    end
+    def self.defaulted(raw, key, fallback, &block)
+      value = raw[key]
+      return fallback if value.nil?
+
+      at("/#{key}") { block.call(value) }
+    end
+
+    sig do
+      type_parameters(:T)
+        .params(raw: T::Hash[String, T.untyped], key: String,
+                block: T.proc.params(value: T.untyped).returns(T.type_parameter(:T)))
+        .returns(T.nilable(T.type_parameter(:T)))
+    end
     def self.optional(raw, key, &block)
       value = raw[key]
       return nil if value.nil?
@@ -82,6 +110,21 @@ module Oapi
       return raw if raw.is_a?(Hash)
 
       raise DecodeError.new("expected an object, got #{raw.class}")
+    end
+
+    sig do
+      params(value: T.untyped, name: String,
+             candidates: T::Array[T.proc.params(value: T.untyped).returns(T.untyped)])
+        .returns(T.untyped)
+    end
+    def self.first_of(value, name, candidates)
+      candidates.each do |candidate|
+        return candidate.call(value)
+      rescue DecodeError
+        next
+      end
+
+      raise DecodeError.new("did not match any member of #{name}")
     end
 
     sig { params(raw: T.untyped).returns(T::Array[T.untyped]) }

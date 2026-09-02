@@ -1,0 +1,13 @@
+openapi: 3.0.3
+info: { title: Cyclic, version: "1.0" }
+paths: {}
+components:
+  schemas:
+    Author:
+      type: object
+      properties:
+        books: { type: array, items: { $ref: "#/components/schemas/Book" } }
+    Book:
+      type: object
+      properties:
+        author: { $ref: "#/components/schemas/Author" }

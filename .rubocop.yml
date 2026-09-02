@@ -10,6 +10,8 @@ AllCops:
     - "spec/dummy/**/*"
     - "vendor/**/*"
     - "tmp/**/*"
+    - "spec/typecheck/**/*"
+    - "spec/scripts/**/*"
 
 # Generated-code emitters are inherently long; readability of output wins.
 Metrics/MethodLength:
@@ -66,4 +68,10 @@ RSpec/SpecFilePathFormat:
 RSpec/DescribeClass:
   Enabled: false
 RSpec/MultipleDescribes:
+  Enabled: false
+Metrics/ModuleLength:
+  Max: 150
+Naming/BlockForwarding:
+  EnforcedStyle: explicit
+Style/ArgumentsForwarding:
   Enabled: false

@@ -6,20 +6,28 @@ module Oapi
     module Builtins
       extend T::Sig
 
-      sig { params(type: T.any(T::Module[T.anything], String), codec: T::Module[T.anything]).returns(RubyType) }
+      sig { params(type: T.any(T::Module[T.anything], String), codec: T.untyped).returns(RubyType) }
       def self.entry(type, codec)
         RubyType.new(
           type: type.is_a?(::Module) ? "::#{T.must(type.name)}" : type,
-          codec: "::#{T.must(codec.name)}"
+          codec: "::Oapi::Codec::Scalar::#{constant_holding(codec)}"
         )
+      end
+
+      sig { params(codec: T.untyped).returns(Symbol) }
+      def self.constant_holding(codec)
+        found = Oapi::Codec::Scalar.constants.find { |name| Oapi::Codec::Scalar.const_get(name).equal?(codec) }
+        return found if found
+
+        raise Error, "#{codec.class} is not held by any constant under Oapi::Codec::Scalar"
       end
 
       BASES = T.let(
         {
-          "string" => entry(::String, Oapi::Codec::String),
-          "integer" => entry(::Integer, Oapi::Codec::Integer),
-          "number" => entry(::Float, Oapi::Codec::Float),
-          "boolean" => entry("T::Boolean", Oapi::Codec::Boolean)
+          "string" => entry(::String, Oapi::Codec::Scalar::String),
+          "integer" => entry(::Integer, Oapi::Codec::Scalar::Integer),
+          "number" => entry(::Float, Oapi::Codec::Scalar::Float),
+          "boolean" => entry("T::Boolean", Oapi::Codec::Scalar::Boolean)
         }.freeze,
         T::Hash[String, RubyType]
       )
@@ -39,12 +47,12 @@ module Oapi
 
       DISTINCT = T.let(
         {
-          "string:date-time" => entry(::Time, Oapi::Codec::DateTime),
-          "string:date" => entry(::Date, Oapi::Codec::Date),
-          "string:uuid" => entry(::String, Oapi::Codec::Uuid),
-          "string:byte" => entry(::String, Oapi::Codec::Byte),
-          "string:decimal" => entry(::BigDecimal, Oapi::Codec::Decimal),
-          "number:decimal" => entry(::BigDecimal, Oapi::Codec::Decimal)
+          "string:date-time" => entry(::Time, Oapi::Codec::Scalar::DateTime),
+          "string:date" => entry(::Date, Oapi::Codec::Scalar::Date),
+          "string:uuid" => entry(::String, Oapi::Codec::Scalar::Uuid),
+          "string:byte" => entry(::String, Oapi::Codec::Scalar::Byte),
+          "string:decimal" => entry(::BigDecimal, Oapi::Codec::Scalar::Decimal),
+          "number:decimal" => entry(::BigDecimal, Oapi::Codec::Scalar::Decimal)
         }.freeze,
         T::Hash[String, RubyType]
       )

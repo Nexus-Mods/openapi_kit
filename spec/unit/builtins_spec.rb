@@ -7,10 +7,10 @@ RSpec.describe Oapi::Types::Builtins do
 
   it "gives formats with a distinct Ruby type that type" do
     expect(described_class["string:date-time"]).to be_ir(
-      Oapi::RubyType.new(type: "::Time", codec: "::Oapi::Codec::DateTime")
+      Oapi::RubyType.new(type: "::Time", codec: "::Oapi::Codec::Scalar::DateTime")
     )
     expect(described_class["string:decimal"]).to be_ir(
-      Oapi::RubyType.new(type: "::BigDecimal", codec: "::Oapi::Codec::Decimal")
+      Oapi::RubyType.new(type: "::BigDecimal", codec: "::Oapi::Codec::Scalar::Decimal")
     )
   end
 
@@ -32,7 +32,7 @@ RSpec.describe Oapi::Types::Builtins do
 
   it "names a codec implementing Oapi::Codec for every entry" do
     described_class::TABLE.each_value do |ruby_type|
-      expect(Object.const_get(ruby_type.codec).singleton_class.ancestors).to include(Oapi::Codec::Interface)
+      expect(Object.const_get(ruby_type.codec).singleton_class.ancestors).to include(Oapi::Codec)
     end
   end
 end

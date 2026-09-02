@@ -10,7 +10,7 @@ class Money
   def ==(other) = other.is_a?(Money) && other.cents == cents
 end
 
-RSpec.describe Oapi::Codec do
+RSpec.describe Oapi::Codec::Scalar do
   describe "Integer" do
     it "accepts an integer and the string form a query parameter arrives as" do
       expect(described_class::Integer.from_wire(42)).to eq(42)
@@ -78,11 +78,11 @@ end
 RSpec.describe Oapi::Decode do
   describe ".field" do
     it "decodes a present value" do
-      expect(described_class.field({ "id" => "7" }, "id") { |v| Oapi::Codec::Integer.from_wire(v) }).to eq(7)
+      expect(described_class.field({ "id" => "7" }, "id") { |v| Oapi::Codec::Scalar::Integer.from_wire(v) }).to eq(7)
     end
 
     it "attaches the pointer to a failure raised without one" do
-      expect { described_class.field({ "id" => "x" }, "id") { |v| Oapi::Codec::Integer.from_wire(v) } }
+      expect { described_class.field({ "id" => "x" }, "id") { |v| Oapi::Codec::Scalar::Integer.from_wire(v) } }
         .to raise_error(Oapi::DecodeError, "/id: expected an integer, got \"x\"")
     end
 
@@ -114,14 +114,14 @@ RSpec.describe Oapi::Decode do
     end
 
     it "is Present(value) for a value" do
-      expect(described_class.tristate({ "bio" => "hi" }, "bio") { |v| Oapi::Codec::String.from_wire(v) })
+      expect(described_class.tristate({ "bio" => "hi" }, "bio") { |v| Oapi::Codec::Scalar::String.from_wire(v) })
         .to eq(Oapi::Present.new(value: "hi"))
     end
   end
 
   describe ".each" do
     it "numbers the pointer by index" do
-      expect { described_class.field({ "tags" => %w[1 x] }, "tags") { |v| described_class.each(v) { |i| Oapi::Codec::Integer.from_wire(i) } } }
+      expect { described_class.field({ "tags" => %w[1 x] }, "tags") { |v| described_class.each(v) { |i| Oapi::Codec::Scalar::Integer.from_wire(i) } } }
         .to raise_error(Oapi::DecodeError, "/tags/1: expected an integer, got \"x\"")
     end
   end
@@ -134,20 +134,28 @@ RSpec.describe Oapi::Decode do
   end
 end
 
-module MoneyCodec
+class MoneyCodecClass
   extend T::Sig
-  extend Oapi::Codec::Interface
+  extend T::Generic
+  include Oapi::Codec
+
+  Value = type_member { { fixed: Money } }
 
   sig { override.params(value: Oapi::Wire).returns(Money) }
-  def self.from_wire(value) = Money.new(Oapi::Codec::Integer.from_wire(value))
+  def from_wire(value) = Money.new(Oapi::Codec::Scalar::Integer.from_wire(value))
 
   sig { override.params(value: Money).returns(Oapi::Wire) }
-  def self.to_wire(value) = value.cents
+  def to_wire(value) = value.cents
 end
+
+MoneyCodec = MoneyCodecClass.new
 
 class SaltedIdCodec
   extend T::Sig
-  include Oapi::Codec::Interface
+  extend T::Generic
+  include Oapi::Codec
+
+  Value = type_member { { fixed: Integer } }
 
   sig { params(salt: String).void }
   def initialize(salt:)
@@ -155,7 +163,7 @@ class SaltedIdCodec
   end
 
   sig { override.params(value: Oapi::Wire).returns(Integer) }
-  def from_wire(value) = Oapi::Codec::String.from_wire(value).delete_prefix(@salt).to_i
+  def from_wire(value) = Oapi::Codec::Scalar::String.from_wire(value).delete_prefix(@salt).to_i
 
   sig { override.params(value: Integer).returns(Oapi::Wire) }
   def to_wire(value) = "#{@salt}#{value}"
@@ -163,7 +171,7 @@ end
 
 SALTED_ID_CODEC = SaltedIdCodec.new(salt: "nx_")
 
-RSpec.describe Oapi::Codec::Interface do
+RSpec.describe Oapi::Codec do
   it "converts a type it does not own, with nothing mixed into that type" do
     expect(Money.ancestors.map(&:to_s).grep(/Oapi/)).to be_empty
     expect(MoneyCodec.from_wire("500")).to eq(Money.new(500))
@@ -171,8 +179,8 @@ RSpec.describe Oapi::Codec::Interface do
   end
 
   it "is the one contract every codec implements, built-in or yours" do
-    [Oapi::Codec::DateTime, Oapi::Codec::Decimal, MoneyCodec].each do |codec|
-      expect(codec.singleton_class.ancestors).to include(described_class)
+    [Oapi::Codec::Scalar::DateTime, Oapi::Codec::Scalar::Decimal, MoneyCodec].each do |codec|
+      expect(codec.class.ancestors).to include(described_class)
     end
   end
 
@@ -185,7 +193,7 @@ RSpec.describe Oapi::Codec::Interface do
     it "answers the same from_wire and to_wire calls a module codec does" do
       expect(SaltedIdCodec.ancestors).to include(described_class)
       expect(SALTED_ID_CODEC).to respond_to(:from_wire, :to_wire)
-      expect(Oapi::Codec::Integer).to respond_to(:from_wire, :to_wire)
+      expect(Oapi::Codec::Scalar::Integer).to respond_to(:from_wire, :to_wire)
     end
 
     it "can be configured differently more than once" do
