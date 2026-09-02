@@ -95,7 +95,7 @@ module Oapi
             groups(operation).each_key { |name| buffer.line("const :#{Naming.identifier(name)}, #{name}") }
             body = body_type(operation)
             buffer.line("const :body, #{body}") if body
-            buffer.line("const :http, ::ActionDispatch::Request")
+            buffer.line("const :http_request, ::ActionDispatch::Request")
           end
         end
 

@@ -34,7 +34,7 @@ RSpec.describe Oapi::Codegen::Generator do
 
     it "hands the handler Rails' own request rather than a wrapper of oapi's" do
       expect(result[:dir].join("server/operations/list_mods.rb").read)
-        .to include("const :http, ::ActionDispatch::Request")
+        .to include("const :http_request, ::ActionDispatch::Request")
     end
   end
 

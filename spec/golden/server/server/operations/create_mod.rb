@@ -16,7 +16,7 @@ module Server
 
         const :path, Path
         const :body, Server::Types::NewMod
-        const :http, ::ActionDispatch::Request
+        const :http_request, ::ActionDispatch::Request
       end
 
       module Response

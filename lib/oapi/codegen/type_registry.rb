@@ -4,82 +4,59 @@
 module Oapi
   module Codegen
     class TypeRegistry
-      module Defaults
-        extend T::Sig
-
-        sig do
-          params(type: T.any(T::Module[T.anything], String), codec: T::Class[T.anything])
-            .returns(RubyType)
-        end
-        def self.entry(type, codec)
-          RubyType.new(
-            type: type.is_a?(::Module) ? "::#{T.must(type.name)}" : type,
-            codec: "::#{T.must(codec.name)}::CODEC"
-          )
-        end
-
-        BASES = T.let(
-          {
-            "string" => entry(::String, Oapi::Codec::Primitive::String),
-            "integer" => entry(::Integer, Oapi::Codec::Primitive::Integer),
-            "number" => entry(::Float, Oapi::Codec::Primitive::Float),
-            "boolean" => entry("T::Boolean", Oapi::Codec::Primitive::Boolean)
-          }.freeze,
-          T::Hash[String, RubyType]
-        )
-
-        FORMATS_WITHOUT_OWN_TYPE = T.let(
-          {
-            "string" => %w[
-              time duration email idn-email hostname idn-hostname ipv4 ipv6
-              uri uri-reference uri-template iri json-pointer relative-json-pointer
-              regex password
-            ],
-            "integer" => %w[int32 int64],
-            "number" => %w[float double]
-          }.freeze,
-          T::Hash[String, T::Array[String]]
-        )
-
-        FORMATS_WITH_OWN_TYPE = T.let(
-          {
-            "string:date-time" => entry(::Time, Oapi::Codec::Primitive::DateTime),
-            "string:date" => entry(::Date, Oapi::Codec::Primitive::Date),
-            "string:uuid" => entry(::String, Oapi::Codec::Primitive::Uuid),
-            "string:byte" => entry(::String, Oapi::Codec::Primitive::Byte),
-            "string:binary" => RubyType.new(
-              type: "::ActionDispatch::Http::UploadedFile",
-              codec: "::Oapi::Rails::Codec::UploadedFile::CODEC"
-            ),
-            "string:decimal" => entry(::BigDecimal, Oapi::Codec::Primitive::Decimal),
-            "number:decimal" => entry(::BigDecimal, Oapi::Codec::Primitive::Decimal)
-          }.freeze,
-          T::Hash[String, RubyType]
-        )
-
-        TABLE = T.let(
-          BASES
-            .merge(
-              FORMATS_WITHOUT_OWN_TYPE.flat_map do |base, formats|
-                formats.map { |format| ["#{base}:#{format}", T.must(BASES[base])] }
-              end.to_h
-            )
-            .merge(FORMATS_WITH_OWN_TYPE)
-            .freeze,
-          T::Hash[String, RubyType]
-        )
-
-        sig { params(key: String).returns(T.nilable(RubyType)) }
-        def self.[](key) = TABLE[key]
-      end
-
       extend T::Sig
+
+      sig { params(type: String, codec: String).returns(RubyType) }
+      def self.primitive(type, codec)
+        RubyType.new(type: type, codec: "::Oapi::Codec::Primitive::#{codec}::CODEC")
+      end
+      private_class_method :primitive
+
+      sig { returns(T::Hash[String, RubyType]) }
+      def self.build_default_type_mappings
+        string = primitive("::String", "String")
+        integer = primitive("::Integer", "Integer")
+        number = primitive("::Float", "Float")
+        decimal = primitive("::BigDecimal", "Decimal")
+
+        plain_string_formats = %w[
+          time duration email idn-email hostname idn-hostname ipv4 ipv6
+          uri uri-reference uri-template iri json-pointer relative-json-pointer
+          regex password
+        ]
+
+        {
+          "string" => string,
+          "integer" => integer,
+          "number" => number,
+          "boolean" => primitive("T::Boolean", "Boolean"),
+
+          "string:date-time" => primitive("::Time", "DateTime"),
+          "string:date" => primitive("::Date", "Date"),
+          "string:uuid" => primitive("::String", "Uuid"),
+          "string:byte" => primitive("::String", "Byte"),
+          "string:decimal" => decimal,
+          "number:decimal" => decimal,
+          "integer:int32" => integer,
+          "integer:int64" => integer,
+          "number:float" => number,
+          "number:double" => number,
+
+          "string:binary" => RubyType.new(
+            type: "::ActionDispatch::Http::UploadedFile",
+            codec: "::Oapi::Rails::Codec::UploadedFile::CODEC"
+          )
+        }.merge(plain_string_formats.to_h { |format| ["string:#{format}", string] }).freeze
+      end
+      private_class_method :build_default_type_mappings
+
+      DEFAULT_TYPE_MAPPINGS = T.let(build_default_type_mappings, T::Hash[String, RubyType])
 
       sig { params(document: Ir::Document, config: Config).returns(TypeRegistry) }
       def self.for(document, config)
         new(
           namespace: config.namespace,
-          type_mappings: Defaults::TABLE.merge(config.type_mappings),
+          type_mappings: DEFAULT_TYPE_MAPPINGS.merge(config.type_mappings),
           types: document.types.to_h { |type| [Ir::TypeDef.name_of(type), type] }
         )
       end
@@ -91,7 +68,7 @@ module Oapi
         params(namespace: String, type_mappings: T::Hash[String, RubyType],
                types: T::Hash[String, Ir::TypeDef]).void
       end
-      def initialize(namespace:, type_mappings: Defaults::TABLE, types: {})
+      def initialize(namespace:, type_mappings: DEFAULT_TYPE_MAPPINGS, types: {})
         @namespace = namespace
         @type_mappings = type_mappings
         @types = types

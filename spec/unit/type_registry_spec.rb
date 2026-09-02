@@ -2,10 +2,55 @@
 
 RSpec.describe Oapi::Codegen::TypeRegistry do
   subject(:registry) do
-    described_class.new(namespace: "API::V3", type_mappings: Oapi::Codegen::TypeRegistry::Defaults::TABLE.merge(mappings))
+    described_class.new(namespace: "API::V3", type_mappings: Oapi::Codegen::TypeRegistry::DEFAULT_TYPE_MAPPINGS.merge(mappings))
   end
 
   let(:mappings) { {} }
+
+  describe "DEFAULT_TYPE_MAPPINGS" do
+    subject(:defaults) { described_class::DEFAULT_TYPE_MAPPINGS }
+
+    it "maps the base types" do
+      expect(defaults.values_at("string", "integer", "number", "boolean").map(&:type))
+        .to eq(["::String", "::Integer", "::Float", "T::Boolean"])
+    end
+
+    it "gives formats with a distinct Ruby type that type" do
+      expect(defaults["string:date-time"]).to be_ir(
+        Oapi::Codegen::RubyType.new(type: "::Time", codec: "::Oapi::Codec::Primitive::DateTime::CODEC")
+      )
+      expect(defaults["number:decimal"].type).to eq("::BigDecimal")
+    end
+
+    it "resolves a format with no Ruby type of its own to the base entry" do
+      expect(defaults["string:uri"]).to be_ir(defaults["string"])
+      expect(defaults["integer:int64"]).to be_ir(defaults["integer"])
+      expect(defaults["number:double"]).to be_ir(defaults["number"])
+    end
+
+    it "maps binary content to the Rails upload type" do
+      expect(defaults["string:binary"].type).to eq("::ActionDispatch::Http::UploadedFile")
+    end
+
+    it "knows nothing about a format it does not recognise" do
+      expect(defaults["integer:unix-time"]).to be_nil
+      expect(defaults["string:money"]).to be_nil
+    end
+
+    it "names a codec that exists and implements Oapi::Codec for every entry" do
+      defaults.each_value do |entry|
+        codec = entry.codec.delete_prefix("::").split("::").reduce(Object) { |scope, name| scope.const_get(name) }
+
+        expect(codec.class.ancestors).to include(Oapi::Codec), entry.codec
+      end
+    end
+
+    it "is overridden by merging, with no ordering rule" do
+      mapped = Oapi::Codegen::RubyType.new(type: "::Tempfile", codec: "MyApp::UploadCodec")
+
+      expect(defaults.merge("string:binary" => mapped)["string:binary"]).to be(mapped)
+    end
+  end
 
   def string(format = nil) = Oapi::Codegen::Ir::StringSchema.new(format: format)
 
@@ -98,7 +143,7 @@ RSpec.describe Oapi::Codegen::TypeRegistry do
     it "is overridden by mapping the format itself" do
       mapped = described_class.new(
         namespace: "API::V3",
-        type_mappings: Oapi::Codegen::TypeRegistry::Defaults::TABLE.merge(
+        type_mappings: Oapi::Codegen::TypeRegistry::DEFAULT_TYPE_MAPPINGS.merge(
           "string:binary" => Oapi::Codegen::RubyType.new(type: "::Tempfile", codec: "MyApp::UploadCodec")
         )
       )
@@ -109,7 +154,7 @@ RSpec.describe Oapi::Codegen::TypeRegistry do
     it "is not affected by mapping the base string type" do
       mapped = described_class.new(
         namespace: "API::V3",
-        type_mappings: Oapi::Codegen::TypeRegistry::Defaults::TABLE.merge(
+        type_mappings: Oapi::Codegen::TypeRegistry::DEFAULT_TYPE_MAPPINGS.merge(
           "string" => Oapi::Codegen::RubyType.new(type: "::Text", codec: "MyApp::TextCodec")
         )
       )

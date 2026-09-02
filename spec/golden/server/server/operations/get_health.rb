@@ -8,7 +8,7 @@ module Server
       class Request < T::Struct
         extend T::Sig
 
-        const :http, ::ActionDispatch::Request
+        const :http_request, ::ActionDispatch::Request
       end
 
       module Response
