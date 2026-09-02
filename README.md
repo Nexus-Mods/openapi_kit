@@ -227,6 +227,9 @@ price:
   `multipart/form-data`. Anything else is refused at generation time.
 - Schema keyword validation (`minLength`, `pattern`, `minimum`) is not enforced; only
   types and formats are.
+- Scalar codecs coerce strings, because path, query and header values arrive as strings.
+  The same leniency applies to JSON bodies, so a body of `{"count": "42"}` satisfies
+  `type: integer`.
 - A request oapi cannot decode raises `Oapi::DecodeError`; mapping that to a response is
   the application's job.
 

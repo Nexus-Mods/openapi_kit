@@ -10,20 +10,30 @@ module Oapi
       problems = T.let([], T::Array[String])
 
       handlers.each do |key, interface|
-        handler =
-          begin
-            container.resolve(key)
-          rescue StandardError => e
-            problems << "#{key} is not registered (#{e.class}: #{e.message})"
-            next
-          end
+        unless registered?(container, key)
+          problems << "#{key} is not registered"
+          next
+        end
 
+        handler = container.resolve(key)
         next if handler.is_a?(interface)
 
         problems << "#{key} resolves to #{handler.class}, which does not include #{interface}"
       end
 
       raise ContainerError, problems unless problems.empty?
+    end
+
+    # An error raised while building a handler is that handler's bug, not a missing
+    # registration, so only the container's own lookup is treated as an answer.
+    sig { params(container: T.untyped, key: String).returns(T::Boolean) }
+    def self.registered?(container, key)
+      return !!container.key?(key) if container.respond_to?(:key?)
+
+      container.resolve(key)
+      true
+    rescue StandardError
+      false
     end
   end
 end

@@ -24,6 +24,8 @@ RSpec.describe Oapi::Container do
     Class.new do
       define_method(:registrations) { registrations }
 
+      def key?(key) = registrations.key?(key)
+
       def resolve(key)
         registrations.fetch(key) { raise KeyError, "nothing registered with the key #{key.inspect}" }
       end
@@ -54,6 +56,18 @@ RSpec.describe Oapi::Container do
     end.to raise_error(
       Oapi::ContainerError, /v1\.handlers\.mods resolves to Object, which does not include Dummy::V1::Handlers::Mods/
     )
+  end
+
+  # Reporting a handler's own constructor failure as "not registered" sends whoever is
+  # debugging it to the wrong file.
+  it "lets an error raised while building a handler surface as itself" do
+    exploding = Class.new do
+      def key?(_key) = true
+      def resolve(_key) = raise(NoMethodError, "undefined method `frobnicate!'")
+    end.new
+
+    expect { Dummy::V1::Container.verify!(exploding) }
+      .to raise_error(NoMethodError, /frobnicate!/)
   end
 
   it "lists the keys the generated API expects" do

@@ -43,7 +43,7 @@ module Oapi
 
           "string:binary" => RubyType.new(
             type: "::ActionDispatch::Http::UploadedFile",
-            codec: "::Oapi::Rails::Codec::UploadedFile::CODEC"
+            codec: "::Oapi::Codec::UploadedFile::CODEC"
           )
         }.merge(plain_string_formats.to_h { |format| ["string:#{format}", string] }).freeze
       end
