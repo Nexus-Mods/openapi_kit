@@ -37,7 +37,7 @@ module Oapi
             emit_to_wire(buffer, type)
           end
           buffer.blank
-          buffer.line("#{RubyType::CODEC_CONSTANT} = T.let(Codec.new, Codec)")
+          buffer.line("CODEC = T.let(Codec.new, Codec)")
         end
 
         sig { params(buffer: Buffer, type: Model::TypeDef).void }
