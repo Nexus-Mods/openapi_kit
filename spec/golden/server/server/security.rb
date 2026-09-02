@@ -31,5 +31,29 @@ module Server
       }.freeze,
       T::Hash[::String, ::Oapi::Security::Scheme]
     )
+
+    module BearerAuth
+      extend T::Sig
+      extend T::Helpers
+      interface!
+
+      sig do
+        abstract.params(request: ::ActionDispatch::Request, scopes: T::Array[::String])
+                .returns(T.nilable(::Demo::User))
+      end
+      def authenticate(request:, scopes:); end
+    end
+
+    module ApiKeyAuth
+      extend T::Sig
+      extend T::Helpers
+      interface!
+
+      sig do
+        abstract.params(request: ::ActionDispatch::Request, scopes: T::Array[::String])
+                .returns(T.nilable(::Demo::Service))
+      end
+      def authenticate(request:, scopes:); end
+    end
   end
 end

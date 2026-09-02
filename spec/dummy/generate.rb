@@ -15,7 +15,8 @@ module Dummy
           "output" => ROOT.join("app/api").to_s,
           "modules" => %w[Dummy V1],
           "controller_base" => "Dummy::BaseController",
-          "container_prefix" => "v1"
+          "container_prefix" => "v1",
+          "principals" => { "bearerAuth" => "::Person", "apiKeyAuth" => "::Robot" }
         },
         base: ROOT
       )

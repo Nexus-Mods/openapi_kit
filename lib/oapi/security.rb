@@ -3,6 +3,10 @@
 
 module Oapi
   module Security
+    # No alternative the document offers was satisfied. Rescue it wherever the
+    # application already rescues Oapi::DecodeError: oapi takes no view on the response.
+    class Unauthenticated < Error; end
+
     # One alternative from a document's `security`: every scheme in it must be satisfied.
     # An empty one is the spec's way of saying the endpoint may also be reached
     # anonymously.

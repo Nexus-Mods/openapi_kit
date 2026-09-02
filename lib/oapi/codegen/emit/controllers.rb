@@ -78,33 +78,56 @@ module Oapi
 
           buffer.line("sig { void }")
           buffer.nest("def #{Naming.identifier(operation.id)}") do
-            unless @document.security_for(operation).empty?
-              buffer.line("oapi_authenticate!(#{scope}::SECURITY)")
-              buffer.blank
-            end
+            emit_authentication(buffer, operation, scope)
 
             groups.each { |name, parameters| buffer.line(source_line(name, parameters)) }
             buffer.blank unless groups.empty?
 
-            buffer.line("decoded = #{scope}::Request.new(")
-            buffer.indent do
-              groups.each_key do |name|
-                buffer.line("#{Naming.identifier(name)}: #{scope}::#{name}.new(")
-                buffer.indent { emit_group_arguments(buffer, name, T.must(groups[name])) }
-                buffer.line("),")
-              end
-              buffer.line("body: #{body_expression(operation)},") if body?(operation)
-              buffer.line("http_request: request")
-            end
-            buffer.line(")")
+            emit_decoded(buffer, operation, scope, groups)
             buffer.blank
-            buffer.line("response = handler.#{Naming.identifier(operation.id)}(request: decoded)")
-            buffer.line("body = response.to_wire")
-            buffer.blank
-            buffer.line("return head(response.status) if body.nil?")
-            buffer.blank
-            buffer.line("render(json: body, status: response.status, content_type: response.content_type)")
+            emit_dispatch(buffer, operation)
           end
+        end
+
+        sig { params(buffer: Buffer, operation: Model::Operation, scope: String).void }
+        def emit_authentication(buffer, operation, scope)
+          return if @document.security_for(operation).empty?
+
+          if @config.principals.empty?
+            buffer.line("oapi_authenticate!(#{scope}::SECURITY)")
+          else
+            buffer.line("context = #{scope}.authenticate(request: request, container: oapi_container)")
+          end
+          buffer.blank
+        end
+
+        sig do
+          params(buffer: Buffer, operation: Model::Operation, scope: String,
+                 groups: T::Hash[String, T::Array[Model::Parameter]]).void
+        end
+        def emit_decoded(buffer, operation, scope, groups)
+          buffer.line("decoded = #{scope}::Request.new(")
+          buffer.indent do
+            groups.each_key do |name|
+              buffer.line("#{Naming.identifier(name)}: #{scope}::#{name}.new(")
+              buffer.indent { emit_group_arguments(buffer, name, T.must(groups[name])) }
+              buffer.line("),")
+            end
+            buffer.line("body: #{body_expression(operation)},") if body?(operation)
+            buffer.line("context: context,") if context?(operation)
+            buffer.line("http_request: request")
+          end
+          buffer.line(")")
+        end
+
+        sig { params(buffer: Buffer, operation: Model::Operation).void }
+        def emit_dispatch(buffer, operation)
+          buffer.line("response = handler.#{Naming.identifier(operation.id)}(request: decoded)")
+          buffer.line("body = response.to_wire")
+          buffer.blank
+          buffer.line("return head(response.status) if body.nil?")
+          buffer.blank
+          buffer.line("render(json: body, status: response.status, content_type: response.content_type)")
         end
 
         sig { params(buffer: Buffer, group: String, parameters: T::Array[Model::Parameter]).void }
@@ -171,6 +194,11 @@ module Oapi
           when Model::QueryParameter
             parameter.style == Model::QueryStyle::Form ? nil : parameter.style.serialize
           end
+        end
+
+        sig { params(operation: Model::Operation).returns(T::Boolean) }
+        def context?(operation)
+          !@config.principals.empty? && !@document.security_for(operation).empty?
         end
 
         sig { params(operation: Model::Operation).returns(T::Boolean) }

@@ -20,6 +20,19 @@ RSpec.describe Oapi::Container do
     end
   end
 
+  let(:authenticators) do
+    {
+      "v1.security.bearer_auth" => Class.new do
+        include Dummy::V1::Security::BearerAuth
+        def authenticate(request:, scopes:) = nil
+      end.new,
+      "v1.security.api_key_auth" => Class.new do
+        include Dummy::V1::Security::ApiKeyAuth
+        def authenticate(request:, scopes:) = nil
+      end.new
+    }
+  end
+
   def container(registrations)
     Class.new do
       define_method(:registrations) { registrations }
@@ -35,7 +48,8 @@ RSpec.describe Oapi::Container do
   it "passes when every handler is registered and implements its interface" do
     expect do
       Dummy::V1::Container.verify!(
-        container("v1.handlers.mods" => complete.new, "v1.handlers.system" => system_handler.new)
+        container({ "v1.handlers.mods" => complete.new,
+                    "v1.handlers.system" => system_handler.new }.merge(authenticators))
       )
     end.not_to raise_error
   end
@@ -51,7 +65,8 @@ RSpec.describe Oapi::Container do
   it "names a handler that does not implement the interface it is registered for" do
     expect do
       Dummy::V1::Container.verify!(
-        container("v1.handlers.mods" => Object.new, "v1.handlers.system" => system_handler.new)
+        container({ "v1.handlers.mods" => Object.new,
+                    "v1.handlers.system" => system_handler.new }.merge(authenticators))
       )
     end.to raise_error(
       Oapi::ContainerError, /v1\.handlers\.mods resolves to Object, which does not include Dummy::V1::Handlers::Mods/
@@ -72,5 +87,7 @@ RSpec.describe Oapi::Container do
 
   it "lists the keys the generated API expects" do
     expect(Dummy::V1::Container::HANDLERS.keys).to eq(["v1.handlers.mods", "v1.handlers.system"])
+    expect(Dummy::V1::Container::AUTHENTICATORS.keys)
+      .to eq(["v1.security.bearer_auth", "v1.security.api_key_auth"])
   end
 end

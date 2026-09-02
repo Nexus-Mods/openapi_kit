@@ -16,11 +16,12 @@ module Oapi
       const :controller_base, String
       const :type_mappings, T::Hash[String, RubyType], default: {}
       const :name_overrides, T::Hash[String, String], default: {}
+      const :principals, T::Hash[String, String], default: {}
 
       KNOWN_KEYS = T.let(
         %w[
           spec output modules controller_base container_prefix
-          type_mappings name_overrides
+          type_mappings name_overrides principals
         ].freeze,
         T::Array[String]
       )
@@ -64,7 +65,8 @@ module Oapi
           container_prefix: raw["container_prefix"]&.to_s,
           controller_base: raw.fetch("controller_base").to_s,
           type_mappings: parse_type_mappings(raw["type_mappings"]),
-          name_overrides: stringify(raw["name_overrides"])
+          name_overrides: stringify(raw["name_overrides"]),
+          principals: principal_types(raw["principals"], where)
         )
       end
 
@@ -72,6 +74,20 @@ module Oapi
       def self.parse_type_mappings(value)
         (value || {}).to_h do |key, mapping|
           [key.to_s, RubyType.parse("type_mappings[#{key.to_s.inspect}]", mapping)]
+        end
+      end
+
+      # A security scheme yields a principal of a type only the application knows, so it
+      # names it here and the generated authenticator interface returns it.
+      sig { params(value: T.untyped, where: String).returns(T::Hash[String, String]) }
+      def self.principal_types(value, where)
+        stringify(value).each do |scheme, type|
+          next if type.match?(RubyType::CONSTANT_PATH)
+
+          raise ConfigError,
+                "#{where}principals.#{scheme} is #{type.inspect}, which is not a Ruby constant " \
+                "path. It must name the class a successful #{scheme} authentication produces, " \
+                "e.g. \"MyApp::User\"."
         end
       end
 

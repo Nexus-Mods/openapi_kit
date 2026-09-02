@@ -32,6 +32,7 @@ container_prefix: v1
 | `controller_base` | class the generated controllers inherit from |
 | `type_mappings` | your Ruby type for a `type:format` pair |
 | `name_overrides` | a different Ruby name for a schema |
+| `principals` | the class each security scheme produces, if you want a typed principal |
 
 ```console
 $ bundle exec oapi generate -c oapi.yml
@@ -145,6 +146,53 @@ end
 credential from the scheme rather than hardcoding where it lives. oapi does no
 authenticating of its own, holds no principal, and takes no view on the refusal body.
 
+### A typed principal
+
+Name what each scheme produces and oapi resolves the alternatives itself, handing the
+handler the principal rather than calling a hook:
+
+```yaml
+principals:
+  bearerAuth: "MyApp::User"
+  apiKeyAuth: "MyApp::Service"
+```
+
+You implement one interface per scheme, registered in the container beside the handlers.
+Return `nil` to say this alternative was not satisfied, so oapi tries the next one:
+
+```ruby
+class BearerAuthenticator
+  include Mods::V1::Security::BearerAuth
+
+  sig do
+    override.params(request: ActionDispatch::Request, scopes: T::Array[String])
+            .returns(T.nilable(MyApp::User))
+  end
+  def authenticate(request:, scopes:)
+    user = MyApp::User.for_token(request.headers["Authorization"])
+    user if user && scopes.all? { |scope| user.can?(scope) }
+  end
+end
+```
+
+The request then carries it, typed as whichever alternative can win:
+
+```ruby
+def create_mod(request:)
+  case request.context             # T.any(MyApp::User, MyApp::Service)
+  when MyApp::User then request.context.id
+  when MyApp::Service then request.context.name
+  end
+end
+```
+
+When no alternative is satisfied oapi raises `Oapi::Security::Unauthenticated`, rescued
+like `Oapi::DecodeError`. An operation offering anonymous access (`security: [..., {}]`)
+gets `T.nilable`. Two schemes required *together* in one alternative is refused at
+generation: give the operation one scheme per alternative.
+
+### Custom schemes
+
 OpenAPI 3.0 fixes the four scheme types, so a bespoke scheme is an `http` one with your
 own name, and anything the type cannot express goes in `x-` keys, which reach the scheme
 as `extensions`:
@@ -230,8 +278,8 @@ price:
 
 ## Not supported yet
 
-- A principal on the request. oapi reports what the document requires and the
-  application authenticates; nothing typed reaches the handler.
+- Two security schemes required together in one alternative (`{a: [], b: []}`), when
+  `principals` is configured. One scheme per alternative.
 - Parameter styles other than `simple` for path and `form` for query.
 - Array and object query parameters follow Rails' conventions, not OpenAPI's: send
   `?tags[]=a&tags[]=b` and `?filter[lat]=1`, not `?tags=a&tags=b` or an exploded `?lat=1`.

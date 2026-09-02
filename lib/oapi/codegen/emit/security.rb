@@ -17,6 +17,25 @@ module Oapi
         sig { params(name: String).returns(String) }
         def self.constant(name) = Naming.snake(name).upcase
 
+        sig { params(name: String).returns(String) }
+        def self.module_name(name) = Naming.pascal(name)
+
+        # The type a successful authentication produces, for whichever alternative won.
+        # An anonymous alternative contributes nil.
+        sig do
+          params(requirements: T::Array[Model::SecurityRequirement], config: Config).returns(String)
+        end
+        def self.context_type(requirements, config)
+          types = requirements.map do |requirement|
+            name = requirement.schemes.keys.first
+            name.nil? ? "NilClass" : config.principals.fetch(name)
+          end.uniq
+
+          return T.must(types.first) if types.one?
+
+          "T.any(#{types.join(", ")})"
+        end
+
         sig { override.returns(T::Array[SourceFile]) }
         def render
           return [] if @document.security_schemes.empty?
@@ -48,6 +67,40 @@ module Oapi
 
           buffer.blank
           emit_catalogue(buffer)
+
+          authenticated.each do |scheme|
+            buffer.blank
+            emit_authenticator(buffer, scheme)
+          end
+        end
+
+        # One interface per scheme, bound to an implementation through the container the
+        # same way handlers are. Returning nil means this alternative was not satisfied,
+        # so the next one is tried; raise to refuse outright.
+        sig { params(buffer: Buffer, scheme: Model::SecurityScheme).void }
+        def emit_authenticator(buffer, scheme)
+          name = Model::SecurityScheme.name_of(scheme)
+
+          buffer.nest("module #{Security.module_name(name)}") do
+            buffer.line("extend T::Sig")
+            buffer.line("extend T::Helpers")
+            buffer.line("interface!")
+            buffer.blank
+            buffer.line("sig do")
+            buffer.indent do
+              buffer.line("abstract.params(request: ::ActionDispatch::Request, scopes: T::Array[::String])")
+              buffer.line("        .returns(T.nilable(#{@config.principals.fetch(name)}))")
+            end
+            buffer.line("end")
+            buffer.line("def authenticate(request:, scopes:); end")
+          end
+        end
+
+        sig { returns(T::Array[Model::SecurityScheme]) }
+        def authenticated
+          @document.security_schemes.select do |scheme|
+            @config.principals.key?(Model::SecurityScheme.name_of(scheme))
+          end
         end
 
         sig { params(buffer: Buffer).void }

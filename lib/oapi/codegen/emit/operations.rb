@@ -43,7 +43,12 @@ module Oapi
         sig { params(buffer: Buffer, operation: Model::Operation).void }
         def emit_operation(buffer, operation)
           buffer.nest("module #{Operations.module_name(operation)}") do
+            if authenticates?(operation)
+              buffer.line("extend T::Sig")
+              buffer.blank
+            end
             emit_security(buffer, operation)
+            emit_authenticate(buffer, operation)
             emit_parameter_structs(buffer, operation)
             emit_request(buffer, operation)
             buffer.blank
@@ -76,6 +81,49 @@ module Oapi
             buffer.line("T::Array[::Oapi::Security::Requirement]")
           end
           buffer.line(")")
+          buffer.blank
+        end
+
+        # Each alternative is one scheme, so the alternatives unroll into a sequence
+        # rather than a loop, and Sorbet sees the exact type each one produces.
+        sig { params(operation: Model::Operation).returns(T::Boolean) }
+        def authenticates?(operation)
+          !@config.principals.empty? && !@document.security_for(operation).empty?
+        end
+
+        sig { params(buffer: Buffer, operation: Model::Operation).void }
+        def emit_authenticate(buffer, operation)
+          return unless authenticates?(operation)
+
+          requirements = @document.security_for(operation)
+          buffer.line("sig do")
+          buffer.indent do
+            buffer.line("params(request: ::ActionDispatch::Request, container: T.untyped)")
+            buffer.line("  .returns(#{context_type(operation)})")
+          end
+          buffer.line("end")
+          buffer.nest("def self.authenticate(request:, container:)") do
+            requirements.each { |requirement| emit_attempt(buffer, requirement) }
+            buffer.line("raise ::Oapi::Security::Unauthenticated")
+          end
+          buffer.blank
+        end
+
+        sig { params(buffer: Buffer, requirement: Model::SecurityRequirement).void }
+        def emit_attempt(buffer, requirement)
+          if requirement.anonymous?
+            buffer.line("return nil")
+            return
+          end
+
+          name = T.must(requirement.schemes.keys.first)
+          scopes = T.must(requirement.schemes[name])
+          interface = "#{@config.namespace}::Security::#{Security.module_name(name)}"
+          key = @config.container_key("security", Naming.snake(name))
+
+          buffer.line("authenticator = T.cast(container.resolve(#{key.inspect}), #{interface})")
+          buffer.line("principal = authenticator.authenticate(request: request, scopes: #{scopes.inspect})")
+          buffer.line("return principal unless principal.nil?")
           buffer.blank
         end
 
@@ -122,8 +170,22 @@ module Oapi
             groups(operation).each_key { |name| buffer.line("const :#{Naming.identifier(name)}, #{name}") }
             body = body_type(operation)
             buffer.line("const :body, #{body}") if body
+            context = context_type(operation)
+            buffer.line("const :context, #{context}") if context
             buffer.line("const :http_request, ::ActionDispatch::Request")
           end
+        end
+
+        # Present only when `principals` is configured and the operation is protected:
+        # whatever the alternative that authenticated the request produced.
+        sig { params(operation: Model::Operation).returns(T.nilable(String)) }
+        def context_type(operation)
+          return nil if @config.principals.empty?
+
+          requirements = @document.security_for(operation)
+          return nil if requirements.empty?
+
+          Security.context_type(requirements, @config)
         end
 
         sig { params(operation: Model::Operation).returns(T.nilable(String)) }

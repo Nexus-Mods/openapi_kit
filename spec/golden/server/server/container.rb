@@ -14,7 +14,17 @@ module Server
       T::Hash[::String, T::Module[T.anything]]
     )
 
+    AUTHENTICATORS = T.let(
+      {
+        "v1.security.bearer_auth" => Server::Security::BearerAuth,
+        "v1.security.api_key_auth" => Server::Security::ApiKeyAuth,
+      }.freeze,
+      T::Hash[::String, T::Module[T.anything]]
+    )
+
     sig { params(container: T.untyped).void }
-    def self.verify!(container) = ::Oapi::Container.verify!(container, HANDLERS)
+    def self.verify!(container)
+      ::Oapi::Container.verify!(container, HANDLERS.merge(AUTHENTICATORS))
+    end
   end
 end

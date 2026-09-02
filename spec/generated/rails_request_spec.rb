@@ -40,7 +40,7 @@ RSpec.describe "a generated API inside a Rails application" do
          { "CONTENT_TYPE" => "application/json" }.merge(bearer(scopes: ["mods:write"]))
 
     expect(last_response.status).to eq(201)
-    expect(parsed_body["name"]).to eq("Cool Mod")
+    expect(parsed_body["name"]).to start_with("Cool Mod")
   end
 
   it "omits a property the handler left nil" do
@@ -84,6 +84,19 @@ RSpec.describe "a generated API inside a Rails application" do
            { "CONTENT_TYPE" => "application/json", "HTTP_X_API_KEY" => "k3y" }
 
       expect(last_response.status).to eq(201)
+    end
+
+    it "hands the handler the principal the authenticator produced" do
+      get "/v1/games/skyrim/mods", {}, bearer
+
+      expect(parsed_body.first["id"]).to eq("t0ken".hash.abs % 1000)
+    end
+
+    it "hands the handler whichever alternative authenticated" do
+      post "/v1/games/skyrim/mods", { name: "Cool Mod" }.to_json,
+           { "CONTENT_TYPE" => "application/json", "HTTP_X_API_KEY" => "k3y" }
+
+      expect(parsed_body["name"]).to eq("Cool Mod by robot-k3y")
     end
 
     it "leaves an operation that opts out of security alone" do

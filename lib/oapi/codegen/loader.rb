@@ -40,6 +40,8 @@ module Oapi
         operations = build_operations(document)
         document.components&.schemas&.each { |name, node| schema_for(node, hint: name) }
 
+        reject_untypeable_security!(operations, requirements(document) || [])
+
         Model::Document.new(
           title: document.info.title,
           version: document.info.version,
@@ -123,6 +125,40 @@ module Oapi
         when Model::UnionDef then type.members.each { |m| walk_for_binary(m, seen, operation) }
         when Model::AliasDef then walk_for_binary(type.target, seen, operation)
         end
+      end
+
+      # With principals configured, oapi resolves the alternatives itself, so it has to be
+      # able to name the type each one produces.
+      sig do
+        params(operations: T::Array[Model::Operation],
+               fallback: T::Array[Model::SecurityRequirement]).void
+      end
+      def reject_untypeable_security!(operations, fallback)
+        return if @config.principals.empty?
+
+        operations.each do |operation|
+          (operation.security || fallback).each do |requirement|
+            reject_untypeable_requirement!(operation, requirement)
+          end
+        end
+      end
+
+      sig { params(operation: Model::Operation, requirement: Model::SecurityRequirement).void }
+      def reject_untypeable_requirement!(operation, requirement)
+        if requirement.schemes.size > 1
+          raise SchemaError,
+                "#{operation.id} requires #{requirement.schemes.keys.join(" and ")} together. " \
+                "oapi cannot yet name the type that produces: give the operation one scheme per " \
+                "alternative, or drop `principals` and authenticate in your base controller."
+        end
+
+        missing = requirement.schemes.keys.reject { |name| @config.principals.key?(name) }
+        return if missing.empty?
+
+        raise ConfigError,
+              "#{operation.id} requires the security scheme #{missing.join(", ")}, which has no " \
+              "entry in `principals`. Name the class a successful authentication produces, or " \
+              "remove `principals` entirely to authenticate in your base controller instead."
       end
 
       sig { params(names: T::Array[String], subject: String, consequence: String).void }

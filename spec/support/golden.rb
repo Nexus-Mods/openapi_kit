@@ -7,7 +7,11 @@ module Golden
 
   FIXTURES = {
     "kitchen_sink" => { "modules" => %w[KitchenSink] },
-    "server" => { "modules" => %w[Server], "container_prefix" => "v1" }
+    "server" => {
+      "modules" => %w[Server],
+      "container_prefix" => "v1",
+      "principals" => { "bearerAuth" => "::Demo::User", "apiKeyAuth" => "::Demo::Service" }
+    }
   }.freeze
 
   def self.call
