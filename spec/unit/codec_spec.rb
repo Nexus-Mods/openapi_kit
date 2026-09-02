@@ -229,3 +229,25 @@ RSpec.describe Oapi::Codec do
     end
   end
 end
+
+RSpec.describe "Oapi::Decode.gather" do
+  # Headers and cookie jars are not Hashes and Sorbet has no structural typing, so the
+  # lookup arrives as a typed block rather than the source object.
+  it "collects the names that are present" do
+    source = { "Application-Name" => "vortex", "Accept" => "application/json" }
+
+    expect(Oapi::Decode.gather(%w[Application-Name Accept]) { |name| source[name] })
+      .to eq("Application-Name" => "vortex", "Accept" => "application/json")
+  end
+
+  it "omits a name the source does not have" do
+    expect(Oapi::Decode.gather(%w[Missing]) { |_name| nil }).to eq({})
+  end
+
+  it "returns a string keyed hash the other Decode helpers accept" do
+    gathered = Oapi::Decode.gather(%w[Page]) { |_name| "4" }
+
+    expect(Oapi::Decode.field(gathered, "Page") { |v| Oapi::Codec::Primitive::Integer::CODEC.from_wire(v) })
+      .to eq(4)
+  end
+end
