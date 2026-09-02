@@ -18,6 +18,34 @@ module Server
 
       sig { returns(::Integer) }
       def hash = [self.class, serialize].hash
+
+      class Codec
+        extend T::Sig
+        extend T::Generic
+        include ::Oapi::Codec
+
+        Value = type_member { { fixed: Server::Types::ProblemDetails } }
+
+        sig { override.params(value: T.untyped).returns(Server::Types::ProblemDetails) }
+        def from_wire(value)
+          raw = ::Oapi::Decode.object(value)
+          Server::Types::ProblemDetails.new(
+            title: ::Oapi::Decode.field(raw, "title") { |v| ::Oapi::Codec::Primitive::String::CODEC.from_wire(v) },
+            detail: ::Oapi::Decode.optional(raw, "detail") { |v| ::Oapi::Codec::Primitive::String::CODEC.from_wire(v) },
+          )
+        end
+
+        sig { override.params(value: Server::Types::ProblemDetails).returns(::Oapi::Wire) }
+        def to_wire(value)
+          wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
+          wire["title"] = ::Oapi::Codec::Primitive::String::CODEC.to_wire(value.title)
+          detail = value.detail
+          wire["detail"] = ::Oapi::Codec::Primitive::String::CODEC.to_wire(detail) unless detail.nil?
+          wire
+        end
+      end
+
+      CODEC = T.let(Codec.new, Codec)
     end
   end
 end

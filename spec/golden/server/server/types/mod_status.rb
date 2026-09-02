@@ -9,6 +9,27 @@ module Server
         Live = new("live")
         Hidden = new("hidden")
       end
+
+      class Codec
+        extend T::Sig
+        extend T::Generic
+        include ::Oapi::Codec
+
+        Value = type_member { { fixed: Server::Types::ModStatus } }
+
+        VALUES = T.let(["live", "hidden"].freeze, T::Array[::Oapi::Wire])
+
+        sig { override.params(value: T.untyped).returns(Server::Types::ModStatus) }
+        def from_wire(value)
+          Server::Types::ModStatus.try_deserialize(value) ||
+            raise(::Oapi::DecodeError.new("expected one of #{VALUES.join(", ")}, got #{value.inspect}"))
+        end
+
+        sig { override.params(value: Server::Types::ModStatus).returns(::Oapi::Wire) }
+        def to_wire(value) = value.serialize
+      end
+
+      CODEC = T.let(Codec.new, Codec)
     end
   end
 end

@@ -10,6 +10,27 @@ module KitchenSink
         UnderModeration = new("under-moderation")
         Hidden = new("hidden")
       end
+
+      class Codec
+        extend T::Sig
+        extend T::Generic
+        include ::Oapi::Codec
+
+        Value = type_member { { fixed: KitchenSink::Types::ModStatus } }
+
+        VALUES = T.let(["live", "under-moderation", "hidden"].freeze, T::Array[::Oapi::Wire])
+
+        sig { override.params(value: T.untyped).returns(KitchenSink::Types::ModStatus) }
+        def from_wire(value)
+          KitchenSink::Types::ModStatus.try_deserialize(value) ||
+            raise(::Oapi::DecodeError.new("expected one of #{VALUES.join(", ")}, got #{value.inspect}"))
+        end
+
+        sig { override.params(value: KitchenSink::Types::ModStatus).returns(::Oapi::Wire) }
+        def to_wire(value) = value.serialize
+      end
+
+      CODEC = T.let(Codec.new, Codec)
     end
   end
 end

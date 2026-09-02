@@ -9,10 +9,10 @@ RSpec.describe Oapi::Codegen::TypeRegistry::Defaults do
 
   it "gives formats with a distinct Ruby type that type" do
     expect(mapping("string:date-time")).to be_ir(
-      Oapi::Codegen::RubyType.new(type: "::Time", codec: "::Oapi::Codec::Primitive::DateTime::INSTANCE")
+      Oapi::Codegen::RubyType.new(type: "::Time", codec: "::Oapi::Codec::Primitive::DateTime::CODEC")
     )
     expect(mapping("string:decimal")).to be_ir(
-      Oapi::Codegen::RubyType.new(type: "::BigDecimal", codec: "::Oapi::Codec::Primitive::Decimal::INSTANCE")
+      Oapi::Codegen::RubyType.new(type: "::BigDecimal", codec: "::Oapi::Codec::Primitive::Decimal::CODEC")
     )
   end
 
@@ -30,7 +30,7 @@ RSpec.describe Oapi::Codegen::TypeRegistry::Defaults do
   it "maps binary content to the Rails upload type" do
     expect(mapping("string:binary")).to be_ir(
       Oapi::Codegen::RubyType.new(type: "::ActionDispatch::Http::UploadedFile",
-                                  codec: "::Oapi::Rails::Codec::UploadedFile::INSTANCE")
+                                  codec: "::Oapi::Rails::Codec::UploadedFile::CODEC")
     )
   end
 

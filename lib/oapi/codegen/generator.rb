@@ -35,7 +35,6 @@ module Oapi
       def emitters(document, registry)
         [
           Emit::Types.new(document: document, registry: registry, config: @config),
-          Emit::Codecs.new(document: document, registry: registry, config: @config),
           Emit::Operations.new(document: document, registry: registry, config: @config),
           Emit::Handlers.new(document: document, config: @config),
           Emit::Container.new(document: document, config: @config)

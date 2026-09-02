@@ -18,6 +18,34 @@ module KitchenSink
 
       sig { returns(::Integer) }
       def hash = [self.class, serialize].hash
+
+      class Codec
+        extend T::Sig
+        extend T::Generic
+        include ::Oapi::Codec
+
+        Value = type_member { { fixed: KitchenSink::Types::Cat } }
+
+        sig { override.params(value: T.untyped).returns(KitchenSink::Types::Cat) }
+        def from_wire(value)
+          raw = ::Oapi::Decode.object(value)
+          KitchenSink::Types::Cat.new(
+            kind: ::Oapi::Decode.field(raw, "kind") { |v| ::Oapi::Codec::Primitive::String::CODEC.from_wire(v) },
+            lives: ::Oapi::Decode.optional(raw, "lives") { |v| ::Oapi::Codec::Primitive::Integer::CODEC.from_wire(v) },
+          )
+        end
+
+        sig { override.params(value: KitchenSink::Types::Cat).returns(::Oapi::Wire) }
+        def to_wire(value)
+          wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
+          wire["kind"] = ::Oapi::Codec::Primitive::String::CODEC.to_wire(value.kind)
+          lives = value.lives
+          wire["lives"] = ::Oapi::Codec::Primitive::Integer::CODEC.to_wire(lives) unless lives.nil?
+          wire
+        end
+      end
+
+      CODEC = T.let(Codec.new, Codec)
     end
   end
 end

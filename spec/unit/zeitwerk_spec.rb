@@ -27,7 +27,7 @@ RSpec.describe "Zeitwerk compatibility" do
     loader.eager_load
 
     expect(Object.const_get("Resolved::Types::Mod")).to be < T::Struct
-    expect(Object.const_get("Resolved::Codecs::Mod")::INSTANCE).to be_a(Oapi::Codec)
+    expect(Object.const_get("Resolved::Types::Mod")::CODEC).to be_a(Oapi::Codec)
     expect(Object.const_get("Resolved::Handlers::Mods")).to be_a(Module)
     expect(Object.const_get("Resolved::Operations::ListMods::Ok")).to be < T::Struct
     expect(Object.const_get("Resolved::Container")::HANDLERS.keys).to include("v1.handlers.mods")

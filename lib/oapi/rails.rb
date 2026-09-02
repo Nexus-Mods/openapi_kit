@@ -25,7 +25,7 @@ module Oapi
         sig { override.params(value: ::ActionDispatch::Http::UploadedFile).returns(Oapi::Wire) }
         def to_wire(value) = value.original_filename
 
-        INSTANCE = T.let(new, UploadedFile)
+        CODEC = T.let(new, UploadedFile)
       end
     end
   end

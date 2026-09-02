@@ -12,6 +12,7 @@ module Oapi
           @document = document
           @registry = registry
           @config = config
+          @codecs = T.let(Codecs.new(document: document, registry: registry, config: config), Codecs)
         end
 
         sig { returns(T::Array[SourceFile]) }
@@ -47,6 +48,8 @@ module Oapi
             buffer.nest("enums do") do
               type.members.each { |member| buffer.line("#{member.constant} = new(#{member.value.inspect})") }
             end
+            buffer.blank
+            @codecs.emit(buffer, type)
           end
         end
 
@@ -54,7 +57,12 @@ module Oapi
         def emit_union(buffer, type)
           members = type.members.map { |member| @registry.sorbet_type(member) }.uniq
           inner = members.one? ? T.must(members.first) : "T.any(#{members.join(", ")})"
-          buffer.line("#{type.name} = T.type_alias { #{inner} }")
+
+          buffer.nest("module #{type.name}") do
+            buffer.line("Value = T.type_alias { #{inner} }")
+            buffer.blank
+            @codecs.emit(buffer, type)
+          end
         end
 
         sig { params(buffer: Buffer, type: Ir::ObjectDef).void }
@@ -67,6 +75,8 @@ module Oapi
             buffer.line("const :additional_properties, #{additional_type(extra)}, factory: -> { {} }") if extra
             buffer.blank
             emit_equality(buffer, type)
+            buffer.blank
+            @codecs.emit(buffer, type)
           end
         end
 

@@ -25,7 +25,7 @@ def check(label)
   raise "failed: #{label}" unless yield
 end
 
-mod = KitchenSink::Codecs::Mod::INSTANCE.from_wire(WIRE)
+mod = KitchenSink::Types::Mod::CODEC.from_wire(WIRE)
 
 check("id") { mod.id == 7 }
 check("inline enum hoisted") { mod.status == KitchenSink::Types::ModStatus::UnderModeration }
@@ -39,37 +39,37 @@ check("alias inlined to String") { mod.owner.value_or(nil)&.id.is_a?(String) }
 check("array items") { mod.tags == %w[a b] }
 check("inline object hoisted") { mod.meta&.note == "hi" }
 check("additionalProperties") { mod.extra == { "downloads" => 12 } }
-other = KitchenSink::Codecs::Mod::INSTANCE.from_wire(WIRE)
+other = KitchenSink::Types::Mod::CODEC.from_wire(WIRE)
 check("equality") { other == mod }
 check("eql? agrees with ==") { other.eql?(mod) }
 check("hash agrees with ==") { other.hash == mod.hash }
 check("usable as a hash key") { { mod => :found }[other] == :found }
 check("uniq collapses equal values") { [mod, other].uniq.size == 1 }
-check("differing values are unequal") { KitchenSink::Codecs::Mod::INSTANCE.from_wire(WIRE.merge("id" => 8)) != mod }
+check("differing values are unequal") { KitchenSink::Types::Mod::CODEC.from_wire(WIRE.merge("id" => 8)) != mod }
 
-wire = KitchenSink::Codecs::Mod::INSTANCE.to_wire(mod)
+wire = KitchenSink::Types::Mod::CODEC.to_wire(mod)
 check("dumped date-time") { wire["updatedAt"] == "2026-09-02T10:00:00Z" }
 check("dumped enum") { wire["status"] == "under-moderation" }
 check("required nullable stays null") { wire.key?("deletedAt") && wire["deletedAt"].nil? }
 check("absent optional omitted") { !wire.key?("summary") }
 check("tristate null kept") { wire.key?("bio") && wire["bio"].nil? }
 
-cat = KitchenSink::Codecs::Pet::INSTANCE.from_wire({ "kind" => "cat", "lives" => 9 })
+cat = KitchenSink::Types::Pet::CODEC.from_wire({ "kind" => "cat", "lives" => 9 })
 check("discriminated union") { cat.is_a?(KitchenSink::Types::Cat) }
-check("union dump") { KitchenSink::Codecs::Pet::INSTANCE.to_wire(cat)["kind"] == "cat" }
+check("union dump") { KitchenSink::Types::Pet::CODEC.to_wire(cat)["kind"] == "cat" }
 
-check("untagged union string") { KitchenSink::Codecs::Loose::INSTANCE.from_wire("x") == "x" }
-check("untagged union integer") { KitchenSink::Codecs::Loose::INSTANCE.from_wire(3) == 3 }
+check("untagged union string") { KitchenSink::Types::Loose::CODEC.from_wire("x") == "x" }
+check("untagged union integer") { KitchenSink::Types::Loose::CODEC.from_wire(3) == 3 }
 
 begin
-  KitchenSink::Codecs::Mod::INSTANCE.from_wire(WIRE.merge("id" => "not a number"))
+  KitchenSink::Types::Mod::CODEC.from_wire(WIRE.merge("id" => "not a number"))
   raise "failed: expected a DecodeError"
 rescue Oapi::DecodeError => e
   check("error names the field") { e.json_pointer == "/id" }
 end
 
 begin
-  KitchenSink::Codecs::Mod::INSTANCE.from_wire(WIRE.merge("tags" => ["a", 2]))
+  KitchenSink::Types::Mod::CODEC.from_wire(WIRE.merge("tags" => ["a", 2]))
   raise "failed: expected a DecodeError"
 rescue Oapi::DecodeError => e
   check("error indexes the element: #{e.json_pointer}") { e.json_pointer == "/tags/1" }

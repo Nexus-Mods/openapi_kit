@@ -41,7 +41,7 @@ module Oapi
         sig { override.params(value: T.untyped).returns(Oapi::Wire) }
         def to_wire(value) = value
 
-        INSTANCE = T.let(new, Untyped)
+        CODEC = T.let(new, Untyped)
       end
 
       class String
@@ -61,7 +61,7 @@ module Oapi
         sig { override.params(value: ::String).returns(Oapi::Wire) }
         def to_wire(value) = value
 
-        INSTANCE = T.let(new, String)
+        CODEC = T.let(new, String)
       end
 
       class Integer
@@ -82,7 +82,7 @@ module Oapi
         sig { override.params(value: ::Integer).returns(Oapi::Wire) }
         def to_wire(value) = value
 
-        INSTANCE = T.let(new, Integer)
+        CODEC = T.let(new, Integer)
       end
 
       class Float
@@ -110,7 +110,7 @@ module Oapi
         sig { override.params(value: ::Float).returns(Oapi::Wire) }
         def to_wire(value) = value
 
-        INSTANCE = T.let(new, Float)
+        CODEC = T.let(new, Float)
       end
 
       class Decimal
@@ -138,7 +138,7 @@ module Oapi
         sig { override.params(value: ::BigDecimal).returns(Oapi::Wire) }
         def to_wire(value) = value.to_s("F")
 
-        INSTANCE = T.let(new, Decimal)
+        CODEC = T.let(new, Decimal)
       end
 
       class Boolean
@@ -166,7 +166,7 @@ module Oapi
         sig { override.params(value: T::Boolean).returns(Oapi::Wire) }
         def to_wire(value) = value
 
-        INSTANCE = T.let(new, Boolean)
+        CODEC = T.let(new, Boolean)
       end
 
       class DateTime
@@ -191,7 +191,7 @@ module Oapi
         sig { override.params(value: ::Time).returns(Oapi::Wire) }
         def to_wire(value) = value.utc.iso8601
 
-        INSTANCE = T.let(new, DateTime)
+        CODEC = T.let(new, DateTime)
       end
 
       class Date
@@ -215,7 +215,7 @@ module Oapi
         sig { override.params(value: ::Date).returns(Oapi::Wire) }
         def to_wire(value) = value.iso8601
 
-        INSTANCE = T.let(new, Date)
+        CODEC = T.let(new, Date)
       end
 
       class Uuid
@@ -235,7 +235,7 @@ module Oapi
         sig { override.params(value: ::String).returns(Oapi::Wire) }
         def to_wire(value) = value
 
-        INSTANCE = T.let(new, Uuid)
+        CODEC = T.let(new, Uuid)
       end
 
       class Byte
@@ -260,7 +260,7 @@ module Oapi
         sig { override.params(value: ::String).returns(Oapi::Wire) }
         def to_wire(value) = [value].pack("m0")
 
-        INSTANCE = T.let(new, Byte)
+        CODEC = T.let(new, Byte)
       end
     end
   end

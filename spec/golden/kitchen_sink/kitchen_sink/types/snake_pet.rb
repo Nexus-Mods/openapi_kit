@@ -4,6 +4,40 @@
 
 module KitchenSink
   module Types
-    SnakePet = T.type_alias { T.any(KitchenSink::Types::SnakeCat, KitchenSink::Types::SnakeDog) }
+    module SnakePet
+      Value = T.type_alias { T.any(KitchenSink::Types::SnakeCat, KitchenSink::Types::SnakeDog) }
+
+      class Codec
+        extend T::Sig
+        extend T::Generic
+        include ::Oapi::Codec
+
+        Value = type_member { { fixed: KitchenSink::Types::SnakePet::Value } }
+
+        TAGS = T.let(["snake_cat", "snake_dog"].freeze, T::Array[::String])
+
+        sig { override.params(value: T.untyped).returns(KitchenSink::Types::SnakePet::Value) }
+        def from_wire(value)
+          raw = ::Oapi::Decode.object(value)
+          tag = raw["kind"]
+          case tag
+          when "snake_cat" then KitchenSink::Types::SnakeCat::CODEC.from_wire(raw)
+          when "snake_dog" then KitchenSink::Types::SnakeDog::CODEC.from_wire(raw)
+          else raise(::Oapi::DecodeError.new("expected kind to be one of #{TAGS.join(", ")}, got #{tag.inspect}"))
+          end
+        end
+
+        sig { override.params(value: KitchenSink::Types::SnakePet::Value).returns(::Oapi::Wire) }
+        def to_wire(value)
+          case value
+          when KitchenSink::Types::SnakeCat then KitchenSink::Types::SnakeCat::CODEC.to_wire(value)
+          when KitchenSink::Types::SnakeDog then KitchenSink::Types::SnakeDog::CODEC.to_wire(value)
+          else T.absurd(value)
+          end
+        end
+      end
+
+      CODEC = T.let(Codec.new, Codec)
+    end
   end
 end

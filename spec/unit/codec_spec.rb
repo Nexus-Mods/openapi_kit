@@ -13,14 +13,14 @@ end
 RSpec.describe Oapi::Codec::Primitive do
   describe "Integer" do
     it "accepts an integer and the string form a query parameter arrives as" do
-      expect(described_class::Integer::INSTANCE.from_wire(42)).to eq(42)
-      expect(described_class::Integer::INSTANCE.from_wire("42")).to eq(42)
-      expect(described_class::Integer::INSTANCE.from_wire("-7")).to eq(-7)
+      expect(described_class::Integer::CODEC.from_wire(42)).to eq(42)
+      expect(described_class::Integer::CODEC.from_wire("42")).to eq(42)
+      expect(described_class::Integer::CODEC.from_wire("-7")).to eq(-7)
     end
 
     it "refuses values that are not integers" do
       ["4.2", "x", "", 4.2, nil, []].each do |value|
-        expect { described_class::Integer::INSTANCE.from_wire(value) }
+        expect { described_class::Integer::CODEC.from_wire(value) }
           .to raise_error(Oapi::DecodeError, /expected an integer/)
       end
     end
@@ -28,39 +28,39 @@ RSpec.describe Oapi::Codec::Primitive do
 
   describe "Boolean" do
     it "accepts booleans and their query-parameter spellings" do
-      expect(described_class::Boolean::INSTANCE.from_wire(true)).to be(true)
-      expect(described_class::Boolean::INSTANCE.from_wire("TRUE")).to be(true)
-      expect(described_class::Boolean::INSTANCE.from_wire("1")).to be(true)
-      expect(described_class::Boolean::INSTANCE.from_wire("false")).to be(false)
-      expect(described_class::Boolean::INSTANCE.from_wire("0")).to be(false)
+      expect(described_class::Boolean::CODEC.from_wire(true)).to be(true)
+      expect(described_class::Boolean::CODEC.from_wire("TRUE")).to be(true)
+      expect(described_class::Boolean::CODEC.from_wire("1")).to be(true)
+      expect(described_class::Boolean::CODEC.from_wire("false")).to be(false)
+      expect(described_class::Boolean::CODEC.from_wire("0")).to be(false)
     end
 
     it "refuses anything else" do
-      expect { described_class::Boolean::INSTANCE.from_wire("yes") }
+      expect { described_class::Boolean::CODEC.from_wire("yes") }
         .to raise_error(Oapi::DecodeError, /expected a boolean/)
     end
   end
 
   describe "round trips" do
     it "normalises a date-time to UTC" do
-      value = described_class::DateTime::INSTANCE.from_wire("2026-09-02T12:00:00+02:00")
-      expect(described_class::DateTime::INSTANCE.to_wire(value)).to eq("2026-09-02T10:00:00Z")
+      value = described_class::DateTime::CODEC.from_wire("2026-09-02T12:00:00+02:00")
+      expect(described_class::DateTime::CODEC.to_wire(value)).to eq("2026-09-02T10:00:00Z")
     end
 
     it "keeps decimal precision as a string" do
-      decimal = described_class::Decimal::INSTANCE
+      decimal = described_class::Decimal::CODEC
 
       expect(decimal.to_wire(decimal.from_wire("1.50"))).to eq("1.5")
       expect(decimal.from_wire("0.1") + decimal.from_wire("0.2")).to eq(decimal.from_wire("0.3"))
     end
 
     it "round trips base64 without the base64 gem" do
-      expect(described_class::Byte::INSTANCE.from_wire("aGk=")).to eq("hi")
-      expect(described_class::Byte::INSTANCE.to_wire("hi")).to eq("aGk=")
+      expect(described_class::Byte::CODEC.from_wire("aGk=")).to eq("hi")
+      expect(described_class::Byte::CODEC.to_wire("hi")).to eq("aGk=")
     end
 
     it "round trips a date" do
-      date = described_class::Date::INSTANCE
+      date = described_class::Date::CODEC
 
       expect(date.to_wire(date.from_wire("2026-09-02"))).to eq("2026-09-02")
     end
@@ -68,12 +68,12 @@ RSpec.describe Oapi::Codec::Primitive do
 
   describe "Uuid" do
     it "accepts a well formed uuid" do
-      expect(described_class::Uuid::INSTANCE.from_wire("0f3a2b1c-1111-2222-3333-444455556666"))
+      expect(described_class::Uuid::CODEC.from_wire("0f3a2b1c-1111-2222-3333-444455556666"))
         .to eq("0f3a2b1c-1111-2222-3333-444455556666")
     end
 
     it "refuses a string that is not a uuid" do
-      expect { described_class::Uuid::INSTANCE.from_wire("nope") }.to raise_error(Oapi::DecodeError, /expected a UUID/)
+      expect { described_class::Uuid::CODEC.from_wire("nope") }.to raise_error(Oapi::DecodeError, /expected a UUID/)
     end
   end
 end
@@ -82,12 +82,12 @@ RSpec.describe Oapi::Decode do
   describe ".field" do
     it "decodes a present value" do
       expect(described_class.field({ "id" => "7" }, "id") do |v|
-        Oapi::Codec::Primitive::Integer::INSTANCE.from_wire(v)
+        Oapi::Codec::Primitive::Integer::CODEC.from_wire(v)
       end).to eq(7)
     end
 
     it "attaches the pointer to a failure raised without one" do
-      expect { described_class.field({ "id" => "x" }, "id") { |v| Oapi::Codec::Primitive::Integer::INSTANCE.from_wire(v) } }
+      expect { described_class.field({ "id" => "x" }, "id") { |v| Oapi::Codec::Primitive::Integer::CODEC.from_wire(v) } }
         .to raise_error(Oapi::DecodeError, "/id: expected an integer, got \"x\"")
     end
 
@@ -130,7 +130,7 @@ RSpec.describe Oapi::Decode do
 
     it "is Present(value) for a value" do
       expect(described_class.tristate({ "bio" => "hi" }, "bio") do |v|
-        Oapi::Codec::Primitive::String::INSTANCE.from_wire(v)
+        Oapi::Codec::Primitive::String::CODEC.from_wire(v)
       end)
         .to eq(Oapi::Present.new(value: "hi"))
     end
@@ -138,7 +138,7 @@ RSpec.describe Oapi::Decode do
 
   describe ".each" do
     it "numbers the pointer by index" do
-      expect { described_class.field({ "tags" => %w[1 x] }, "tags") { |v| described_class.each(v) { |i| Oapi::Codec::Primitive::Integer::INSTANCE.from_wire(i) } } }
+      expect { described_class.field({ "tags" => %w[1 x] }, "tags") { |v| described_class.each(v) { |i| Oapi::Codec::Primitive::Integer::CODEC.from_wire(i) } } }
         .to raise_error(Oapi::DecodeError, "/tags/1: expected an integer, got \"x\"")
     end
   end
@@ -159,7 +159,7 @@ class MoneyCodecClass
   Value = type_member { { fixed: Money } }
 
   sig { override.params(value: T.untyped).returns(Money) }
-  def from_wire(value) = Money.new(Oapi::Codec::Primitive::Integer::INSTANCE.from_wire(value))
+  def from_wire(value) = Money.new(Oapi::Codec::Primitive::Integer::CODEC.from_wire(value))
 
   sig { override.params(value: Money).returns(Oapi::Wire) }
   def to_wire(value) = value.cents
@@ -180,7 +180,7 @@ class SaltedIdCodec
   end
 
   sig { override.params(value: T.untyped).returns(Integer) }
-  def from_wire(value) = Oapi::Codec::Primitive::String::INSTANCE.from_wire(value).delete_prefix(@salt).to_i
+  def from_wire(value) = Oapi::Codec::Primitive::String::CODEC.from_wire(value).delete_prefix(@salt).to_i
 
   sig { override.params(value: Integer).returns(Oapi::Wire) }
   def to_wire(value) = "#{@salt}#{value}"
@@ -196,7 +196,7 @@ RSpec.describe Oapi::Codec do
   end
 
   it "is the one contract every codec implements, built-in or yours" do
-    [Oapi::Codec::Primitive::DateTime::INSTANCE, Oapi::Codec::Primitive::Decimal::INSTANCE, MoneyCodec].each do |codec|
+    [Oapi::Codec::Primitive::DateTime::CODEC, Oapi::Codec::Primitive::Decimal::CODEC, MoneyCodec].each do |codec|
       expect(codec.class.ancestors).to include(described_class)
     end
   end
@@ -210,7 +210,7 @@ RSpec.describe Oapi::Codec do
     it "answers the same from_wire and to_wire calls a module codec does" do
       expect(SaltedIdCodec.ancestors).to include(described_class)
       expect(SALTED_ID_CODEC).to respond_to(:from_wire, :to_wire)
-      expect(Oapi::Codec::Primitive::Integer::INSTANCE).to respond_to(:from_wire, :to_wire)
+      expect(Oapi::Codec::Primitive::Integer::CODEC).to respond_to(:from_wire, :to_wire)
     end
 
     it "can be configured differently more than once" do

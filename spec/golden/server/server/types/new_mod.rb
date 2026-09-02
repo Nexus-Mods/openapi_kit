@@ -17,6 +17,31 @@ module Server
 
       sig { returns(::Integer) }
       def hash = [self.class, serialize].hash
+
+      class Codec
+        extend T::Sig
+        extend T::Generic
+        include ::Oapi::Codec
+
+        Value = type_member { { fixed: Server::Types::NewMod } }
+
+        sig { override.params(value: T.untyped).returns(Server::Types::NewMod) }
+        def from_wire(value)
+          raw = ::Oapi::Decode.object(value)
+          Server::Types::NewMod.new(
+            name: ::Oapi::Decode.field(raw, "name") { |v| ::Oapi::Codec::Primitive::String::CODEC.from_wire(v) },
+          )
+        end
+
+        sig { override.params(value: Server::Types::NewMod).returns(::Oapi::Wire) }
+        def to_wire(value)
+          wire = T.let({}, T::Hash[::String, ::Oapi::Wire])
+          wire["name"] = ::Oapi::Codec::Primitive::String::CODEC.to_wire(value.name)
+          wire
+        end
+      end
+
+      CODEC = T.let(Codec.new, Codec)
     end
   end
 end

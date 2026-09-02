@@ -9,8 +9,7 @@ RSpec.describe Oapi::Codegen::Generator do
     it "writes one file per constant, at the path the constant implies" do
       expect(relative_paths(result[:dir])).to eq(
         %w[
-          server/codecs/mod.rb server/codecs/mod_status.rb server/codecs/new_mod.rb
-          server/codecs/problem_details.rb server/container.rb
+          server/container.rb
           server/handlers/mods.rb server/handlers/system.rb
           server/operations/create_mod.rb server/operations/get_health.rb
           server/operations/list_mods.rb

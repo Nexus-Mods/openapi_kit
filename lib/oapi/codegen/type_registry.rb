@@ -14,7 +14,7 @@ module Oapi
         def self.entry(type, codec)
           RubyType.new(
             type: type.is_a?(::Module) ? "::#{T.must(type.name)}" : type,
-            codec: "::#{T.must(codec.name)}::INSTANCE"
+            codec: "::#{T.must(codec.name)}::CODEC"
           )
         end
 
@@ -49,7 +49,7 @@ module Oapi
             "string:byte" => entry(::String, Oapi::Codec::Primitive::Byte),
             "string:binary" => RubyType.new(
               type: "::ActionDispatch::Http::UploadedFile",
-              codec: "::Oapi::Rails::Codec::UploadedFile::INSTANCE"
+              codec: "::Oapi::Rails::Codec::UploadedFile::CODEC"
             ),
             "string:decimal" => entry(::BigDecimal, Oapi::Codec::Primitive::Decimal),
             "number:decimal" => entry(::BigDecimal, Oapi::Codec::Primitive::Decimal)
@@ -103,7 +103,9 @@ module Oapi
         case schema
         when Ir::Ref
           aliased = alias_target(schema)
-          aliased ? sorbet_type(aliased) : "#{@namespace}::Types::#{schema.name}"
+          return sorbet_type(aliased) if aliased
+
+          union?(schema) ? "#{@namespace}::Types::#{schema.name}::Value" : "#{@namespace}::Types::#{schema.name}"
         when Ir::List then "T::Array[#{sorbet_type(schema.items)}]"
         when Ir::Freeform
           values = schema.values
@@ -175,7 +177,10 @@ module Oapi
       private
 
       sig { params(schema: Ir::Ref).returns(String) }
-      def codec_for(schema) = "#{@namespace}::Codecs::#{schema.name}::INSTANCE"
+      def codec_for(schema) = "#{@namespace}::Types::#{schema.name}::CODEC"
+
+      sig { params(schema: Ir::Ref).returns(T::Boolean) }
+      def union?(schema) = @types[schema.name].is_a?(Ir::UnionDef)
 
       sig { params(schema: Ir::Ref).returns(T.nilable(Ir::Schema)) }
       def alias_target(schema)

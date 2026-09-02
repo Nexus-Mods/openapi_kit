@@ -14,16 +14,8 @@ module Oapi
           @config = config
         end
 
-        sig { returns(T::Array[SourceFile]) }
-        def render
-          @document.types.grep_v(Ir::AliasDef).map do |type|
-            name = Ir::TypeDef.name_of(type)
-            Source.file(path: "#{@config.module_path}/codecs/#{Naming.snake(name)}.rb",
-                        modules: @config.modules + ["Codecs"]) do |buffer|
-              emit_codec(buffer, type)
-            end
-          end
-        end
+        sig { params(buffer: Buffer, type: Ir::TypeDef).void }
+        def emit(buffer, type) = emit_codec(buffer, type)
 
         private
 
@@ -36,7 +28,7 @@ module Oapi
         sig { params(buffer: Buffer, type: Ir::TypeDef).void }
         def emit_codec(buffer, type)
           name = Ir::TypeDef.name_of(type)
-          buffer.nest("class #{name}") do
+          buffer.nest("class Codec") do
             buffer.line("extend T::Sig")
             buffer.line("extend T::Generic")
             buffer.line("include ::Oapi::Codec")
@@ -49,9 +41,9 @@ module Oapi
             buffer.blank
             buffer.line("sig { override.params(value: #{qualified(name)}).returns(::Oapi::Wire) }")
             emit_to_wire(buffer, type)
-            buffer.blank
-            buffer.line("INSTANCE = T.let(new, #{name})")
           end
+          buffer.blank
+          buffer.line("CODEC = T.let(Codec.new, Codec)")
         end
 
         sig { params(buffer: Buffer, type: Ir::TypeDef).void }
@@ -71,7 +63,7 @@ module Oapi
         end
 
         sig { params(name: String).returns(String) }
-        def qualified(name) = "#{@config.namespace}::Types::#{name}"
+        def qualified(name) = @registry.sorbet_type(Ir::Ref.new(name: name))
 
         sig { params(buffer: Buffer, type: Ir::TypeDef).void }
         def emit_from_wire(buffer, type)
@@ -247,7 +239,7 @@ module Oapi
         end
 
         sig { params(name: String).returns(String) }
-        def codec_for(name) = "#{@config.namespace}::Codecs::#{name}::INSTANCE"
+        def codec_for(name) = "#{@config.namespace}::Types::#{name}::CODEC"
       end
     end
   end
