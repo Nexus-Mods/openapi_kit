@@ -7,23 +7,6 @@ module Server
     extend T::Sig
     include Kernel
 
-    @current = T.let(nil, T.nilable(Registry))
-
-    class << self
-      extend T::Sig
-
-      sig { params(current: Registry).void }
-      attr_writer :current
-
-      sig { returns(Registry) }
-      def current
-        @current || raise(
-          "Server::Registry.current has not been assigned. Build one in an " \
-          "initializer, e.g. Server::Registry.current = Server::Registry::Eager.new(...)."
-        )
-      end
-    end
-
     sig { returns(Server::Handlers::Mods) }
     def mods = raise(NotImplementedError, "#{self.class} must provide mods")
 
@@ -36,7 +19,24 @@ module Server
     sig { returns(Server::Security::ApiKeyAuth) }
     def api_key_auth = raise(NotImplementedError, "#{self.class} must provide api_key_auth")
 
-    class Eager < T::Struct
+    sig do
+      params(
+        mods: Server::Handlers::Mods,
+        system: Server::Handlers::System,
+        bearer_auth: Server::Security::BearerAuth,
+        api_key_auth: Server::Security::ApiKeyAuth
+      ).returns(Registry)
+    end
+    def self.new(mods:, system:, bearer_auth:, api_key_auth:)
+      Values.new(
+        mods: mods,
+        system: system,
+        bearer_auth: bearer_auth,
+        api_key_auth: api_key_auth,
+      )
+    end
+
+    class Values < T::Struct
       include Registry
 
       const :mods, Server::Handlers::Mods

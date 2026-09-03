@@ -127,15 +127,14 @@ end
 ```
 
 **Assign the registry.** oapi generates a `Registry` with one reader per handler and
-authenticator, and controllers read it from `Registry.current`. Rails instantiates
-controllers itself, so they cannot be handed one. `Eager` is the implementation you
-usually want: omit a slot, or pass something that does not implement its interface, and
-it does not compile.
+authenticator, and controllers read it from `Mods::V1.registry`. Rails instantiates
+controllers itself, so they cannot be handed one. Omit a slot, or pass something that
+does not implement its interface, and it does not compile.
 
 ```ruby
 # config/initializers/oapi.rb
 Rails.application.config.to_prepare do
-  Mods::V1::Registry.current = Mods::V1::Registry::Eager.new(
+  Mods::V1.registry = Mods::V1::Registry.new(
     mods: ModsHandler.new,
     system: SystemHandler.new,
     bearer_auth: BearerAuthenticator.new
@@ -143,9 +142,8 @@ Rails.application.config.to_prepare do
 end
 ```
 
-`Registry` is an interface, so you can supply your own implementation instead. Its
-readers are plain signatures rather than abstract ones, which is what lets `Eager` be a
-struct, and lets you compute a reader:
+`Registry.new` builds the usual thing: a value holding what you passed. It is an
+interface, though, so you can supply your own implementation and compute a reader:
 
 ```ruby
 class TenantRegistry

@@ -27,8 +27,12 @@ module Oapi
         def render
           return [] if slots.empty?
 
-          [Source.file(path: "#{@config.module_path}/registry.rb",
-                       modules: @config.modules) { |buffer| emit_registry(buffer) }]
+          [
+            Source.file(path: "#{@config.module_path}/registry.rb",
+                        modules: @config.modules) { |buffer| emit_registry(buffer) },
+            Source.file(path: "#{@config.module_path}.rb",
+                        modules: @config.modules) { |buffer| emit_accessor(buffer) }
+          ]
         end
 
         private
@@ -61,29 +65,31 @@ module Oapi
             buffer.line("extend T::Sig")
             buffer.line("include Kernel")
             buffer.blank
-            buffer.line("@current = T.let(nil, T.nilable(Registry))")
-            buffer.blank
-            emit_accessor(buffer)
-            buffer.blank
             emit_readers(buffer)
-            emit_eager(buffer)
+            emit_factory(buffer)
+            buffer.blank
+            emit_values(buffer)
           end
         end
 
+        # Rails instantiates controllers itself, so a controller cannot be handed the
+        # registry. It reads it from here, and an application assigns it at boot.
         sig { params(buffer: Buffer).void }
         def emit_accessor(buffer)
-          buffer.nest("class << self") do
-            buffer.line("extend T::Sig")
-            buffer.blank
-            buffer.line("sig { params(current: Registry).void }")
-            buffer.line("attr_writer :current")
-            buffer.blank
-            buffer.line("sig { returns(Registry) }")
-            buffer.nest("def current") do
-              buffer.line("@current || raise(")
-              buffer.indent { unset_message.each { |line| buffer.line(line) } }
-              buffer.line(")")
-            end
+          buffer.line("extend T::Sig")
+          buffer.blank
+          buffer.line("@registry = T.let(nil, T.nilable(Registry))")
+          buffer.blank
+          buffer.line("sig { params(registry: Registry).void }")
+          buffer.line("def self.registry=(registry)")
+          buffer.indent { buffer.line("@registry = registry") }
+          buffer.line("end")
+          buffer.blank
+          buffer.line("sig { returns(Registry) }")
+          buffer.nest("def self.registry") do
+            buffer.line("@registry || raise(")
+            buffer.indent { unset_message.each { |line| buffer.line(line) } }
+            buffer.line(")")
           end
         end
 
@@ -91,8 +97,8 @@ module Oapi
         def unset_message
           namespace = @config.namespace
           [
-            %("#{namespace}::Registry.current has not been assigned. Build one in an " \\),
-            %("initializer, e.g. #{namespace}::Registry.current = #{namespace}::Registry::Eager.new(...).")
+            %("#{namespace}.registry has not been assigned. Build one in an initializer, " \\),
+            %("e.g. #{namespace}.registry = #{namespace}::Registry.new(...).")
           ]
         end
 
@@ -108,9 +114,28 @@ module Oapi
           end
         end
 
+        # Reads as constructing a Registry, and what it builds is an implementation
+        # detail: an application that wants something else implements the interface.
         sig { params(buffer: Buffer).void }
-        def emit_eager(buffer)
-          buffer.nest("class Eager < T::Struct") do
+        def emit_factory(buffer)
+          buffer.line("sig do")
+          buffer.indent do
+            arguments = slots.map { |slot| [slot.reader, slot.interface] }
+            buffer.nest_call("params", arguments, tail: ".returns(Registry)")
+          end
+          buffer.line("end")
+          buffer.nest("def self.new(#{slots.map { |slot| "#{slot.reader}:" }.join(", ")})") do
+            buffer.line("Values.new(")
+            buffer.indent do
+              slots.each { |slot| buffer.line("#{slot.reader}: #{slot.reader},") }
+            end
+            buffer.line(")")
+          end
+        end
+
+        sig { params(buffer: Buffer).void }
+        def emit_values(buffer)
+          buffer.nest("class Values < T::Struct") do
             buffer.line("include Registry")
             buffer.blank
             slots.each { |slot| buffer.line("const :#{slot.reader}, #{slot.interface}") }

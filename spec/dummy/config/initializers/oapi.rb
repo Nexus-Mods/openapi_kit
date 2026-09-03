@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-# Rails instantiates controllers itself, so they read the registry from here rather than
-# being handed one. to_prepare reassigns it on a code reload.
+# Rails instantiates controllers itself, so they read the registry from Dummy::V1 rather
+# than being handed one. to_prepare reassigns it on a code reload.
 Rails.application.config.to_prepare do
-  Dummy::V1::Registry.current = Dummy::V1::Registry::Eager.new(
+  Dummy::V1.registry = Dummy::V1::Registry.new(
     mods: ModsHandler.new,
     system: SystemHandler.new,
     bearer_auth: BearerAuthenticator.new,
