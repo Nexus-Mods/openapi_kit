@@ -28,6 +28,15 @@ RSpec.describe "static guarantees" do
     )
   end
 
+  # `principal` names one type for the document, so an authenticator may narrow to a
+  # variant of it but not step outside it.
+  it "rejects an authenticator returning something that is not the configured principal" do
+    expect(invalid("foreign_principal")).to include(
+      "Return type `T.nilable(String)` does not match return type of abstract method " \
+      "`Server::Security::BearerAuth#authenticate`"
+    )
+  end
+
   it "rejects a codec whose from_wire and to_wire disagree" do
     expect(invalid("mismatched_codec")).to include(
       "Parameter `value` of type `String` not compatible with type of abstract method " \

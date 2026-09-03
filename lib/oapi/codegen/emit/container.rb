@@ -30,6 +30,33 @@ module Oapi
         sig { params(tag: String).returns(String) }
         def key_for(tag) = @config.container_key("handlers", Naming.snake(tag))
 
+        # A resolve is the one place the container's untypedness surfaces, so every cast
+        # lives here, beside the verify! that makes it sound.
+        sig { params(buffer: Buffer).void }
+        def emit_readers(buffer)
+          readers.each do |reader, (key, interface)|
+            buffer.line("sig { params(container: T.untyped).returns(#{interface}) }")
+            buffer.nest("def self.#{reader}(container)") do
+              buffer.line("T.cast(container.resolve(#{key.inspect}), #{interface})")
+            end
+            buffer.blank
+          end
+        end
+
+        sig { returns(T::Hash[String, [String, String]]) }
+        def readers
+          handlers = @document.tags.to_h do |tag|
+            [Naming.snake(tag),
+             [key_for(tag), "#{@config.namespace}::Handlers::#{Emit::Handlers.module_name(tag)}"]]
+          end
+
+          authenticated_names.to_h do |name|
+            [Naming.snake(name),
+             [@config.container_key("security", Naming.snake(name)),
+              "#{@config.namespace}::Security::#{Emit::Security.module_name(name)}"]]
+          end.merge(handlers)
+        end
+
         sig { params(buffer: Buffer).void }
         def emit_authenticators(buffer)
           buffer.line("AUTHENTICATORS = T.let(")
@@ -50,10 +77,19 @@ module Oapi
         end
 
         sig { returns(T::Array[String]) }
+        def authenticated_names
+          return [] if @config.principal.nil?
+
+          @document.operations.flat_map do |operation|
+            @document.security_for(operation).flat_map { |requirement| requirement.schemes.keys }
+          end.uniq
+        end
+
+        sig { returns(T::Array[String]) }
         def authenticated
           @document.security_schemes
                    .map { |scheme| Model::SecurityScheme.name_of(scheme) }
-                   .select { |name| @config.principals.key?(name) }
+                   .select { |name| authenticated_names.include?(name) }
         end
 
         sig { params(buffer: Buffer).void }
@@ -75,6 +111,7 @@ module Oapi
           buffer.line(")")
           buffer.blank
           emit_authenticators(buffer)
+          emit_readers(buffer)
           buffer.line("sig { params(container: T.untyped).void }")
           buffer.nest("def self.verify!(container)") do
             buffer.line("::Oapi::Container.verify!(container, HANDLERS.merge(AUTHENTICATORS))")

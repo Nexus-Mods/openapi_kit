@@ -51,6 +51,11 @@ module Oapi
             buffer.line("private")
             buffer.blank
             emit_handler(buffer, tag)
+
+            operations.select { |operation| context?(operation) }.each do |operation|
+              buffer.blank
+              emit_authenticator(buffer, operation)
+            end
           end
         end
 
@@ -63,12 +68,9 @@ module Oapi
         sig { params(buffer: Buffer, tag: String).void }
         def emit_handler(buffer, tag)
           interface = "#{@config.namespace}::Handlers::#{Handlers.module_name(tag)}"
-          key = @config.container_key("handlers", Naming.snake(tag))
 
           buffer.line("sig { returns(#{interface}) }")
-          buffer.nest("def handler") do
-            buffer.line("T.cast(oapi_container.resolve(#{key.inspect}), #{interface})")
-          end
+          buffer.line("def handler = #{@config.namespace}::Container.#{Naming.snake(tag)}(oapi_container)")
         end
 
         sig { params(buffer: Buffer, operation: Model::Operation).void }
@@ -78,7 +80,7 @@ module Oapi
 
           buffer.line("sig { void }")
           buffer.nest("def #{Naming.identifier(operation.id)}") do
-            emit_authentication(buffer, operation, scope)
+            emit_authentication(buffer, operation)
 
             groups.each { |name, parameters| buffer.line(source_line(name, parameters)) }
             buffer.blank unless groups.empty?
@@ -89,16 +91,43 @@ module Oapi
           end
         end
 
-        sig { params(buffer: Buffer, operation: Model::Operation, scope: String).void }
-        def emit_authentication(buffer, operation, scope)
-          return if @document.security_for(operation).empty?
+        sig { params(buffer: Buffer, operation: Model::Operation).void }
+        def emit_authentication(buffer, operation)
+          return unless context?(operation)
 
-          if @config.principals.empty?
-            buffer.line("oapi_authenticate!(#{scope}::SECURITY)")
-          else
-            buffer.line("context = #{scope}.authenticate(request: request, container: oapi_container)")
-          end
+          buffer.line("context = #{authenticator_name(operation)}")
           buffer.blank
+        end
+
+        sig { params(operation: Model::Operation).returns(String) }
+        def authenticator_name(operation) = "authenticate_#{Naming.identifier(operation.id)}"
+
+        # Each alternative is one attempt, tried in the order the document lists them.
+        sig { params(buffer: Buffer, operation: Model::Operation).void }
+        def emit_authenticator(buffer, operation)
+          requirements = @document.security_for(operation)
+
+          buffer.line("sig { returns(#{Security.principal_type(requirements, @config)}) }")
+          buffer.nest("def #{authenticator_name(operation)}") do
+            buffer.line("::Oapi::Security.first_of(")
+            buffer.indent do
+              buffer.line("[")
+              buffer.indent do
+                requirements.reject(&:anonymous?).each { |requirement| buffer.line("#{attempt(requirement)},") }
+              end
+              buffer.line("]")
+            end
+            buffer.line(requirements.any?(&:anonymous?) ? ")" : ") || raise(::Oapi::Security::Unauthenticated)")
+          end
+        end
+
+        sig { params(requirement: Model::SecurityRequirement).returns(String) }
+        def attempt(requirement)
+          name = T.must(requirement.schemes.keys.first)
+          scopes = T.must(requirement.schemes[name])
+          reader = "#{@config.namespace}::Container.#{Naming.snake(name)}(oapi_container)"
+
+          "-> { #{reader}.authenticate(request: request, scopes: #{scopes.inspect}) }"
         end
 
         sig do
@@ -155,7 +184,7 @@ module Oapi
           when "Path" then "request.path_parameters[name.to_sym]"
           when "Query" then "request.query_parameters[name]"
           when "Headers" then "request.headers[name]"
-          when "Cookies" then "request.cookie_jar[name]"
+          when "Cookies" then "request.cookies[name]"
           else raise SchemaError, "unknown parameter group #{group}"
           end
         end
@@ -198,7 +227,7 @@ module Oapi
 
         sig { params(operation: Model::Operation).returns(T::Boolean) }
         def context?(operation)
-          !@config.principals.empty? && !@document.security_for(operation).empty?
+          !@config.principal.nil? && !@document.security_for(operation).empty?
         end
 
         sig { params(operation: Model::Operation).returns(T::Boolean) }

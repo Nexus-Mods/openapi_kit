@@ -12,7 +12,7 @@ module Server
         scheme: "bearer",
         bearer_format: "JWT"
       ),
-      ::Oapi::Security::Scheme
+      ::Oapi::Security::Http
     )
 
     API_KEY_AUTH = T.let(
@@ -21,7 +21,7 @@ module Server
         location: ::Oapi::Security::ApiKeyLocation::Header,
         parameter_name: "X-Api-Key"
       ),
-      ::Oapi::Security::Scheme
+      ::Oapi::Security::ApiKey
     )
 
     SCHEMES = T.let(
@@ -35,11 +35,17 @@ module Server
     module BearerAuth
       extend T::Sig
       extend T::Helpers
-      interface!
+      abstract!
+
+      sig { returns(::Oapi::Security::Http) }
+      def scheme = BEARER_AUTH
+
+      sig { params(request: ::ActionDispatch::Request).returns(T.nilable(::String)) }
+      def credential(request) = ::Oapi::Security.credential(scheme, request)
 
       sig do
         abstract.params(request: ::ActionDispatch::Request, scopes: T::Array[::String])
-                .returns(T.nilable(::Demo::User))
+                .returns(T.nilable(::Demo::Principal))
       end
       def authenticate(request:, scopes:); end
     end
@@ -47,11 +53,17 @@ module Server
     module ApiKeyAuth
       extend T::Sig
       extend T::Helpers
-      interface!
+      abstract!
+
+      sig { returns(::Oapi::Security::ApiKey) }
+      def scheme = API_KEY_AUTH
+
+      sig { params(request: ::ActionDispatch::Request).returns(T.nilable(::String)) }
+      def credential(request) = ::Oapi::Security.credential(scheme, request)
 
       sig do
         abstract.params(request: ::ActionDispatch::Request, scopes: T::Array[::String])
-                .returns(T.nilable(::Demo::Service))
+                .returns(T.nilable(::Demo::Principal))
       end
       def authenticate(request:, scopes:); end
     end

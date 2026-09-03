@@ -11,7 +11,8 @@ module GeneratorHelper
     @generated_dirs << dir
     config = Oapi::Codegen::Config.from_hash(
       { "spec" => FIXTURES.join(fixture).to_s, "output" => dir.join("generated").to_s,
-        "modules" => modules, "controller_base" => "ApiBaseController" }.merge(options),
+        "modules" => modules, "controller_base" => "ApiBaseController",
+        "principal" => "::SpecPrincipal" }.merge(options),
       base: dir
     )
     generator = Oapi::Codegen::Generator.new(config: config)
@@ -36,7 +37,7 @@ module GeneratorHelper
 
     config = Oapi::Codegen::Config.from_hash(
       { "spec" => "api.yaml", "output" => "generated", "modules" => modules,
-        "controller_base" => "ApiBaseController" }.merge(options),
+        "controller_base" => "ApiBaseController", "principal" => "::SpecPrincipal" }.merge(options),
       base: dir
     )
     generator = Oapi::Codegen::Generator.new(config: config)

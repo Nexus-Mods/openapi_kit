@@ -12,19 +12,20 @@ class ModsHandler
 
     Dummy::V1::Operations::ListMods::Ok.new(
       body: [
-        Dummy::V1::Types::Mod.new(id: request.context.id,
+        Dummy::V1::Types::Mod.new(id: T.cast(request.context, Principal::Token).user_id,
                                   name: "#{request.path.game_domain}:#{request.query.page}",
                                   status: Dummy::V1::Types::ModStatus::Live)
       ]
     )
   end
 
-  # The operation offers bearerAuth or apiKeyAuth, so the context is whichever one
-  # authenticated: a Person or a Robot.
+  # The operation offers bearerAuth or apiKeyAuth, and Principal is sealed, so this case
+  # is exhaustive: adding a variant stops compiling here until it is handled.
   def create_mod(request:)
     author = case request.context
-             when Person then "person-#{request.context.id}"
-             when Robot then request.context.name
+             when Principal::Token then "user-#{request.context.user_id}"
+             when Principal::Key then request.context.client
+             else T.absurd(request.context)
              end
 
     Dummy::V1::Operations::CreateMod::Created.new(

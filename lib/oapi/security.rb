@@ -3,20 +3,76 @@
 
 module Oapi
   module Security
+    extend T::Sig
+
     # No alternative the document offers was satisfied. Rescue it wherever the
     # application already rescues Oapi::DecodeError: oapi takes no view on the response.
     class Unauthenticated < Error; end
 
-    # One alternative from a document's `security`: every scheme in it must be satisfied.
-    # An empty one is the spec's way of saying the endpoint may also be reached
-    # anonymously.
-    class Requirement < T::Struct
-      extend T::Sig
+    # Try each alternative in the order the document lists them. An attempt returns nil to
+    # say it was not satisfied, so the first one that produces a principal wins and the
+    # rest are never called.
+    sig do
+      type_parameters(:Principal)
+        .params(attempts: T::Array[T.proc.returns(T.nilable(T.type_parameter(:Principal)))])
+        .returns(T.nilable(T.type_parameter(:Principal)))
+    end
+    def self.first_of(attempts) = attempts.lazy.filter_map(&:call).first
 
-      const :schemes, T::Hash[String, T::Array[String]]
+    # Where a credential lives is what the scheme declares, so reading it is oapi's job
+    # rather than every authenticator's. The request is duck typed on headers,
+    # query_parameters and cookies, so this stays framework agnostic.
+    sig { params(scheme: Scheme, request: T.untyped).returns(T.nilable(String)) }
+    def self.credential(scheme, request)
+      case scheme
+      when ApiKey then api_key(scheme, request)
+      when Http then authorization(request, scheme.scheme)
+      when OAuth2, OpenIdConnect then authorization(request, "bearer")
+      else T.absurd(scheme)
+      end
+    end
 
-      sig { returns(T::Boolean) }
-      def anonymous? = schemes.empty?
+    # Basic credentials are base64 of user:password, which is no use undecoded.
+    sig { params(scheme: Http, request: T.untyped).returns(T.nilable([String, String])) }
+    def self.basic(scheme, request)
+      encoded = credential(scheme, request)
+      return nil if encoded.nil?
+
+      decoded = begin
+        encoded.unpack1("m0")
+      rescue ArgumentError
+        nil
+      end
+      user, password = decoded.to_s.split(":", 2)
+      user.nil? || password.nil? ? nil : [user, password]
+    end
+
+    sig { params(scheme: ApiKey, request: T.untyped).returns(T.nilable(String)) }
+    def self.api_key(scheme, request)
+      location = scheme.location
+      case location
+      when ApiKeyLocation::Header then present(request.headers[scheme.parameter_name])
+      when ApiKeyLocation::Query then present(request.query_parameters[scheme.parameter_name])
+      when ApiKeyLocation::Cookie then present(request.cookies[scheme.parameter_name])
+      else T.absurd(location)
+      end
+    end
+
+    sig { params(request: T.untyped, scheme: String).returns(T.nilable(String)) }
+    def self.authorization(request, scheme)
+      header = present(request.headers["Authorization"])
+      return nil if header.nil?
+
+      prefix = "#{scheme} "
+      return nil unless header.downcase.start_with?(prefix.downcase)
+
+      present(header[prefix.length..])
+    end
+
+    sig { params(value: T.untyped).returns(T.nilable(String)) }
+    def self.present(value)
+      string = value.to_s
+      string.empty? ? nil : string
     end
 
     module Scheme

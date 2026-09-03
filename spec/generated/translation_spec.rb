@@ -301,12 +301,16 @@ RSpec.describe "translating a document" do
   end
 
   describe "security schemes" do
-    def secured(scheme)
-      document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
-               "  /a:", "    get:", "      operationId: getA", "      tags: [t]",
-               "      security: [{ customAuth: [] }]",
-               %(      responses: { "204": { description: done } }),
-               "components:", "  securitySchemes:", *indent(scheme, 4))
+    def secured(scheme, requirement: "customAuth: []", principal: "::SpecPrincipal")
+      yaml = [
+        "openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
+        "  /a:", "    get:", "      operationId: getA", "      tags: [t]",
+        "      security: [{ #{requirement} }]",
+        %(      responses: { "204": { description: done } }),
+        "components:", "  securitySchemes:", *indent(scheme, 4)
+      ].join("\n")
+
+      generate_from(yaml, "principal" => principal)
     end
 
     # OpenAPI 3.0 fixes the four scheme types, but `http` takes any scheme name, so a
@@ -329,74 +333,96 @@ RSpec.describe "translating a document" do
       expect(generated["api/security.rb"]).to include(%(extensions: {"x-signing-key" => "SIGNING_KEY"}))
     end
 
-    it "gives an operation the requirements it declares" do
-      generated = secured("customAuth: { type: apiKey, in: cookie, name: session }")
-
-      expect(generated["api/operations/get_a.rb"])
-        .to include(%(::Oapi::Security::Requirement.new(schemes: {"customAuth" => []})))
-      expect(generated["api/t_controller.rb"]).to include("oapi_authenticate!(Api::Operations::GetA::SECURITY)")
-    end
-
-    describe "with principals configured" do
-      def typed(scheme, requirement: "customAuth: []", principals: { "customAuth" => "::MyApp::User" })
-        generate_from(
-          [
-            "openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
-            "  /a:", "    get:", "      operationId: getA", "      tags: [t]",
-            "      security: [{ #{requirement} }]",
-            %(      responses: { "204": { description: done } }),
-            "components:", "  securitySchemes:", *indent(scheme, 4)
-          ].join("\n"),
-          "principals" => principals
-        )
-      end
-
-      it "gives each scheme an authenticator interface returning its principal" do
-        generated = typed("customAuth: { type: http, scheme: bearer }")
-
-        expect(generated["api/security.rb"])
-          .to include("module CustomAuth", "interface!", "returns(T.nilable(::MyApp::User))")
-      end
-
-      it "puts the principal on the request and resolves it in the controller" do
-        generated = typed("customAuth: { type: http, scheme: bearer }")
-
-        expect(generated["api/operations/get_a.rb"]).to include("const :context, ::MyApp::User")
-        expect(generated["api/t_controller.rb"])
-          .to include("context = Api::Operations::GetA.authenticate(request: request, container: oapi_container)")
-      end
-
-      it "types the context as the union of the alternatives" do
-        generated = typed(
-          "customAuth: { type: http, scheme: bearer }\nkeyAuth: { type: apiKey, in: header, name: X-Key }",
-          requirement: "customAuth: [] }, { keyAuth: []",
-          principals: { "customAuth" => "::MyApp::User", "keyAuth" => "::MyApp::Service" }
-        )
-
-        expect(generated["api/operations/get_a.rb"])
-          .to include("const :context, T.any(::MyApp::User, ::MyApp::Service)")
-      end
-
-      it "refuses a scheme it cannot name a principal for" do
-        expect { typed("customAuth: { type: http, scheme: bearer }", principals: { "other" => "::X" }) }
-          .to raise_error(Oapi::ConfigError, /no entry in `principals`/)
-      end
-
-      it "refuses two schemes required together, which it cannot yet type" do
-        expect do
-          typed("customAuth: { type: http, scheme: bearer }\nkeyAuth: { type: apiKey, in: header, name: X-Key }",
-                requirement: "customAuth: [], keyAuth: []",
-                principals: { "customAuth" => "::MyApp::User", "keyAuth" => "::MyApp::Service" })
-        end.to raise_error(Oapi::SchemaError, /requires customAuth and keyAuth together/)
-      end
-    end
-
-    # Without principals, oapi reports the requirements and the base controller decides.
-    it "calls the hook instead when no principals are configured" do
+    it "gives each scheme an authenticator returning the configured principal" do
       generated = secured("customAuth: { type: http, scheme: bearer }")
 
-      expect(generated["api/t_controller.rb"]).to include("oapi_authenticate!(Api::Operations::GetA::SECURITY)")
-      expect(generated["api/operations/get_a.rb"]).not_to include("const :context")
+      expect(generated["api/security.rb"])
+        .to include("module CustomAuth", "abstract!", "returns(T.nilable(::SpecPrincipal))")
+    end
+
+    # Where a credential lives is what the document declares, so an authenticator is
+    # given it rather than knowing the header name and the scheme prefix itself.
+    it "implements credential extraction from the declaration" do
+      generated = secured("customAuth: { type: apiKey, in: cookie, name: session }")
+
+      expect(generated["api/security.rb"])
+        .to include("def scheme = CUSTOM_AUTH",
+                    "def credential(request) = ::Oapi::Security.credential(scheme, request)")
+    end
+
+    it "decodes a basic scheme's credentials, since base64 is no use undecoded" do
+      generated = secured("customAuth: { type: http, scheme: basic }")
+
+      expect(generated["api/security.rb"])
+        .to include("def basic_credential(request) = ::Oapi::Security.basic(scheme, request)")
+    end
+
+    it "offers no basic decoding for a scheme that is not basic" do
+      generated = secured("customAuth: { type: http, scheme: bearer }")
+
+      expect(generated["api/security.rb"]).not_to include("basic_credential")
+    end
+
+    it "puts the principal on the request and resolves it in the controller" do
+      generated = secured("customAuth: { type: http, scheme: bearer }")
+
+      expect(generated["api/operations/get_a.rb"]).to include("const :context, ::SpecPrincipal")
+      expect(generated["api/t_controller.rb"])
+        .to include("context = authenticate_get_a",
+                    "Api::Container.custom_auth(oapi_container).authenticate(request: request, scopes: [])",
+                    "raise(::Oapi::Security::Unauthenticated)")
+    end
+
+    it "resolves every alternative through the container, in document order" do
+      generated = secured(
+        "customAuth: { type: http, scheme: bearer }\nkeyAuth: { type: apiKey, in: header, name: X-Key }",
+        requirement: "customAuth: [read] }, { keyAuth: []"
+      )
+
+      attempts = generated["api/t_controller.rb"].lines.grep(/-> \{/).map(&:strip)
+      expect(attempts.first).to include("custom_auth", %(scopes: ["read"]))
+      expect(attempts.last).to include("key_auth", "scopes: []")
+    end
+
+    # An anonymous alternative means the request may arrive without a principal.
+    it "makes the principal nilable when the document offers anonymous access" do
+      generated = secured("customAuth: { type: http, scheme: bearer }",
+                          requirement: "customAuth: [] }, {")
+
+      expect(generated["api/operations/get_a.rb"]).to include("const :context, T.nilable(::SpecPrincipal)")
+      expect(generated["api/t_controller.rb"]).not_to include("raise(::Oapi::Security::Unauthenticated)")
+    end
+
+    it "refuses a document that declares security with no principal configured" do
+      expect { secured("customAuth: { type: http, scheme: bearer }", principal: nil) }
+        .to raise_error(Oapi::ConfigError, /no `principal` is configured/)
+    end
+
+    it "refuses two schemes required together, which it cannot yet type" do
+      expect do
+        secured("customAuth: { type: http, scheme: bearer }\nkeyAuth: { type: apiKey, in: header, name: X-Key }",
+                requirement: "customAuth: [], keyAuth: []")
+      end.to raise_error(Oapi::SchemaError, /requires customAuth and keyAuth together/)
+    end
+
+    # A server checks scope names; the flows' URLs tell a client where to get a token, so
+    # oapi does not carry them. Scopes are unioned, and a disagreement is not silent.
+    it "unions scopes across OAuth flows and warns when one is described two ways" do
+      generated = secured(<<~YAML, requirement: "oauth: [read]")
+        oauth:
+          type: oauth2
+          flows:
+            authorizationCode:
+              authorizationUrl: https://example.com/authorize
+              tokenUrl: https://example.com/token
+              scopes: { read: "Read as a user" }
+            clientCredentials:
+              tokenUrl: https://example.com/machine-token
+              scopes: { read: "Read as a machine", write: "Write" }
+      YAML
+
+      expect(generated["api/security.rb"]).to include(%(scopes: {"read" => "Read as a user", "write" => "Write"}))
+      expect(generated.warnings.join).to include(%(The scope "read" of security scheme "oauth" is described two ways))
     end
 
     it "refuses a scheme type it does not know" do

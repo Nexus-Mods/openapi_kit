@@ -5,12 +5,12 @@ class BearerAuthenticator
   include Dummy::V1::Security::BearerAuth
 
   def authenticate(request:, scopes:)
-    token = request.headers["Authorization"]&.delete_prefix("Bearer ")
-    return nil if token.blank?
+    token = credential(request)
+    return nil if token.nil?
 
-    granted = request.headers["X-Scopes"].to_s.split(",")
-    return nil unless scopes.all? { |scope| granted.include?(scope) }
+    permissions = request.headers["X-Scopes"].to_s.split(",")
+    return nil unless scopes.all? { |scope| permissions.include?(scope) }
 
-    Person.new(id: token.hash.abs % 1000, scopes: granted)
+    Principal::Token.new(user_id: token.hash.abs % 1000, permissions: permissions)
   end
 end

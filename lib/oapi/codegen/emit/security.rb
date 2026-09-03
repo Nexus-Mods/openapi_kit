@@ -20,20 +20,14 @@ module Oapi
         sig { params(name: String).returns(String) }
         def self.module_name(name) = Naming.pascal(name)
 
-        # The type a successful authentication produces, for whichever alternative won.
-        # An anonymous alternative contributes nil.
+        # The principal a protected operation carries. An anonymous alternative means the
+        # request may arrive without one.
         sig do
           params(requirements: T::Array[Model::SecurityRequirement], config: Config).returns(String)
         end
-        def self.context_type(requirements, config)
-          types = requirements.map do |requirement|
-            name = requirement.schemes.keys.first
-            name.nil? ? "NilClass" : config.principals.fetch(name)
-          end.uniq
-
-          return T.must(types.first) if types.one?
-
-          "T.any(#{types.join(", ")})"
+        def self.principal_type(requirements, config)
+          type = T.must(config.principal)
+          requirements.any?(&:anonymous?) ? "T.nilable(#{type})" : type
         end
 
         sig { override.returns(T::Array[SourceFile]) }
@@ -60,7 +54,7 @@ module Oapi
               extensions = Model::SecurityScheme.extensions_of(scheme)
               arguments += [["extensions", extensions.inspect]] unless extensions.empty?
               buffer.nest_call("#{type}.new", arguments)
-              buffer.line("::Oapi::Security::Scheme")
+              buffer.line(type)
             end
             buffer.line(")")
           end
@@ -81,26 +75,65 @@ module Oapi
         def emit_authenticator(buffer, scheme)
           name = Model::SecurityScheme.name_of(scheme)
 
+          type, = constructor(scheme)
+
           buffer.nest("module #{Security.module_name(name)}") do
             buffer.line("extend T::Sig")
             buffer.line("extend T::Helpers")
-            buffer.line("interface!")
+            buffer.line("abstract!")
             buffer.blank
-            buffer.line("sig do")
-            buffer.indent do
-              buffer.line("abstract.params(request: ::ActionDispatch::Request, scopes: T::Array[::String])")
-              buffer.line("        .returns(T.nilable(#{@config.principals.fetch(name)}))")
-            end
-            buffer.line("end")
-            buffer.line("def authenticate(request:, scopes:); end")
+            buffer.line("sig { returns(#{type}) }")
+            buffer.line("def scheme = #{Security.constant(name)}")
+            buffer.blank
+            emit_credential(buffer, scheme)
+            buffer.blank
+            emit_authenticate(buffer)
+          end
+        end
+
+        sig { params(buffer: Buffer, scheme: Model::SecurityScheme).void }
+        def emit_credential(buffer, scheme)
+          buffer.line("sig { params(request: ::ActionDispatch::Request).returns(T.nilable(::String)) }")
+          buffer.line("def credential(request) = ::Oapi::Security.credential(scheme, request)")
+          return unless basic?(scheme)
+
+          buffer.blank
+          buffer.line("sig do")
+          buffer.indent do
+            buffer.line("params(request: ::ActionDispatch::Request)")
+            buffer.line("  .returns(T.nilable([::String, ::String]))")
+          end
+          buffer.line("end")
+          buffer.line("def basic_credential(request) = ::Oapi::Security.basic(scheme, request)")
+        end
+
+        sig { params(buffer: Buffer).void }
+        def emit_authenticate(buffer)
+          buffer.line("sig do")
+          buffer.indent do
+            buffer.line("abstract.params(request: ::ActionDispatch::Request, scopes: T::Array[::String])")
+            buffer.line("        .returns(T.nilable(#{T.must(@config.principal)}))")
+          end
+          buffer.line("end")
+          buffer.line("def authenticate(request:, scopes:); end")
+        end
+
+        # Undecoded base64 is no use, so a basic scheme gets the decoded pair instead.
+        sig { params(scheme: Model::SecurityScheme).returns(T::Boolean) }
+        def basic?(scheme) = scheme.is_a?(Model::HttpScheme) && scheme.scheme == "basic"
+
+        sig { params(name: String).returns(T::Boolean) }
+        def used?(name)
+          @document.operations.any? do |operation|
+            @document.security_for(operation).any? { |requirement| requirement.schemes.key?(name) }
           end
         end
 
         sig { returns(T::Array[Model::SecurityScheme]) }
         def authenticated
-          @document.security_schemes.select do |scheme|
-            @config.principals.key?(Model::SecurityScheme.name_of(scheme))
-          end
+          return [] if @config.principal.nil?
+
+          @document.security_schemes.select { |scheme| used?(Model::SecurityScheme.name_of(scheme)) }
         end
 
         sig { params(buffer: Buffer).void }

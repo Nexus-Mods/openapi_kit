@@ -5,8 +5,8 @@ module ActionDispatch
     sig { returns(T.untyped) }
     def headers; end
 
-    sig { returns(T.untyped) }
-    def cookie_jar; end
+    sig { returns(T::Hash[String, String]) }
+    def cookies; end
 
     sig { returns(T::Hash[Symbol, T.untyped]) }
     def path_parameters; end

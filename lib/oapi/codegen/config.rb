@@ -16,12 +16,12 @@ module Oapi
       const :controller_base, String
       const :type_mappings, T::Hash[String, RubyType], default: {}
       const :name_overrides, T::Hash[String, String], default: {}
-      const :principals, T::Hash[String, String], default: {}
+      const :principal, T.nilable(String), default: nil
 
       KNOWN_KEYS = T.let(
         %w[
           spec output modules controller_base container_prefix
-          type_mappings name_overrides principals
+          type_mappings name_overrides principal
         ].freeze,
         T::Array[String]
       )
@@ -66,7 +66,7 @@ module Oapi
           controller_base: raw.fetch("controller_base").to_s,
           type_mappings: parse_type_mappings(raw["type_mappings"]),
           name_overrides: stringify(raw["name_overrides"]),
-          principals: principal_types(raw["principals"], where)
+          principal: principal_type(raw["principal"], where)
         )
       end
 
@@ -77,18 +77,18 @@ module Oapi
         end
       end
 
-      # A security scheme yields a principal of a type only the application knows, so it
-      # names it here and the generated authenticator interface returns it.
-      sig { params(value: T.untyped, where: String).returns(T::Hash[String, String]) }
-      def self.principal_types(value, where)
-        stringify(value).each do |scheme, type|
-          next if type.match?(RubyType::CONSTANT_PATH)
+      # Authenticating produces a principal of a type only the application knows, so it
+      # names it here and every authenticator interface returns it.
+      sig { params(value: T.untyped, where: String).returns(T.nilable(String)) }
+      def self.principal_type(value, where)
+        return nil if value.nil?
 
-          raise ConfigError,
-                "#{where}principals.#{scheme} is #{type.inspect}, which is not a Ruby constant " \
-                "path. It must name the class a successful #{scheme} authentication produces, " \
-                "e.g. \"MyApp::User\"."
-        end
+        type = value.to_s
+        return type if type.match?(RubyType::CONSTANT_PATH)
+
+        raise ConfigError,
+              "#{where}`principal` is #{type.inspect}, which is not a Ruby constant path. It " \
+              "must name the class a successful authentication produces, e.g. \"MyApp::Principal\"."
       end
 
       sig { params(value: T.untyped).returns(T::Hash[String, String]) }

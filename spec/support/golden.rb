@@ -10,7 +10,7 @@ module Golden
     "server" => {
       "modules" => %w[Server],
       "container_prefix" => "v1",
-      "principals" => { "bearerAuth" => "::Demo::User", "apiKeyAuth" => "::Demo::Service" }
+      "principal" => "::Demo::Principal"
     }
   }.freeze
 

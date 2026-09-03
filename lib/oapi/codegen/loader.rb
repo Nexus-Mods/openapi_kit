@@ -12,6 +12,11 @@ module Oapi
 
       # The media types Rails parses into request_parameters and oapi renders as JSON.
       # Anything else would decode a Hash that was never there, so it is refused.
+      OAUTH_FLOWS = T.let(
+        %i[implicit password client_credentials authorization_code].freeze,
+        T::Array[Symbol]
+      )
+
       DECODABLE_MEDIA_TYPES = T.let(
         %w[application/json application/x-www-form-urlencoded multipart/form-data].freeze,
         T::Array[String]
@@ -134,8 +139,6 @@ module Oapi
                fallback: T::Array[Model::SecurityRequirement]).void
       end
       def reject_untypeable_security!(operations, fallback)
-        return if @config.principals.empty?
-
         operations.each do |operation|
           (operation.security || fallback).each do |requirement|
             reject_untypeable_requirement!(operation, requirement)
@@ -152,13 +155,12 @@ module Oapi
                 "alternative, or drop `principals` and authenticate in your base controller."
         end
 
-        missing = requirement.schemes.keys.reject { |name| @config.principals.key?(name) }
-        return if missing.empty?
+        return unless @config.principal.nil?
 
         raise ConfigError,
-              "#{operation.id} requires the security scheme #{missing.join(", ")}, which has no " \
-              "entry in `principals`. Name the class a successful authentication produces, or " \
-              "remove `principals` entirely to authenticate in your base controller instead."
+              "#{operation.id} declares security, so a successful authentication produces a " \
+              "principal, but no `principal` is configured. Name the class it produces, " \
+              "e.g. principal: \"MyApp::Principal\"."
       end
 
       sig { params(names: T::Array[String], subject: String, consequence: String).void }
@@ -329,7 +331,7 @@ module Oapi
                                   bearer_format: node.bearer_format, description: node.description,
                                   extensions: extensions(node))
           when "oauth2"
-            Model::OAuth2Scheme.new(name: name, scopes: oauth_scopes(node), description: node.description,
+            Model::OAuth2Scheme.new(name: name, scopes: oauth_scopes(node, name: name), description: node.description,
                                     extensions: extensions(node))
           when "openIdConnect"
             Model::OpenIdConnectScheme.new(name: name, url: node.open_id_connect_url.to_s,
@@ -340,15 +342,36 @@ module Oapi
         end
       end
 
-      sig { params(node: Openapi3Parser::Node::SecurityScheme).returns(T::Hash[String, String]) }
-      def oauth_scopes(node)
+      sig do
+        params(node: Openapi3Parser::Node::SecurityScheme, name: String)
+          .returns(T::Hash[String, String])
+      end
+      # A server checks scope names and nothing else: the flows' authorizationUrl,
+      # tokenUrl and refreshUrl tell a client where to get a token, so they are not
+      # carried. Scopes are unioned across the flows, and a scope described two ways
+      # warns rather than losing one description quietly.
+      def oauth_scopes(node, name:)
         flows = node.flows
         return {} if flows.nil?
 
-        %i[implicit password client_credentials authorization_code].each_with_object({}) do |name, all|
-          flow = flows.public_send(name)
-          (flow&.scopes || {}).each { |scope, description| all[scope.to_s] = description.to_s }
+        OAUTH_FLOWS.each_with_object({}) do |flow_name, all|
+          flow = flows.public_send(flow_name)
+          (flow&.scopes || {}).each do |scope, description|
+            warn_scope_conflict(name, scope.to_s, all[scope.to_s], description.to_s)
+            all[scope.to_s] = description.to_s
+          end
         end
+      end
+
+      sig do
+        params(scheme: String, scope: String, existing: T.nilable(String), description: String).void
+      end
+      def warn_scope_conflict(scheme, scope, existing, description)
+        return if existing.nil? || existing == description
+
+        @warnings << "The scope #{scope.inspect} of security scheme #{scheme.inspect} is " \
+                     "described two ways across its OAuth flows: #{existing.inspect} and " \
+                     "#{description.inspect}. oapi keeps the last."
       end
 
       sig do

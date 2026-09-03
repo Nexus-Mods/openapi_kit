@@ -23,8 +23,6 @@ module Server
     private
 
     sig { returns(Server::Handlers::System) }
-    def handler
-      T.cast(oapi_container.resolve("v1.handlers.system"), Server::Handlers::System)
-    end
+    def handler = Server::Container.system(oapi_container)
   end
 end

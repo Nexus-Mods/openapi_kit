@@ -22,6 +22,26 @@ module Server
       T::Hash[::String, T::Module[T.anything]]
     )
 
+    sig { params(container: T.untyped).returns(Server::Security::BearerAuth) }
+    def self.bearer_auth(container)
+      T.cast(container.resolve("v1.security.bearer_auth"), Server::Security::BearerAuth)
+    end
+
+    sig { params(container: T.untyped).returns(Server::Security::ApiKeyAuth) }
+    def self.api_key_auth(container)
+      T.cast(container.resolve("v1.security.api_key_auth"), Server::Security::ApiKeyAuth)
+    end
+
+    sig { params(container: T.untyped).returns(Server::Handlers::Mods) }
+    def self.mods(container)
+      T.cast(container.resolve("v1.handlers.mods"), Server::Handlers::Mods)
+    end
+
+    sig { params(container: T.untyped).returns(Server::Handlers::System) }
+    def self.system(container)
+      T.cast(container.resolve("v1.handlers.system"), Server::Handlers::System)
+    end
+
     sig { params(container: T.untyped).void }
     def self.verify!(container)
       ::Oapi::Container.verify!(container, HANDLERS.merge(AUTHENTICATORS))

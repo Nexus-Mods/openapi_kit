@@ -8,7 +8,7 @@ module Server
 
     sig { void }
     def list_mods
-      context = Server::Operations::ListMods.authenticate(request: request, container: oapi_container)
+      context = authenticate_list_mods
 
       path_params = ::Oapi::Decode.gather(["gameDomain"]) { |name| request.path_parameters[name.to_sym] }
       query_params = ::Oapi::Decode.gather(["page", "status"]) { |name| request.query_parameters[name] }
@@ -39,7 +39,7 @@ module Server
 
     sig { void }
     def create_mod
-      context = Server::Operations::CreateMod.authenticate(request: request, container: oapi_container)
+      context = authenticate_create_mod
 
       path_params = ::Oapi::Decode.gather(["gameDomain"]) { |name| request.path_parameters[name.to_sym] }
 
@@ -63,8 +63,25 @@ module Server
     private
 
     sig { returns(Server::Handlers::Mods) }
-    def handler
-      T.cast(oapi_container.resolve("v1.handlers.mods"), Server::Handlers::Mods)
+    def handler = Server::Container.mods(oapi_container)
+
+    sig { returns(::Demo::Principal) }
+    def authenticate_list_mods
+      ::Oapi::Security.first_of(
+        [
+          -> { Server::Container.bearer_auth(oapi_container).authenticate(request: request, scopes: []) },
+        ]
+      ) || raise(::Oapi::Security::Unauthenticated)
+    end
+
+    sig { returns(::Demo::Principal) }
+    def authenticate_create_mod
+      ::Oapi::Security.first_of(
+        [
+          -> { Server::Container.bearer_auth(oapi_container).authenticate(request: request, scopes: ["mods:write"]) },
+          -> { Server::Container.api_key_auth(oapi_container).authenticate(request: request, scopes: []) },
+        ]
+      ) || raise(::Oapi::Security::Unauthenticated)
     end
   end
 end

@@ -5,27 +5,6 @@
 module Server
   module Operations
     module ListMods
-      extend T::Sig
-
-      SECURITY = T.let(
-        [
-          ::Oapi::Security::Requirement.new(schemes: {"bearerAuth" => []}),
-        ].freeze,
-        T::Array[::Oapi::Security::Requirement]
-      )
-
-      sig do
-        params(request: ::ActionDispatch::Request, container: T.untyped)
-          .returns(::Demo::User)
-      end
-      def self.authenticate(request:, container:)
-        authenticator = T.cast(container.resolve("v1.security.bearer_auth"), Server::Security::BearerAuth)
-        principal = authenticator.authenticate(request: request, scopes: [])
-        return principal unless principal.nil?
-
-        raise ::Oapi::Security::Unauthenticated
-      end
-
       class Path < T::Struct
         extend T::Sig
 
@@ -51,7 +30,7 @@ module Server
         const :path, Path
         const :query, Query
         const :headers, Headers
-        const :context, ::Demo::User
+        const :context, ::Demo::Principal
         const :http_request, ::ActionDispatch::Request
       end
 

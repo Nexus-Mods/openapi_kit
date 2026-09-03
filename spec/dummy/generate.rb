@@ -16,7 +16,7 @@ module Dummy
           "modules" => %w[Dummy V1],
           "controller_base" => "Dummy::BaseController",
           "container_prefix" => "v1",
-          "principals" => { "bearerAuth" => "::Person", "apiKeyAuth" => "::Robot" }
+          "principal" => "::Principal"
         },
         base: ROOT
       )
