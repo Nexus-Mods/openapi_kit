@@ -61,14 +61,8 @@ module Oapi
 
         sig { params(buffer: Buffer).void }
         def emit_registry(buffer)
-          buffer.nest("module Registry") do
-            buffer.line("extend T::Sig")
-            buffer.line("include Kernel")
-            buffer.blank
-            emit_readers(buffer)
-            emit_factory(buffer)
-            buffer.blank
-            emit_values(buffer)
+          buffer.nest("class Registry < T::Struct") do
+            slots.each { |slot| buffer.line("const :#{slot.reader}, #{slot.interface}") }
           end
         end
 
@@ -81,9 +75,9 @@ module Oapi
           buffer.line("@registry = T.let(nil, T.nilable(Registry))")
           buffer.blank
           buffer.line("sig { params(registry: Registry).void }")
-          buffer.line("def self.registry=(registry)")
-          buffer.indent { buffer.line("@registry = registry") }
-          buffer.line("end")
+          buffer.nest("def self.registry=(registry)") do
+            buffer.line("@registry = registry")
+          end
           buffer.blank
           buffer.line("sig { returns(Registry) }")
           buffer.nest("def self.registry") do

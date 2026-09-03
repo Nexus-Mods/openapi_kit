@@ -3,46 +3,10 @@
 # frozen_string_literal: true
 
 module Server
-  module Registry
-    extend T::Sig
-    include Kernel
-
-    sig { returns(Server::Handlers::Mods) }
-    def mods = raise(NotImplementedError, "#{self.class} must provide mods")
-
-    sig { returns(Server::Handlers::System) }
-    def system = raise(NotImplementedError, "#{self.class} must provide system")
-
-    sig { returns(Server::Security::BearerAuth) }
-    def bearer_auth = raise(NotImplementedError, "#{self.class} must provide bearer_auth")
-
-    sig { returns(Server::Security::ApiKeyAuth) }
-    def api_key_auth = raise(NotImplementedError, "#{self.class} must provide api_key_auth")
-
-    sig do
-      params(
-        mods: Server::Handlers::Mods,
-        system: Server::Handlers::System,
-        bearer_auth: Server::Security::BearerAuth,
-        api_key_auth: Server::Security::ApiKeyAuth
-      ).returns(Registry)
-    end
-    def self.new(mods:, system:, bearer_auth:, api_key_auth:)
-      Values.new(
-        mods: mods,
-        system: system,
-        bearer_auth: bearer_auth,
-        api_key_auth: api_key_auth,
-      )
-    end
-
-    class Values < T::Struct
-      include Registry
-
-      const :mods, Server::Handlers::Mods
-      const :system, Server::Handlers::System
-      const :bearer_auth, Server::Security::BearerAuth
-      const :api_key_auth, Server::Security::ApiKeyAuth
-    end
+  class Registry < T::Struct
+    const :mods, Server::Handlers::Mods
+    const :system, Server::Handlers::System
+    const :bearer_auth, Server::Security::BearerAuth
+    const :api_key_auth, Server::Security::ApiKeyAuth
   end
 end

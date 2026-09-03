@@ -29,15 +29,15 @@ RSpec.describe "a generated registry" do
     )
   end
 
-  # This is what replaced the boot-time container check.
-  it "refuses an implementation that does not satisfy the interface" do
+  # These two are what replaced the boot-time container check.
+  it "refuses an implementation that does not satisfy its interface" do
     expect { registry(mods: Object.new) }
-      .to raise_error(TypeError, /Expected type Dummy::V1::Handlers::Mods/)
+      .to raise_error(TypeError, /Can't set Dummy::V1::Registry.mods to/)
   end
 
   it "refuses a missing implementation" do
     expect { Dummy::V1::Registry.new(mods: handler(Dummy::V1::Handlers::Mods, :list_mods)) }
-      .to raise_error(ArgumentError, /missing keywords/)
+      .to raise_error(ArgumentError, /Missing required prop/)
   end
 
   it "is what a generated controller reads from" do
@@ -45,16 +45,13 @@ RSpec.describe "a generated registry" do
     expect(Dummy::V1.registry.mods).to be_a(Dummy::V1::Handlers::Mods)
   end
 
-  # An application may implement the interface itself, which is the seam: the readers are
-  # plain signatures, so a struct's props satisfy them and a class may compute them.
-  it "accepts any implementation of the interface" do
-    computed = Class.new do
-      include Dummy::V1::Registry
+  it "says what to do when nothing has been assigned" do
+    original = Dummy::V1.registry
+    Dummy::V1.instance_variable_set(:@registry, nil)
 
-      def mods = @mods ||= ModsHandler.new
-    end.new
-
-    expect(computed.mods).to be_a(Dummy::V1::Handlers::Mods)
-    expect { computed.system }.to raise_error(NotImplementedError, /must provide system/)
+    expect { Dummy::V1.registry }
+      .to raise_error(/Dummy::V1.registry has not been assigned.*Dummy::V1::Registry.new/m)
+  ensure
+    Dummy::V1.registry = original
   end
 end

@@ -126,10 +126,10 @@ module Api
 end
 ```
 
-**Assign the registry.** oapi generates a `Registry` with one reader per handler and
+**Assign the registry.** oapi generates a `Registry` struct with one slot per handler and
 authenticator, and controllers read it from `Mods::V1.registry`. Rails instantiates
-controllers itself, so they cannot be handed one. Omit a slot, or pass something that
-does not implement its interface, and it does not compile.
+controllers itself, so they cannot be handed one. Omit a slot, or pass something that does
+not implement its interface, and it does not compile.
 
 ```ruby
 # config/initializers/oapi.rb
@@ -139,18 +139,6 @@ Rails.application.config.to_prepare do
     system: SystemHandler.new,
     bearer_auth: BearerAuthenticator.new
   )
-end
-```
-
-`Registry.new` builds the usual thing: a value holding what you passed. It is an
-interface, though, so you can supply your own implementation and compute a reader:
-
-```ruby
-class TenantRegistry
-  include Mods::V1::Registry
-
-  sig { returns(Mods::V1::Handlers::Mods) }
-  def mods = ModsHandler.new(tenant: Tenant.current)
 end
 ```
 
