@@ -70,7 +70,7 @@ module Oapi
           interface = "#{@config.namespace}::Handlers::#{Handlers.module_name(tag)}"
 
           buffer.line("sig { returns(#{interface}) }")
-          buffer.line("def handler = oapi_registry.#{Naming.snake(tag)}")
+          buffer.line("def handler = #{@config.namespace}::Registry.current.#{Naming.snake(tag)}")
         end
 
         sig { params(buffer: Buffer, operation: Model::Operation).void }
@@ -125,7 +125,7 @@ module Oapi
         def attempt(requirement)
           name = T.must(requirement.schemes.keys.first)
           scopes = T.must(requirement.schemes[name])
-          reader = "oapi_registry.#{Naming.snake(name)}"
+          reader = "#{@config.namespace}::Registry.current.#{Naming.snake(name)}"
 
           "-> { #{reader}.authenticate(request: request, scopes: #{scopes.inspect}) }"
         end

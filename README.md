@@ -102,11 +102,10 @@ class ModsHandler
 end
 ```
 
-**Give the controllers a base class.** `oapi_registry` is the only method they need from
-it. Rails instantiates controllers itself, so nothing can be injected into one; this
-method is the seam, and you can override it for a per-request or multi-tenant lookup. A
-request oapi cannot decode raises `Oapi::DecodeError`, carrying `detail` and a
-`json_pointer` naming the field; oapi takes no view on the wire format.
+**Give the controllers a base class.** They inherit whatever you put there and need
+nothing from it, so this is where your own concerns and error mapping live. A request
+oapi cannot decode raises `Oapi::DecodeError`, carrying `detail` and a `json_pointer`
+naming the field; oapi takes no view on the wire format.
 
 ```ruby
 # app/controllers/api/base_controller.rb
@@ -116,8 +115,6 @@ module Api
     rescue_from Oapi::Security::Unauthenticated, with: :unauthorized
 
     private
-
-    def oapi_registry = Rails.configuration.x.api_registry
 
     def unauthorized = head(:unauthorized)
 
@@ -129,15 +126,16 @@ module Api
 end
 ```
 
-**Build the registry.** oapi generates a `Registry` with one slot per handler and
-authenticator. Omit one, or pass something that does not implement its interface, and it
-does not compile; in an untyped application it raises at construction instead. Use
-`to_prepare`, or a code reload leaves handlers holding stale constants.
+**Assign the registry.** oapi generates a `Registry` with one reader per handler and
+authenticator, and controllers read it from `Registry.current`. Rails instantiates
+controllers itself, so they cannot be handed one. `Eager` is the implementation you
+usually want: omit a slot, or pass something that does not implement its interface, and
+it does not compile.
 
 ```ruby
 # config/initializers/oapi.rb
 Rails.application.config.to_prepare do
-  Rails.configuration.x.api_registry = Mods::V1::Registry.new(
+  Mods::V1::Registry.current = Mods::V1::Registry::Eager.new(
     mods: ModsHandler.new,
     system: SystemHandler.new,
     bearer_auth: BearerAuthenticator.new
@@ -145,31 +143,16 @@ Rails.application.config.to_prepare do
 end
 ```
 
-Building it here means a wrong implementation fails at boot, and it means every handler
-is constructed at boot, along with whatever their constructors resolve.
-
-To defer that, memoise the registry somewhere shared. Not in `oapi_registry` itself:
-Rails builds a new controller per request, so an instance variable there rebuilds
-everything on every request.
+`Registry` is an interface, so you can supply your own implementation instead. Its
+readers are plain signatures rather than abstract ones, which is what lets `Eager` be a
+struct, and lets you compute a reader:
 
 ```ruby
-module Api
-  def self.registry
-    @registry ||= Mods::V1::Registry.new(
-      mods: ModsHandler.new,
-      system: SystemHandler.new,
-      bearer_auth: BearerAuthenticator.new
-    )
-  end
+class TenantRegistry
+  include Mods::V1::Registry
 
-  # Call this from to_prepare, so a code reload is picked up.
-  def self.reset! = @registry = nil
-end
-
-class Api::BaseController < ApplicationController
-  private
-
-  def oapi_registry = Api.registry
+  sig { returns(Mods::V1::Handlers::Mods) }
+  def mods = ModsHandler.new(tenant: Tenant.current)
 end
 ```
 
@@ -184,18 +167,8 @@ class ModsHandler
 end
 ```
 
-A test replaces whatever it needs by building a registry of its own, or by stubbing in
-your container.
-
-A container needs no bridge: an untyped `resolve` satisfies a typed slot.
-
-```ruby
-Mods::V1::Registry.new(
-  mods: MyApp::Container["mod_handler"],
-  system: MyApp::Container["system_handler"],
-  bearer_auth: MyApp::Container["bearer_authenticator"]
-)
-```
+Building the registry in `to_prepare` constructs every handler at boot, along with
+whatever their constructors resolve, and reassigns them on a code reload.
 
 ## Security
 

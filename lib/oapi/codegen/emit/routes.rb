@@ -68,7 +68,7 @@ module Oapi
                   "A path parameter name may contain only letters, digits and underscores."
           end
 
-          operation.path.gsub(/\{(\w+)\}/, ':\1')
+          operation.path.gsub(/\{(\w+)}/, ':\1')
         end
       end
     end

@@ -30,7 +30,7 @@ RSpec.describe "Zeitwerk compatibility" do
     expect(Object.const_get("Resolved::Types::Mod")::Codec).to be_a(Oapi::Codec::Contract)
     expect(Object.const_get("Resolved::Handlers::Mods")).to be_a(Module)
     expect(Object.const_get("Resolved::Operations::ListMods::Ok")).to be < T::Struct
-    expect(Object.const_get("Resolved::Registry")).to be < Object
+    expect(Object.const_get("Resolved::Registry")).to be_a(Module)
   ensure
     loader&.unload
   end

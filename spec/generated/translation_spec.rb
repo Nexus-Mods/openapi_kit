@@ -369,7 +369,7 @@ RSpec.describe "translating a document" do
       expect(generated["api/operations/get_a.rb"]).to include("const :context, ::SpecPrincipal")
       expect(generated["api/t_controller.rb"])
         .to include("context = authenticate_get_a",
-                    "oapi_registry.custom_auth.authenticate(request: request, scopes: [])",
+                    "Api::Registry.current.custom_auth.authenticate(request: request, scopes: [])",
                     "raise(::Oapi::Security::Unauthenticated)")
     end
 

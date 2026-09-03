@@ -4,10 +4,9 @@
 module Oapi
   module Codegen
     module Emit
-      # The typed boundary between oapi's interfaces and an application's objects. Fields
-      # are thunks, so nothing is built until first use, and Sorbet checks that every
-      # interface has an implementation of the right type at the call site, which is
-      # earlier and stricter than any boot-time check.
+      # The typed boundary between oapi's interfaces and an application's objects. Rails
+      # instantiates controllers itself, so a controller cannot be handed the registry: it
+      # reads it from the accessor, which an application assigns at boot.
       class Registry
         extend T::Sig
         include Emitter
@@ -29,7 +28,7 @@ module Oapi
           return [] if slots.empty?
 
           [Source.file(path: "#{@config.module_path}/registry.rb",
-                       modules: @config.modules) { |buffer| emit_class(buffer) }]
+                       modules: @config.modules) { |buffer| emit_registry(buffer) }]
         end
 
         private
@@ -57,12 +56,66 @@ module Oapi
         end
 
         sig { params(buffer: Buffer).void }
-        def emit_class(buffer)
-          buffer.nest("class Registry < T::Struct") do
-            slots.each { |slot| buffer.line("const :#{slot.reader}, #{slot.interface}") }
+        def emit_registry(buffer)
+          buffer.nest("module Registry") do
+            buffer.line("extend T::Sig")
+            buffer.line("include Kernel")
+            buffer.blank
+            buffer.line("@current = T.let(nil, T.nilable(Registry))")
+            buffer.blank
+            emit_accessor(buffer)
+            buffer.blank
+            emit_readers(buffer)
+            emit_eager(buffer)
           end
         end
 
+        sig { params(buffer: Buffer).void }
+        def emit_accessor(buffer)
+          buffer.nest("class << self") do
+            buffer.line("extend T::Sig")
+            buffer.blank
+            buffer.line("sig { params(current: Registry).void }")
+            buffer.line("attr_writer :current")
+            buffer.blank
+            buffer.line("sig { returns(Registry) }")
+            buffer.nest("def current") do
+              buffer.line("@current || raise(")
+              buffer.indent { unset_message.each { |line| buffer.line(line) } }
+              buffer.line(")")
+            end
+          end
+        end
+
+        sig { returns(T::Array[String]) }
+        def unset_message
+          namespace = @config.namespace
+          [
+            %("#{namespace}::Registry.current has not been assigned. Build one in an " \\),
+            %("initializer, e.g. #{namespace}::Registry.current = #{namespace}::Registry::Eager.new(...).")
+          ]
+        end
+
+        # Plain signatures rather than abstract ones, so an implementation may be a struct
+        # whose props satisfy them without restating every reader.
+        sig { params(buffer: Buffer).void }
+        def emit_readers(buffer)
+          slots.each do |slot|
+            reader = slot.reader
+            buffer.line("sig { returns(#{slot.interface}) }")
+            buffer.line(%(def #{reader} = raise(NotImplementedError, "\#{self.class} must provide #{reader}")))
+            buffer.blank
+          end
+        end
+
+        sig { params(buffer: Buffer).void }
+        def emit_eager(buffer)
+          buffer.nest("class Eager < T::Struct") do
+            buffer.line("include Registry")
+            buffer.blank
+            slots.each { |slot| buffer.line("const :#{slot.reader}, #{slot.interface}") }
+          end
+        end
       end
     end
   end

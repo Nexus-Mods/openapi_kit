@@ -1,10 +1,9 @@
 # frozen_string_literal: true
 
-# Eager, so a wrong implementation is a TypeError at boot rather than on the first
-# request that endpoint receives. Build it in oapi_registry instead if you would rather
-# defer construction.
+# Rails instantiates controllers itself, so they read the registry from here rather than
+# being handed one. to_prepare reassigns it on a code reload.
 Rails.application.config.to_prepare do
-  Rails.configuration.x.api_registry = Dummy::V1::Registry.new(
+  Dummy::V1::Registry.current = Dummy::V1::Registry::Eager.new(
     mods: ModsHandler.new,
     system: SystemHandler.new,
     bearer_auth: BearerAuthenticator.new,
