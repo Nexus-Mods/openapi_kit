@@ -9,12 +9,12 @@ RSpec.describe Oapi::Codegen::Generator do
     it "writes one file per constant, at the path the constant implies" do
       expect(relative_paths(result[:dir])).to eq(
         %w[
-          server/container.rb
           server/handlers/mods.rb server/handlers/system.rb
           server/mods_controller.rb
           server/operations/create_mod.rb server/operations/get_health.rb
           server/operations/list_mods.rb
-          server/routes.rb server/security.rb server/system_controller.rb
+          server/registry.rb server/routes.rb server/security.rb
+          server/system_controller.rb
           server/types/mod.rb server/types/mod_status.rb server/types/new_mod.rb
           server/types/problem_details.rb
         ]
@@ -27,11 +27,12 @@ RSpec.describe Oapi::Codegen::Generator do
       end
     end
 
-    it "gives each tag one interface file and one container key" do
+    it "gives each tag one interface file and one registry slot" do
       expect(result[:dir].join("server/handlers/mods.rb").read).to include("module Mods")
       expect(result[:dir].join("server/handlers/system.rb").read).to include("module System")
-      expect(result[:dir].join("server/container.rb").read)
-        .to include(%("v1.handlers.mods"), %("v1.handlers.system"))
+      expect(result[:dir].join("server/registry.rb").read)
+        .to include("def mods = @mods ||= @mods_factory.call",
+                    "def system = @system ||= @system_factory.call")
     end
 
     it "hands the handler Rails' own request rather than a wrapper of oapi's" do

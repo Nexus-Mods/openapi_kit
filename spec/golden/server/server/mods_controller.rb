@@ -63,13 +63,13 @@ module Server
     private
 
     sig { returns(Server::Handlers::Mods) }
-    def handler = Server::Container.mods(oapi_container)
+    def handler = oapi_registry.mods
 
     sig { returns(::Demo::Principal) }
     def authenticate_list_mods
       ::Oapi::Security.first_of(
         [
-          -> { Server::Container.bearer_auth(oapi_container).authenticate(request: request, scopes: []) },
+          -> { oapi_registry.bearer_auth.authenticate(request: request, scopes: []) },
         ]
       ) || raise(::Oapi::Security::Unauthenticated)
     end
@@ -78,8 +78,8 @@ module Server
     def authenticate_create_mod
       ::Oapi::Security.first_of(
         [
-          -> { Server::Container.bearer_auth(oapi_container).authenticate(request: request, scopes: ["mods:write"]) },
-          -> { Server::Container.api_key_auth(oapi_container).authenticate(request: request, scopes: []) },
+          -> { oapi_registry.bearer_auth.authenticate(request: request, scopes: ["mods:write"]) },
+          -> { oapi_registry.api_key_auth.authenticate(request: request, scopes: []) },
         ]
       ) || raise(::Oapi::Security::Unauthenticated)
     end

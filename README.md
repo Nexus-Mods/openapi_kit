@@ -102,8 +102,10 @@ class ModsHandler
 end
 ```
 
-**Give the controllers a base class.** `oapi_container` is the only method they need from
-it. A request oapi cannot decode raises `Oapi::DecodeError`, carrying `detail` and a
+**Give the controllers a base class.** `oapi_registry` is the only method they need from
+it. Rails instantiates controllers itself, so nothing can be injected into one; this
+method is the seam, and you can override it for a per-request or multi-tenant lookup. A
+request oapi cannot decode raises `Oapi::DecodeError`, carrying `detail` and a
 `json_pointer` naming the field; oapi takes no view on the wire format.
 
 ```ruby
@@ -115,7 +117,7 @@ module Api
 
     private
 
-    def oapi_container = Rails.configuration.x.api_container
+    def oapi_registry = Rails.configuration.x.api_registry
 
     def unauthorized = head(:unauthorized)
 
@@ -127,21 +129,42 @@ module Api
 end
 ```
 
-**Build the container and verify it at boot**, so a missing registration fails boot rather
-than the first request that needs it. Use `to_prepare`, or a code reload leaves handlers
-holding stale constants.
+**Build the registry.** oapi generates a `Registry` with one slot per handler and
+authenticator. Fields are thunks, so nothing is constructed until first use, and omitting
+one is a compile error rather than a boot-time surprise. Use `to_prepare`, or a code
+reload leaves handlers holding stale constants.
 
 ```ruby
 # config/initializers/oapi.rb
 Rails.application.config.to_prepare do
-  container = Dry::Container.new
-  container.register("v1.handlers.mods") { ModsHandler.new }
-  container.register("v1.security.bearer_auth") { BearerAuthenticator.new }
-
-  Rails.configuration.x.api_container = container
-  Mods::V1::Container.verify!(container)
+  Rails.configuration.x.api_registry = Mods::V1::Registry.new(
+    mods: -> { ModsHandler.new },
+    system: -> { SystemHandler.new },
+    bearer_auth: -> { BearerAuthenticator.new }
+  )
 end
 ```
+
+The registry is only oapi's boundary, not a dependency injection container. What each
+handler needs behind it is yours, and a container is the right tool there. Unlike
+controllers, *you* construct handlers, so constructor injection works:
+
+```ruby
+class ModsHandler
+  include Mods::V1::Handlers::Mods            # oapi's interface
+  include Deps["mod_repo", "search_client"]   # your container, via dry-auto_inject
+end
+```
+
+Tests get two seams. Swap one dependency deep in your own container, or swap a whole
+handler on the registry, typed and without touching the rest:
+
+```ruby
+Rails.configuration.x.api_registry = registry.swap(mods: FakeModsHandler.new)
+```
+
+If you would rather keep everything in a container, `Registry.from(container)` builds one
+by key, deferring each `resolve` so laziness survives.
 
 ## Security
 

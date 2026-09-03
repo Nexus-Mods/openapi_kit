@@ -40,8 +40,10 @@ module Oapi
           line("end")
         end
 
-        sig { params(call: String, arguments: T::Array[[String, String]]).returns(Buffer) }
-        def nest_call(call, arguments)
+        sig do
+          params(call: String, arguments: T::Array[[String, String]], tail: String).returns(Buffer)
+        end
+        def nest_call(call, arguments, tail: ",")
           line("#{call}(")
           indent do
             arguments.each_with_index do |(keyword, value), index|
@@ -49,7 +51,7 @@ module Oapi
               line("#{keyword}: #{value}#{comma}")
             end
           end
-          line("),")
+          line(")#{tail}")
         end
 
         sig { params(subject: String, block: T.proc.void).returns(Buffer) }

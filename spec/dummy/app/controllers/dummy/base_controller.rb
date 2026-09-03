@@ -7,7 +7,9 @@ module Dummy
 
     private
 
-    def oapi_container = Rails.configuration.x.api_container
+    # Rails instantiates controllers itself, so the registry cannot be injected. This is
+    # the seam: override it for a per-request or multi-tenant lookup.
+    def oapi_registry = Rails.configuration.x.api_registry
 
     def unauthorized = render(json: { "error" => "unauthenticated" }, status: :unauthorized)
 

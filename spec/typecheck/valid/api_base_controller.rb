@@ -6,6 +6,15 @@ class ApiBaseController < ActionController::API
 
   private
 
-  sig { returns(T.untyped) }
-  def oapi_container = ObjectSpace
+  # An application builds this once and returns it here. oapi never stores it, because
+  # Rails instantiates controllers itself and cannot inject anything into them.
+  sig { returns(Server::Registry) }
+  def oapi_registry
+    Server::Registry.new(
+      mods: -> { T.unsafe(nil) },
+      system: -> { T.unsafe(nil) },
+      bearer_auth: -> { T.unsafe(nil) },
+      api_key_auth: -> { T.unsafe(nil) }
+    )
+  end
 end

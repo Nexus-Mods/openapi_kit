@@ -23,6 +23,6 @@ module Server
     private
 
     sig { returns(Server::Handlers::System) }
-    def handler = Server::Container.system(oapi_container)
+    def handler = oapi_registry.system
   end
 end
