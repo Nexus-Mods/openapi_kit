@@ -145,9 +145,33 @@ Rails.application.config.to_prepare do
 end
 ```
 
-Building it here means a wrong implementation fails at boot. Memoise it in
-`oapi_registry` instead and nothing is constructed until the first request, at the cost
-of finding out later. That choice is yours because `oapi_registry` is your method.
+Building it here means a wrong implementation fails at boot, and it means every handler
+is constructed at boot, along with whatever their constructors resolve.
+
+To defer that, memoise the registry somewhere shared. Not in `oapi_registry` itself:
+Rails builds a new controller per request, so an instance variable there rebuilds
+everything on every request.
+
+```ruby
+module Api
+  def self.registry
+    @registry ||= Mods::V1::Registry.new(
+      mods: ModsHandler.new,
+      system: SystemHandler.new,
+      bearer_auth: BearerAuthenticator.new
+    )
+  end
+
+  # Call this from to_prepare, so a code reload is picked up.
+  def self.reset! = @registry = nil
+end
+
+class Api::BaseController < ApplicationController
+  private
+
+  def oapi_registry = Api.registry
+end
+```
 
 The registry is only oapi's boundary, not a dependency injection container. What each
 handler needs behind it is yours, and a container is the right tool there. Unlike
@@ -160,12 +184,8 @@ class ModsHandler
 end
 ```
 
-Tests get two seams. Swap one dependency deep in your own container, or swap a whole
-handler on the registry, typed and without touching the rest:
-
-```ruby
-Rails.configuration.x.api_registry = registry.swap(mods: FakeModsHandler.new)
-```
+A test replaces whatever it needs by building a registry of its own, or by stubbing in
+your container.
 
 A container needs no bridge: an untyped `resolve` satisfies a typed slot.
 

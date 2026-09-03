@@ -4,28 +4,9 @@
 
 module Server
   class Registry < T::Struct
-    extend T::Sig
-
     const :mods, Server::Handlers::Mods
     const :system, Server::Handlers::System
     const :bearer_auth, Server::Security::BearerAuth
     const :api_key_auth, Server::Security::ApiKeyAuth
-
-    sig do
-      params(
-        mods: T.nilable(Server::Handlers::Mods),
-        system: T.nilable(Server::Handlers::System),
-        bearer_auth: T.nilable(Server::Security::BearerAuth),
-        api_key_auth: T.nilable(Server::Security::ApiKeyAuth)
-      ).returns(Registry)
-    end
-    def swap(mods: nil, system: nil, bearer_auth: nil, api_key_auth: nil)
-      Registry.new(
-        mods: mods || self.mods,
-        system: system || self.system,
-        bearer_auth: bearer_auth || self.bearer_auth,
-        api_key_auth: api_key_auth || self.api_key_auth,
-      )
-    end
   end
 end

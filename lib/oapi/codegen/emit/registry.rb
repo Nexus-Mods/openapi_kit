@@ -59,36 +59,10 @@ module Oapi
         sig { params(buffer: Buffer).void }
         def emit_class(buffer)
           buffer.nest("class Registry < T::Struct") do
-            buffer.line("extend T::Sig")
-            buffer.blank
             slots.each { |slot| buffer.line("const :#{slot.reader}, #{slot.interface}") }
-            buffer.blank
-            emit_swap(buffer)
           end
         end
 
-        # Replace individual pieces without restating the rest, for a test that fakes one.
-        sig { params(buffer: Buffer).void }
-        def emit_swap(buffer)
-          buffer.line("sig do")
-          buffer.indent do
-            arguments = slots.map { |slot| [slot.reader, "T.nilable(#{slot.interface})"] }
-            buffer.nest_call("params", arguments, tail: ".returns(Registry)")
-          end
-          buffer.line("end")
-          buffer.nest("def swap(#{keywords(default: "nil")})") do
-            buffer.line("Registry.new(")
-            buffer.indent do
-              slots.each { |slot| buffer.line("#{slot.reader}: #{slot.reader} || self.#{slot.reader},") }
-            end
-            buffer.line(")")
-          end
-        end
-
-        sig { params(default: T.nilable(String)).returns(String) }
-        def keywords(default: nil)
-          slots.map { |slot| "#{slot.reader}:#{" #{default}" if default}" }.join(", ")
-        end
       end
     end
   end
