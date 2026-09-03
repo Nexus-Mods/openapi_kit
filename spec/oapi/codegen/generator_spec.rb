@@ -31,8 +31,8 @@ RSpec.describe Oapi::Codegen::Generator do
       expect(result[:dir].join("server/handlers/mods.rb").read).to include("module Mods")
       expect(result[:dir].join("server/handlers/system.rb").read).to include("module System")
       expect(result[:dir].join("server/registry.rb").read)
-        .to include("def mods = @mods ||= @mods_factory.call",
-                    "def system = @system ||= @system_factory.call")
+        .to include("const :mods, Server::Handlers::Mods",
+                    "const :system, Server::Handlers::System")
     end
 
     it "hands the handler Rails' own request rather than a wrapper of oapi's" do

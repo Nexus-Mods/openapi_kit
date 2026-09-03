@@ -130,20 +130,24 @@ end
 ```
 
 **Build the registry.** oapi generates a `Registry` with one slot per handler and
-authenticator. Fields are thunks, so nothing is constructed until first use, and omitting
-one is a compile error rather than a boot-time surprise. Use `to_prepare`, or a code
-reload leaves handlers holding stale constants.
+authenticator. Omit one, or pass something that does not implement its interface, and it
+does not compile; in an untyped application it raises at construction instead. Use
+`to_prepare`, or a code reload leaves handlers holding stale constants.
 
 ```ruby
 # config/initializers/oapi.rb
 Rails.application.config.to_prepare do
   Rails.configuration.x.api_registry = Mods::V1::Registry.new(
-    mods: -> { ModsHandler.new },
-    system: -> { SystemHandler.new },
-    bearer_auth: -> { BearerAuthenticator.new }
+    mods: ModsHandler.new,
+    system: SystemHandler.new,
+    bearer_auth: BearerAuthenticator.new
   )
 end
 ```
+
+Building it here means a wrong implementation fails at boot. Memoise it in
+`oapi_registry` instead and nothing is constructed until the first request, at the cost
+of finding out later. That choice is yours because `oapi_registry` is your method.
 
 The registry is only oapi's boundary, not a dependency injection container. What each
 handler needs behind it is yours, and a container is the right tool there. Unlike
@@ -163,8 +167,15 @@ handler on the registry, typed and without touching the rest:
 Rails.configuration.x.api_registry = registry.swap(mods: FakeModsHandler.new)
 ```
 
-If you would rather keep everything in a container, `Registry.from(container)` builds one
-by key, deferring each `resolve` so laziness survives.
+A container needs no bridge: an untyped `resolve` satisfies a typed slot.
+
+```ruby
+Mods::V1::Registry.new(
+  mods: MyApp::Container["mod_handler"],
+  system: MyApp::Container["system_handler"],
+  bearer_auth: MyApp::Container["bearer_authenticator"]
+)
+```
 
 ## Security
 
