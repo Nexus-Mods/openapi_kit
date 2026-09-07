@@ -221,14 +221,14 @@ end
 `apiKey`. A `basic` scheme also gets `basic_credential`, returning the decoded
 `[user, password]`.
 
-Your handler then reads `request.context`:
+Your handler then reads `request.principal`:
 
 ```ruby
 def create_mod(request:)
-  author = case request.context
-           when Mods::Principal::Token then "user-#{request.context.user_id}"
-           when Mods::Principal::Key then request.context.client
-           else T.absurd(request.context)
+  author = case request.principal
+           when Mods::Principal::Token then "user-#{request.principal.user_id}"
+           when Mods::Principal::Key then request.principal.client
+           else T.absurd(request.principal)
            end
 end
 ```

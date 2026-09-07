@@ -96,8 +96,8 @@ module Oapi
             groups(operation).each_key { |name| buffer.line("const :#{Naming.identifier(name)}, #{name}") }
             body = body_type(operation)
             buffer.line("const :body, #{body}") if body
-            context = context_type(operation)
-            buffer.line("const :context, #{context}") if context
+            principal = principal_type(operation)
+            buffer.line("const :principal, #{principal}") if principal
             buffer.line("const :http_request, ::ActionDispatch::Request")
           end
         end
@@ -105,7 +105,7 @@ module Oapi
         # Present only when `principals` is configured and the operation is protected:
         # whatever the alternative that authenticated the request produced.
         sig { params(operation: Model::Operation).returns(T.nilable(String)) }
-        def context_type(operation)
+        def principal_type(operation)
           return nil if @config.principal.nil?
 
           requirements = @document.security_for(operation)

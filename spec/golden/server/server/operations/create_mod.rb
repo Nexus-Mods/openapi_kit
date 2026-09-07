@@ -16,7 +16,7 @@ module Server
 
         const :path, Path
         const :body, Server::Types::NewMod
-        const :context, ::Demo::Principal
+        const :principal, ::Demo::Principal
         const :http_request, ::ActionDispatch::Request
       end
 

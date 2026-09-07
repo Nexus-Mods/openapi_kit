@@ -69,7 +69,7 @@ module Oapi
             buffer.blank
             emit_render_response(buffer)
 
-            operations.select { |operation| context?(operation) }.each do |operation|
+            operations.select { |operation| principal?(operation) }.each do |operation|
               buffer.blank
               emit_authenticator(buffer, operation)
             end
@@ -110,9 +110,9 @@ module Oapi
 
         sig { params(buffer: Buffer, operation: Model::Operation).void }
         def emit_authentication(buffer, operation)
-          return unless context?(operation)
+          return unless principal?(operation)
 
-          buffer.line("context = #{authenticator_name(operation)}")
+          buffer.line("principal = #{authenticator_name(operation)}")
           buffer.blank
         end
 
@@ -160,7 +160,7 @@ module Oapi
               buffer.line("),")
             end
             buffer.line("body: #{body_expression(operation)},") if body?(operation)
-            buffer.line("context: context,") if context?(operation)
+            buffer.line("principal: principal,") if principal?(operation)
             buffer.line("http_request: request")
           end
           buffer.line(")")
@@ -251,7 +251,7 @@ module Oapi
         end
 
         sig { params(operation: Model::Operation).returns(T::Boolean) }
-        def context?(operation)
+        def principal?(operation)
           !@config.principal.nil? && !@document.security_for(operation).empty?
         end
 

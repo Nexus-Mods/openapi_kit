@@ -30,7 +30,7 @@ module Server
         const :path, Path
         const :query, Query
         const :headers, Headers
-        const :context, ::Demo::Principal
+        const :principal, ::Demo::Principal
         const :http_request, ::ActionDispatch::Request
       end
 

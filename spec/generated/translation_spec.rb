@@ -487,9 +487,9 @@ RSpec.describe "translating a document" do
     it "puts the principal on the request and resolves it in the controller" do
       generated = secured("customAuth: { type: http, scheme: bearer }")
 
-      expect(generated["api/operations/get_a.rb"]).to include("const :context, ::SpecPrincipal")
+      expect(generated["api/operations/get_a.rb"]).to include("const :principal, ::SpecPrincipal")
       expect(generated["api/t_controller.rb"])
-        .to include("context = authenticate_get_a",
+        .to include("principal = authenticate_get_a",
                     "Api.registry.custom_auth.authenticate(request: request, scopes: [])",
                     "raise(::Oapi::Unauthenticated)")
     end
@@ -510,7 +510,7 @@ RSpec.describe "translating a document" do
       generated = secured("customAuth: { type: http, scheme: bearer }",
                           requirement: "customAuth: [] }, {")
 
-      expect(generated["api/operations/get_a.rb"]).to include("const :context, T.nilable(::SpecPrincipal)")
+      expect(generated["api/operations/get_a.rb"]).to include("const :principal, T.nilable(::SpecPrincipal)")
       expect(generated["api/t_controller.rb"]).not_to include("raise(::Oapi::Unauthenticated)")
     end
 

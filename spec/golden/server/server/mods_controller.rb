@@ -8,7 +8,7 @@ module Server
 
     sig { void }
     def list_mods
-      context = authenticate_list_mods
+      principal = authenticate_list_mods
 
       path_params = ::Oapi::Decode.gather(["gameDomain"]) { |name| request.path_parameters[name.to_sym] }
       query_params = ::Oapi::Decode.gather(["page", "status"]) { |name| request.query_parameters[name] }
@@ -25,7 +25,7 @@ module Server
         headers: Server::Operations::ListMods::Headers.new(
           application_name: ::Oapi::Decode.optional(header_params, "Application-Name") { |v| ::Oapi::Codec::String.from_wire(v) },
         ),
-        context: context,
+        principal: principal,
         http_request: request
       )
 
@@ -34,7 +34,7 @@ module Server
 
     sig { void }
     def create_mod
-      context = authenticate_create_mod
+      principal = authenticate_create_mod
 
       path_params = ::Oapi::Decode.gather(["gameDomain"]) { |name| request.path_parameters[name.to_sym] }
 
@@ -43,7 +43,7 @@ module Server
           game_domain: ::Oapi::Decode.required(path_params, "gameDomain") { |v| ::Oapi::Codec::String.from_wire(v) },
         ),
         body: Server::Types::NewMod::Codec.from_wire(request.request_parameters),
-        context: context,
+        principal: principal,
         http_request: request
       )
 
