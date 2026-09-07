@@ -33,9 +33,9 @@ RSpec.describe "translating a document" do
             properties:
               error: { $ref: "shared.yaml#/components/schemas/ProblemDetails" }
     YAML
-    config = Oapi::Codegen::Config.from_hash(
-      { "spec" => "api.yaml", "output" => "generated", "modules" => %w[Api],
-        "controller_base" => "ApiBaseController" }, base: dir
+    config = Oapi::Codegen::Config.new(
+      spec: dir.join("api.yaml"), output: dir.join("generated"),
+      modules: %w[Api], controller_base: "ApiBaseController"
     )
     Oapi::Codegen::Generator.new(config: config).generate
     dir
@@ -331,10 +331,10 @@ RSpec.describe "translating a document" do
     end
 
     it "refuses a type mapping for string:binary, which no codec can convert" do
-      binary = { "type" => "::MyBlob", "codec" => "MyApp::BlobCodec" }
+      binary = Oapi::Codegen::RubyType.new(type: "::MyBlob", codec: "MyApp::BlobCodec")
 
       expect do
-        generate_from(<<~YAML, "type_mappings" => { "string:binary" => binary })
+        generate_from(<<~YAML, type_mappings: { "string:binary" => binary })
           openapi: 3.0.3
           info: { title: T, version: "1.0" }
           paths: {}
@@ -343,8 +343,8 @@ RSpec.describe "translating a document" do
     end
 
     it "uses a configured type and codec" do
-      money = { "type" => "::Money", "codec" => "MyApp::MoneyCodec" }
-      generated = generate_from(<<~YAML, "type_mappings" => { "string:money" => money })
+      money = Oapi::Codegen::RubyType.new(type: "::Money", codec: "MyApp::MoneyCodec")
+      generated = generate_from(<<~YAML, type_mappings: { "string:money" => money })
         openapi: 3.0.3
         info: { title: T, version: "1.0" }
         paths: {}
@@ -431,7 +431,7 @@ RSpec.describe "translating a document" do
         "components:", "  securitySchemes:", *indent(scheme, 4)
       ].join("\n")
 
-      generate_from(yaml, "principal" => principal)
+      generate_from(yaml, principal: principal)
     end
 
     # OpenAPI 3.0 fixes the four scheme types, but `http` takes any scheme name, so a

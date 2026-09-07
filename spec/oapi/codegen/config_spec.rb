@@ -52,6 +52,47 @@ RSpec.describe Oapi::Codegen::Config do
     expect(config.container_key("handlers", "mods")).to eq("handlers.mods")
   end
 
+  describe "type mappings" do
+    def with_mapping(body)
+      described_class.from_file(write(<<~YAML))
+        spec: openapi/api.yaml
+        output: app/api
+        modules: [Api]
+        controller_base: Base
+        type_mappings:
+          "string:money":
+        #{body.lines.map { |line| "    #{line}" }.join.rstrip}
+      YAML
+    end
+
+    it "parses a type and codec into a RubyType" do
+      config = with_mapping("type: \"::Money\"\ncodec: MyApp::MoneyCodec\n")
+
+      expect(config.type_mappings.fetch("string:money"))
+        .to have_attributes(type: "::Money", codec: "MyApp::MoneyCodec")
+    end
+
+    it "names the mapping that is not a mapping" do
+      expect { with_mapping("\"::Money\"\n") }
+        .to raise_error(Oapi::ConfigError, /type_mappings\["string:money"\] must be a mapping/)
+    end
+
+    it "names an unknown key, and lists the valid ones" do
+      expect { with_mapping("type: \"::Money\"\ncodec: C\nformat: money\n") }
+        .to raise_error(Oapi::ConfigError, /has unknown key format\. Valid keys: type, codec/)
+    end
+
+    it "says which half is missing" do
+      expect { with_mapping("type: \"::Money\"\n") }
+        .to raise_error(Oapi::ConfigError, /is missing codec\. Both are required/)
+    end
+
+    it "refuses a codec that is not a constant path" do
+      expect { with_mapping("type: \"::Money\"\ncodec: money_codec\n") }
+        .to raise_error(Oapi::ConfigError, /is "money_codec", which is not a Ruby constant path/)
+    end
+  end
+
   describe "options it refuses to guess at" do
     it "names the unknown option and lists the valid ones" do
       expect { described_class.from_file(write("spec: a\noutput: b\nmodules: [A]\ncontroller_base: C\nmodules_: x\n")) }

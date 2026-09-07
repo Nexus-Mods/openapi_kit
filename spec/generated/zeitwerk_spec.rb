@@ -7,7 +7,7 @@ require "zeitwerk"
 # raises Zeitwerk::NameError for any file whose constant does not match.
 RSpec.describe "Zeitwerk compatibility" do
   it "eager loads the generated tree with no naming mismatch" do
-    result = generate("server.yaml", modules: %w[Loaded], "container_prefix" => "v1")
+    result = generate("server.yaml", modules: %w[Loaded], container_prefix: "v1")
 
     loader = Zeitwerk::Loader.new
     loader.push_dir(result[:dir].to_s)
@@ -19,7 +19,7 @@ RSpec.describe "Zeitwerk compatibility" do
   end
 
   it "resolves every generated constant from its own path" do
-    result = generate("server.yaml", modules: %w[Resolved], "container_prefix" => "v1")
+    result = generate("server.yaml", modules: %w[Resolved], container_prefix: "v1")
 
     loader = Zeitwerk::Loader.new
     loader.push_dir(result[:dir].to_s)
@@ -39,7 +39,7 @@ RSpec.describe "Zeitwerk compatibility" do
   # constants generally: config.autoload_paths plus inflect, or the loader's own
   # inflector outside Rails.
   it "loads an acronym namespace when the inflector is told about it" do
-    result = generate("server.yaml", modules: %w[API V1], "container_prefix" => "v1")
+    result = generate("server.yaml", modules: %w[API V1], container_prefix: "v1")
 
     loader = Zeitwerk::Loader.new
     loader.inflector.inflect("api" => "API")

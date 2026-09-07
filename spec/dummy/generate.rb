@@ -9,16 +9,13 @@ module Dummy
     ROOT = Pathname.new(__dir__)
 
     def self.call
-      config = Oapi::Codegen::Config.from_hash(
-        {
-          "spec" => ROOT.join("../fixtures/schemas/server.yaml").to_s,
-          "output" => ROOT.join("app/api").to_s,
-          "modules" => %w[Dummy V1],
-          "controller_base" => "Dummy::BaseController",
-          "container_prefix" => "v1",
-          "principal" => "::Principal"
-        },
-        base: ROOT
+      config = Oapi::Codegen::Config.new(
+        spec: ROOT.join("../fixtures/schemas/server.yaml").expand_path,
+        output: ROOT.join("app/api").expand_path,
+        modules: %w[Dummy V1],
+        controller_base: "Dummy::BaseController",
+        container_prefix: "v1",
+        principal: "::Principal"
       )
 
       Oapi::Codegen::Generator.new(config: config).generate

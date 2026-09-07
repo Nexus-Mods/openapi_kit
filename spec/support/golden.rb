@@ -6,23 +6,21 @@ module Golden
   ROOT = Pathname.new(__dir__).join("../golden")
 
   FIXTURES = {
-    "kitchen_sink" => { "modules" => %w[KitchenSink] },
+    "kitchen_sink" => { modules: %w[KitchenSink] },
     "server" => {
-      "modules" => %w[Server],
-      "container_prefix" => "v1",
-      "principal" => "::Demo::Principal"
+      modules: %w[Server],
+      container_prefix: "v1",
+      principal: "::Demo::Principal"
     }
   }.freeze
 
   def self.call
     FIXTURES.map do |name, options|
-      config = Oapi::Codegen::Config.from_hash(
-        {
-          "spec" => ROOT.join("../fixtures/schemas/#{name}.yaml").to_s,
-          "output" => ROOT.join(name).to_s,
-          "controller_base" => "ApiBaseController"
-        }.merge(options),
-        base: ROOT
+      config = Oapi::Codegen::Config.new(
+        spec: ROOT.join("../fixtures/schemas/#{name}.yaml").expand_path,
+        output: ROOT.join(name).expand_path,
+        controller_base: "ApiBaseController",
+        **options
       )
 
       Oapi::Codegen::Generator.new(config: config).generate

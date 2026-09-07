@@ -9,12 +9,8 @@ module GeneratorHelper
   def generate(fixture, modules: %w[Demo V1], **options)
     dir = Pathname.new(Dir.mktmpdir)
     @generated_dirs << dir
-    config = Oapi::Codegen::Config.from_hash(
-      { "spec" => FIXTURES.join(fixture).to_s, "output" => dir.join("generated").to_s,
-        "modules" => modules, "controller_base" => "ApiBaseController",
-        "principal" => "::SpecPrincipal" }.merge(options),
-      base: dir
-    )
+    config = config_for(spec: FIXTURES.join(fixture), output: dir.join("generated"),
+                        modules: modules, **options)
     generator = Oapi::Codegen::Generator.new(config: config)
     generator.generate
     { dir: dir.join("generated"), warnings: generator.warnings }
@@ -22,6 +18,13 @@ module GeneratorHelper
 
   def golden(name)
     GOLDEN.join(name)
+  end
+
+  def config_for(spec:, output:, modules:, principal: "::SpecPrincipal", **options)
+    Oapi::Codegen::Config.new(
+      spec: spec, output: output, modules: modules,
+      controller_base: "ApiBaseController", principal: principal, **options
+    )
   end
 
   # Drives the generator from an inline document and returns the generated sources
@@ -35,11 +38,8 @@ module GeneratorHelper
     dir = scratch_dir
     dir.join("api.yaml").write(yaml)
 
-    config = Oapi::Codegen::Config.from_hash(
-      { "spec" => "api.yaml", "output" => "generated", "modules" => modules,
-        "controller_base" => "ApiBaseController", "principal" => "::SpecPrincipal" }.merge(options),
-      base: dir
-    )
+    config = config_for(spec: dir.join("api.yaml"), output: dir.join("generated"),
+                        modules: modules, **options)
     generator = Oapi::Codegen::Generator.new(config: config)
     generator.generate
 

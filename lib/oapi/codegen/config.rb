@@ -34,40 +34,45 @@ module Oapi
         raw = YAML.safe_load(file.read, permitted_classes: [], aliases: true) || {}
         raise ConfigError, "#{file}: expected a YAML mapping, got #{raw.class}" unless raw.is_a?(Hash)
 
-        from_hash(raw, base: file.dirname, source: file)
-      end
-
-      sig do
-        params(raw: T::Hash[String, T.untyped], base: Pathname, source: T.nilable(Pathname))
-          .returns(Config)
-      end
-      def self.from_hash(raw, base:, source: nil)
-        where = source ? "#{source}: " : ""
-
-        unknown = raw.keys.map(&:to_s) - KNOWN_KEYS
-        unless unknown.empty?
-          raise ConfigError,
-                "#{where}unknown option#{"s" if unknown.size > 1} #{unknown.sort.join(", ")}. " \
-                "Known options: #{KNOWN_KEYS.join(", ")}."
-        end
-
-        %w[spec output modules controller_base].each do |key|
-          raise ConfigError, "#{where}`#{key}` is required." unless raw[key]
-        end
-
-        modules = Array(raw["modules"]).map(&:to_s)
-        raise ConfigError, "#{where}`modules` must name at least one namespace, e.g. [API, V3]." if modules.empty?
+        reject_unknown_options!(raw, file)
+        reject_missing_options!(raw, file)
+        base = file.dirname
 
         new(
           spec: base.join(raw.fetch("spec").to_s).expand_path,
           output: base.join(raw.fetch("output").to_s).expand_path,
-          modules: modules,
+          modules: modules_in(raw, file),
           container_prefix: raw["container_prefix"]&.to_s,
           controller_base: raw.fetch("controller_base").to_s,
           type_mappings: parse_type_mappings(raw["type_mappings"]),
           name_overrides: stringify(raw["name_overrides"]),
-          principal: principal_type(raw["principal"], where)
+          principal: principal_type(raw["principal"], "#{file}: ")
         )
+      end
+
+      sig { params(raw: T::Hash[String, T.untyped], file: Pathname).void }
+      def self.reject_unknown_options!(raw, file)
+        unknown = raw.keys.map(&:to_s) - KNOWN_KEYS
+        return if unknown.empty?
+
+        raise ConfigError,
+              "#{file}: unknown option#{"s" if unknown.size > 1} #{unknown.sort.join(", ")}. " \
+              "Known options: #{KNOWN_KEYS.join(", ")}."
+      end
+
+      sig { params(raw: T::Hash[String, T.untyped], file: Pathname).void }
+      def self.reject_missing_options!(raw, file)
+        %w[spec output modules controller_base].each do |key|
+          raise ConfigError, "#{file}: `#{key}` is required." unless raw[key]
+        end
+      end
+
+      sig { params(raw: T::Hash[String, T.untyped], file: Pathname).returns(T::Array[String]) }
+      def self.modules_in(raw, file)
+        modules = Array(raw["modules"]).map(&:to_s)
+        return modules unless modules.empty?
+
+        raise ConfigError, "#{file}: `modules` must name at least one namespace, e.g. [API, V3]."
       end
 
       sig { params(value: T.untyped).returns(T::Hash[String, RubyType]) }
