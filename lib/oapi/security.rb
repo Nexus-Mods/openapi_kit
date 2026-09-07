@@ -1,6 +1,8 @@
 # typed: strict
 # frozen_string_literal: true
 
+require "action_dispatch"
+
 module Oapi
   module Security
     extend T::Sig
@@ -12,7 +14,7 @@ module Oapi
     end
     def self.first_of(attempts) = attempts.lazy.filter_map(&:call).first
 
-    sig { params(scheme: Scheme, request: T.untyped).returns(T.nilable(String)) }
+    sig { params(scheme: Scheme, request: ::ActionDispatch::Request).returns(T.nilable(String)) }
     def self.credential(scheme, request)
       case scheme
       when ApiKey then api_key(scheme, request)
@@ -22,7 +24,7 @@ module Oapi
       end
     end
 
-    sig { params(scheme: Http, request: T.untyped).returns(T.nilable([String, String])) }
+    sig { params(scheme: Http, request: ::ActionDispatch::Request).returns(T.nilable([String, String])) }
     def self.basic(scheme, request)
       encoded = credential(scheme, request)
       return nil if encoded.nil?
@@ -36,7 +38,7 @@ module Oapi
       user.nil? || password.nil? ? nil : [user, password]
     end
 
-    sig { params(scheme: ApiKey, request: T.untyped).returns(T.nilable(String)) }
+    sig { params(scheme: ApiKey, request: ::ActionDispatch::Request).returns(T.nilable(String)) }
     def self.api_key(scheme, request)
       location = scheme.location
       case location
@@ -47,7 +49,7 @@ module Oapi
       end
     end
 
-    sig { params(request: T.untyped, scheme: String).returns(T.nilable(String)) }
+    sig { params(request: ::ActionDispatch::Request, scheme: String).returns(T.nilable(String)) }
     def self.authorization(request, scheme)
       header = present(request.headers["Authorization"])
       return nil if header.nil?
