@@ -40,15 +40,15 @@ module KitchenSink
         def self.from_wire(value)
           raw = ::Oapi::Decode.object(value)
           KitchenSink::Types::Mod.new(
-            id: ::Oapi::Decode.field(raw, "id") { |v| ::Oapi::Codec::Integer.from_wire(v) },
-            name: ::Oapi::Decode.field(raw, "name") { |v| ::Oapi::Codec::String.from_wire(v) },
+            id: ::Oapi::Decode.required(raw, "id") { |v| ::Oapi::Codec::Integer.from_wire(v) },
+            name: ::Oapi::Decode.required(raw, "name") { |v| ::Oapi::Codec::String.from_wire(v) },
             status: ::Oapi::Decode.optional(raw, "status") { |v| KitchenSink::Types::ModStatus::Codec.from_wire(v) },
-            updated_at: ::Oapi::Decode.field(raw, "updatedAt") { |v| ::Oapi::Codec::DateTime.from_wire(v) },
-            deleted_at: ::Oapi::Decode.nullable_field(raw, "deletedAt") { |v| ::Oapi::Codec::DateTime.from_wire(v) },
+            updated_at: ::Oapi::Decode.required(raw, "updatedAt") { |v| ::Oapi::Codec::DateTime.from_wire(v) },
+            deleted_at: ::Oapi::Decode.required_nullable(raw, "deletedAt") { |v| ::Oapi::Codec::DateTime.from_wire(v) },
             summary: ::Oapi::Decode.optional(raw, "summary") { |v| ::Oapi::Codec::String.from_wire(v) },
-            bio: ::Oapi::Decode.tristate(raw, "bio") { |v| ::Oapi::Codec::String.from_wire(v) },
+            bio: ::Oapi::Decode.optional_nullable(raw, "bio") { |v| ::Oapi::Codec::String.from_wire(v) },
             page_size: ::Oapi::Decode.defaulted(raw, "pageSize", 20) { |v| ::Oapi::Codec::Integer.from_wire(v) },
-            owner: ::Oapi::Decode.tristate(raw, "owner") { |v| KitchenSink::Types::User::Codec.from_wire(v) },
+            owner: ::Oapi::Decode.optional_nullable(raw, "owner") { |v| KitchenSink::Types::User::Codec.from_wire(v) },
             tags: ::Oapi::Decode.optional(raw, "tags") { |v| Oapi::Decode.each(v) { |item| ::Oapi::Codec::String.from_wire(item) } },
             meta: ::Oapi::Decode.optional(raw, "meta") { |v| KitchenSink::Types::ModMeta::Codec.from_wire(v) },
             extra: ::Oapi::Decode.optional(raw, "extra") { |v| Oapi::Decode.values(v) { |item| ::Oapi::Codec::Integer.from_wire(item) } },

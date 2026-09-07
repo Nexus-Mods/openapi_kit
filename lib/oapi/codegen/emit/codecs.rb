@@ -143,7 +143,7 @@ module Oapi
           key = property.name.inspect
           reader = property.identifier.to_s
 
-          if Decode.tristate?(required: property.required, meta: Model::Schema.meta(property.schema))
+          if Decode.optional_nullable?(required: property.required, meta: Model::Schema.meta(property.schema))
             buffer.line("#{reader} = value.#{reader}")
             buffer.nest("if #{reader}.is_a?(::Oapi::Present)") do
               buffer.line("inner = #{reader}.value")

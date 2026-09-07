@@ -29,7 +29,7 @@ module Server
         def self.from_wire(value)
           raw = ::Oapi::Decode.object(value)
           Server::Types::NewMod.new(
-            name: ::Oapi::Decode.field(raw, "name") { |v| ::Oapi::Codec::String.from_wire(v) },
+            name: ::Oapi::Decode.required(raw, "name") { |v| ::Oapi::Codec::String.from_wire(v) },
           )
         end
 

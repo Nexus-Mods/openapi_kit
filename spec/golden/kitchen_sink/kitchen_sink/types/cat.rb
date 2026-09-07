@@ -30,7 +30,7 @@ module KitchenSink
         def self.from_wire(value)
           raw = ::Oapi::Decode.object(value)
           KitchenSink::Types::Cat.new(
-            kind: ::Oapi::Decode.field(raw, "kind") { |v| ::Oapi::Codec::String.from_wire(v) },
+            kind: ::Oapi::Decode.required(raw, "kind") { |v| ::Oapi::Codec::String.from_wire(v) },
             lives: ::Oapi::Decode.optional(raw, "lives") { |v| ::Oapi::Codec::Integer.from_wire(v) },
           )
         end

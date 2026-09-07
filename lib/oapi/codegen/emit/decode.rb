@@ -8,7 +8,7 @@ module Oapi
         extend T::Sig
 
         sig { params(required: T::Boolean, meta: Model::Meta).returns(T::Boolean) }
-        def self.tristate?(required:, meta:) = !required && meta.nullable && meta.default.nil?
+        def self.optional_nullable?(required:, meta:) = !required && meta.nullable && meta.default.nil?
 
         sig do
           params(source: String, key: String, schema: Model::Schema, required: T::Boolean,
@@ -25,10 +25,11 @@ module Oapi
             return "::Oapi::Decode.defaulted(#{source}, #{quoted}, #{fallback}) { |v| #{inner} }"
           end
 
-          return "::Oapi::Decode.tristate(#{source}, #{quoted}) { |v| #{inner} }" if
-            tristate?(required: required, meta: meta)
-          return "::Oapi::Decode.nullable_field(#{source}, #{quoted}) { |v| #{inner} }" if required && meta.nullable
-          return "::Oapi::Decode.field(#{source}, #{quoted}) { |v| #{inner} }" if required
+          return "::Oapi::Decode.optional_nullable(#{source}, #{quoted}) { |v| #{inner} }" if
+            optional_nullable?(required: required, meta: meta)
+          return "::Oapi::Decode.required_nullable(#{source}, #{quoted}) { |v| #{inner} }" if
+            required && meta.nullable
+          return "::Oapi::Decode.required(#{source}, #{quoted}) { |v| #{inner} }" if required
 
           "::Oapi::Decode.optional(#{source}, #{quoted}) { |v| #{inner} }"
         end

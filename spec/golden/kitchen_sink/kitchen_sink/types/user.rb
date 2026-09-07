@@ -31,8 +31,8 @@ module KitchenSink
         def self.from_wire(value)
           raw = ::Oapi::Decode.object(value)
           KitchenSink::Types::User.new(
-            id: ::Oapi::Decode.field(raw, "id") { |v| ::Oapi::Codec::Uuid.from_wire(v) },
-            name: ::Oapi::Decode.field(raw, "name") { |v| ::Oapi::Codec::String.from_wire(v) },
+            id: ::Oapi::Decode.required(raw, "id") { |v| ::Oapi::Codec::Uuid.from_wire(v) },
+            name: ::Oapi::Decode.required(raw, "name") { |v| ::Oapi::Codec::String.from_wire(v) },
             friend: ::Oapi::Decode.optional(raw, "friend") { |v| KitchenSink::Types::User::Codec.from_wire(v) },
           )
         end

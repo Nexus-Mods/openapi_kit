@@ -33,7 +33,7 @@ module KitchenSink
         def self.from_wire(value)
           raw = ::Oapi::Decode.object(value)
           KitchenSink::Types::Adversarial.new(
-            serialize_: ::Oapi::Decode.field(raw, "serialize") { |v| ::Oapi::Codec::String.from_wire(v) },
+            serialize_: ::Oapi::Decode.required(raw, "serialize") { |v| ::Oapi::Codec::String.from_wire(v) },
             since: ::Oapi::Decode.defaulted(raw, "since", ::Oapi::Codec::DateTime.from_wire("2020-01-01T00:00:00Z")) { |v| ::Oapi::Codec::DateTime.from_wire(v) },
             cleared: ::Oapi::Decode.defaulted(raw, "cleared", nil) { |v| ::Oapi::Codec::String.from_wire(v) },
             rate: ::Oapi::Decode.defaulted(raw, "rate", ::Oapi::Codec::Float.from_wire(1)) { |v| ::Oapi::Codec::Float.from_wire(v) },

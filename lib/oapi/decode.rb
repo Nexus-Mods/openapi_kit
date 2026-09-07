@@ -11,9 +11,11 @@ module Oapi
                 block: T.proc.params(value: T.untyped).returns(T.type_parameter(:T)))
         .returns(T.type_parameter(:T))
     end
-    def self.field(raw, key, &block)
+    def self.required(raw, key, &block)
+      raise DecodeError.new("is required", json_pointer: "/#{key}") unless raw.key?(key)
+
       value = raw[key]
-      raise DecodeError.new("is required", json_pointer: "/#{key}") if value.nil?
+      raise DecodeError.new("must not be null", json_pointer: "/#{key}") if value.nil?
 
       at("/#{key}") { block.call(value) }
     end
@@ -24,7 +26,7 @@ module Oapi
                 block: T.proc.params(value: T.untyped).returns(T.type_parameter(:T)))
         .returns(T.nilable(T.type_parameter(:T)))
     end
-    def self.nullable_field(raw, key, &block)
+    def self.required_nullable(raw, key, &block)
       raise DecodeError.new("is required", json_pointer: "/#{key}") unless raw.key?(key)
 
       value = raw[key]
@@ -65,7 +67,7 @@ module Oapi
                 block: T.proc.params(value: T.untyped).returns(T.type_parameter(:T)))
         .returns(Oapi::Optional[T.nilable(T.type_parameter(:T))])
     end
-    def self.tristate(raw, key, &block)
+    def self.optional_nullable(raw, key, &block)
       return Absent[T.nilable(T.type_parameter(:T))].new unless raw.key?(key)
 
       value = raw[key]

@@ -30,7 +30,7 @@ module Server
         def self.from_wire(value)
           raw = ::Oapi::Decode.object(value)
           Server::Types::ProblemDetails.new(
-            title: ::Oapi::Decode.field(raw, "title") { |v| ::Oapi::Codec::String.from_wire(v) },
+            title: ::Oapi::Decode.required(raw, "title") { |v| ::Oapi::Codec::String.from_wire(v) },
             detail: ::Oapi::Decode.optional(raw, "detail") { |v| ::Oapi::Codec::String.from_wire(v) },
           )
         end
