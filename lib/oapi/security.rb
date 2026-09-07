@@ -5,9 +5,6 @@ module Oapi
   module Security
     extend T::Sig
 
-    # Try each alternative in the order the document lists them. An attempt returns nil to
-    # say it was not satisfied, so the first one that produces a principal wins and the
-    # rest are never called.
     sig do
       type_parameters(:Principal)
         .params(attempts: T::Array[T.proc.returns(T.nilable(T.type_parameter(:Principal)))])
@@ -15,9 +12,6 @@ module Oapi
     end
     def self.first_of(attempts) = attempts.lazy.filter_map(&:call).first
 
-    # Where a credential lives is what the scheme declares, so reading it is oapi's job
-    # rather than every authenticator's. The request is duck typed on headers,
-    # query_parameters and cookies, so this stays framework agnostic.
     sig { params(scheme: Scheme, request: T.untyped).returns(T.nilable(String)) }
     def self.credential(scheme, request)
       case scheme
@@ -28,7 +22,6 @@ module Oapi
       end
     end
 
-    # Basic credentials are base64 of user:password, which is no use undecoded.
     sig { params(scheme: Http, request: T.untyped).returns(T.nilable([String, String])) }
     def self.basic(scheme, request)
       encoded = credential(scheme, request)
