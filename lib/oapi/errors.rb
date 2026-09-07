@@ -8,6 +8,8 @@ module Oapi
 
   class SchemaError < Error; end
 
+  class Unauthenticated < Error; end
+
   class DecodeError < Error
     extend T::Sig
 

@@ -3,7 +3,7 @@
 module Dummy
   class BaseController < ActionController::API
     rescue_from Oapi::DecodeError, with: :bad_request
-    rescue_from Oapi::Security::Unauthenticated, with: :unauthorized
+    rescue_from Oapi::Unauthenticated, with: :unauthorized
 
     private
 

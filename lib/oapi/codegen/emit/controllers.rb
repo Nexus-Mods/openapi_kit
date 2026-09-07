@@ -117,7 +117,7 @@ module Oapi
               end
               buffer.line("]")
             end
-            buffer.line(requirements.any?(&:anonymous?) ? ")" : ") || raise(::Oapi::Security::Unauthenticated)")
+            buffer.line(requirements.any?(&:anonymous?) ? ")" : ") || raise(::Oapi::Unauthenticated)")
           end
         end
 

@@ -5,10 +5,6 @@ module Oapi
   module Security
     extend T::Sig
 
-    # No alternative the document offers was satisfied. Rescue it wherever the
-    # application already rescues Oapi::DecodeError: oapi takes no view on the response.
-    class Unauthenticated < Error; end
-
     # Try each alternative in the order the document lists them. An attempt returns nil to
     # say it was not satisfied, so the first one that produces a principal wins and the
     # rest are never called.

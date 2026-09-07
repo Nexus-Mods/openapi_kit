@@ -71,7 +71,7 @@ module Server
         [
           -> { Server.registry.bearer_auth.authenticate(request: request, scopes: []) },
         ]
-      ) || raise(::Oapi::Security::Unauthenticated)
+      ) || raise(::Oapi::Unauthenticated)
     end
 
     sig { returns(::Demo::Principal) }
@@ -81,7 +81,7 @@ module Server
           -> { Server.registry.bearer_auth.authenticate(request: request, scopes: ["mods:write"]) },
           -> { Server.registry.api_key_auth.authenticate(request: request, scopes: []) },
         ]
-      ) || raise(::Oapi::Security::Unauthenticated)
+      ) || raise(::Oapi::Unauthenticated)
     end
   end
 end

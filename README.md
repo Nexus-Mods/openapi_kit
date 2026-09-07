@@ -112,7 +112,7 @@ naming the field; oapi takes no view on the wire format.
 module Api
   class BaseController < ApplicationController
     rescue_from Oapi::DecodeError, with: :unprocessable
-    rescue_from Oapi::Security::Unauthenticated, with: :unauthorized
+    rescue_from Oapi::Unauthenticated, with: :unauthorized
 
     private
 
@@ -233,7 +233,7 @@ end
 ```
 
 Alternatives are tried in document order and the first to produce a principal wins. If
-none do, oapi raises `Oapi::Security::Unauthenticated`. An operation offering anonymous
+none do, oapi raises `Oapi::Unauthenticated`. An operation offering anonymous
 access (`security: [..., {}]`) makes the context `T.nilable` and raises nothing.
 
 ### What each scheme type gives you
