@@ -238,7 +238,7 @@ RSpec.describe "translating a document" do
         "sig { override.params(parts: ::Oapi::Form::Parts).returns(Api::Types::PostFileBody) }",
         %(upload: ::Oapi::Decode.required(parts, "upload") { |v| ::Oapi::Decode.file(v) })
       )
-      expect(generated["api/files_controller.rb"]).to include(
+      expect(generated["api/controllers/files_controller.rb"]).to include(
         "Api::Types::PostFileBody::Form.from_parts(request.request_parameters)"
       )
     end
@@ -280,7 +280,7 @@ RSpec.describe "translating a document" do
       generated = generate_from(multipart_component("name" => "{ type: string }"))
 
       expect(generated.type("fields")).to include("module Codec", "def self.to_wire(value)")
-      expect(generated["api/files_controller.rb"]).to include(
+      expect(generated["api/controllers/files_controller.rb"]).to include(
         "Api::Types::Fields::Codec.from_wire(request.request_parameters)"
       )
     end
@@ -409,13 +409,13 @@ RSpec.describe "translating a document" do
     it "reads a top-level array body from the key Rails wraps it under" do
       generated = body("{ type: array, items: { type: string } }")
 
-      expect(generated["api/things_controller.rb"]).to include(%(request.request_parameters["_json"]))
+      expect(generated["api/controllers/things_controller.rb"]).to include(%(request.request_parameters["_json"]))
     end
 
     it "reads an object body from request_parameters itself" do
       generated = body("{ type: object, properties: { a: { type: string } } }")
 
-      source = generated["api/things_controller.rb"]
+      source = generated["api/controllers/things_controller.rb"]
       expect(source).to include("from_wire(request.request_parameters)")
       expect(source).not_to include("_json")
     end
@@ -488,7 +488,7 @@ RSpec.describe "translating a document" do
       generated = secured("customAuth: { type: http, scheme: bearer }")
 
       expect(generated["api/operations/get_a.rb"]).to include("const :principal, ::SpecPrincipal")
-      expect(generated["api/t_controller.rb"])
+      expect(generated["api/controllers/t_controller.rb"])
         .to include("principal = authenticate_get_a",
                     "Api.registry.custom_auth.authenticate(request: request, scopes: [])",
                     "raise(::Oapi::Unauthenticated)")
@@ -500,7 +500,7 @@ RSpec.describe "translating a document" do
         requirement: "customAuth: [read] }, { keyAuth: []"
       )
 
-      attempts = generated["api/t_controller.rb"].lines.grep(/-> \{/).map(&:strip)
+      attempts = generated["api/controllers/t_controller.rb"].lines.grep(/-> \{/).map(&:strip)
       expect(attempts.first).to include("custom_auth", %(scopes: ["read"]))
       expect(attempts.last).to include("key_auth", "scopes: []")
     end
@@ -511,7 +511,7 @@ RSpec.describe "translating a document" do
                           requirement: "customAuth: [] }, {")
 
       expect(generated["api/operations/get_a.rb"]).to include("const :principal, T.nilable(::SpecPrincipal)")
-      expect(generated["api/t_controller.rb"]).not_to include("raise(::Oapi::Unauthenticated)")
+      expect(generated["api/controllers/t_controller.rb"]).not_to include("raise(::Oapi::Unauthenticated)")
     end
 
     it "refuses a document that declares security with no principal configured" do

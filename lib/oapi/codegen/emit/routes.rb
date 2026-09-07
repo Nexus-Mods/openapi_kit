@@ -53,7 +53,8 @@ module Oapi
         sig { params(operation: Model::Operation).returns(String) }
         def route_for(operation)
           verb = operation.http_method.serialize
-          target = "#{@config.module_path}/#{Naming.snake(operation.tag)}##{Naming.identifier(operation.id)}"
+          controller = "#{@config.module_path}/controllers/#{Naming.snake(operation.tag)}"
+          target = "#{controller}##{Naming.identifier(operation.id)}"
 
           "mapper.#{verb}(#{path_for(operation).inspect}, to: #{target.inspect}, format: false)"
         end

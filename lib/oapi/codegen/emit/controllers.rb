@@ -43,8 +43,8 @@ module Oapi
         sig { override.returns(T::Array[SourceFile]) }
         def render
           @document.operations.group_by(&:tag).map do |tag, operations|
-            Source.file(path: "#{@config.module_path}/#{Naming.snake(tag)}_controller.rb",
-                        modules: @config.modules) do |buffer|
+            Source.file(path: "#{@config.module_path}/controllers/#{Naming.snake(tag)}_controller.rb",
+                        modules: @config.modules + ["Controllers"]) do |buffer|
               emit_controller(buffer, tag, operations)
             end
           end

@@ -8,11 +8,11 @@ module Server
 
     sig { params(mapper: ::ActionDispatch::Routing::Mapper).void }
     def self.draw(mapper)
-      mapper.get("/health", to: "server/system#get_health", format: false)
-      mapper.get("/games/:gameDomain/mods", to: "server/mods#list_mods", format: false)
-      mapper.post("/games/:gameDomain/mods", to: "server/mods#create_mod", format: false)
-      mapper.get("/games/:gameDomain/mods/:modId/file", to: "server/files#download_mod_file", format: false)
-      mapper.put("/games/:gameDomain/mods/:modId/file", to: "server/files#upload_mod_file", format: false)
+      mapper.get("/health", to: "server/controllers/system#get_health", format: false)
+      mapper.get("/games/:gameDomain/mods", to: "server/controllers/mods#list_mods", format: false)
+      mapper.post("/games/:gameDomain/mods", to: "server/controllers/mods#create_mod", format: false)
+      mapper.get("/games/:gameDomain/mods/:modId/file", to: "server/controllers/files#download_mod_file", format: false)
+      mapper.put("/games/:gameDomain/mods/:modId/file", to: "server/controllers/files#upload_mod_file", format: false)
     end
   end
 end

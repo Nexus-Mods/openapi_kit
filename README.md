@@ -53,10 +53,10 @@ $ bundle exec oapi generate -c oapi.yml
 app/api/mods/v1/types/mod.rb
 app/api/mods/v1/operations/list_mods.rb
 app/api/mods/v1/handlers/mods.rb
+app/api/mods/v1/controllers/mods_controller.rb
 app/api/mods/v1/security.rb
-app/api/mods/v1/container.rb
+app/api/mods/v1/registry.rb
 app/api/mods/v1/routes.rb
-app/api/mods/v1/mods_controller.rb
 ```
 
 One constant per file at the path that constant implies, so Rails autoloads it. Each run

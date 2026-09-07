@@ -10,14 +10,13 @@ RSpec.describe Oapi::Codegen::Generator do
       expect(relative_paths(result[:dir])).to eq(
         %w[
           server.rb
-          server/files_controller.rb
+          server/controllers/files_controller.rb server/controllers/mods_controller.rb
+          server/controllers/system_controller.rb
           server/handlers/files.rb server/handlers/mods.rb server/handlers/system.rb
-          server/mods_controller.rb
           server/operations/create_mod.rb server/operations/download_mod_file.rb
           server/operations/get_health.rb
           server/operations/list_mods.rb server/operations/upload_mod_file.rb
           server/registry.rb server/routes.rb server/security.rb
-          server/system_controller.rb
           server/types/mod.rb server/types/mod_status.rb server/types/new_mod.rb
           server/types/problem_details.rb server/types/upload_mod_file_body.rb
         ]
