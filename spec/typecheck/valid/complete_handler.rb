@@ -33,11 +33,11 @@ end
 module Render
   extend T::Sig
 
-  sig { params(response: Server::Operations::ListMods::Response).returns([::Integer, ::Oapi::Wire]) }
+  sig { params(response: Server::Operations::ListMods::Response).returns([::Integer, ::Oapi::Body]) }
   def self.call(response)
     case response
-    when Server::Operations::ListMods::Ok then [response.status, response.to_wire]
-    when Server::Operations::ListMods::BadRequest then [response.status, response.to_wire]
+    when Server::Operations::ListMods::Ok then [response.status, response.to_body]
+    when Server::Operations::ListMods::BadRequest then [response.status, response.to_body]
     else T.absurd(response)
     end
   end

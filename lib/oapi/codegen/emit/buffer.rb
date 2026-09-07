@@ -54,6 +54,12 @@ module Oapi
           line(")#{tail}")
         end
 
+        sig { params(pattern: String, block: T.proc.void).returns(Buffer) }
+        def when_of(pattern, &block)
+          line("when #{pattern}")
+          indent(&block)
+        end
+
         sig { params(subject: String, block: T.proc.void).returns(Buffer) }
         def case_of(subject, &block)
           line("case #{subject}")

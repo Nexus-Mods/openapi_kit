@@ -21,19 +21,10 @@ module Server
       end
 
       module Response
-        extend T::Sig
         extend T::Helpers
+        include ::Oapi::Response
         abstract!
         sealed!
-
-        sig { abstract.returns(::Integer) }
-        def status; end
-
-        sig { abstract.returns(::Oapi::Wire) }
-        def to_wire; end
-
-        sig { abstract.returns(T.nilable(::String)) }
-        def content_type; end
       end
 
       class Created < T::Struct
@@ -45,8 +36,8 @@ module Server
         sig { override.returns(::Integer) }
         def status = 201
 
-        sig { override.returns(::Oapi::Wire) }
-        def to_wire = Server::Types::Mod::Codec.to_wire(body)
+        sig { override.returns(::Oapi::Body) }
+        def to_body = ::Oapi::Body::Json.new(wire: Server::Types::Mod::Codec.to_wire(body))
 
         sig { override.returns(T.nilable(::String)) }
         def content_type = "application/json"
@@ -59,8 +50,8 @@ module Server
         sig { override.returns(::Integer) }
         def status = 204
 
-        sig { override.returns(::Oapi::Wire) }
-        def to_wire = nil
+        sig { override.returns(::Oapi::Body) }
+        def to_body = ::Oapi::Body::Empty.new
 
         sig { override.returns(T.nilable(::String)) }
         def content_type = nil
@@ -76,8 +67,8 @@ module Server
         sig { override.returns(::Integer) }
         def status = status_code
 
-        sig { override.returns(::Oapi::Wire) }
-        def to_wire = Server::Types::ProblemDetails::Codec.to_wire(body)
+        sig { override.returns(::Oapi::Body) }
+        def to_body = ::Oapi::Body::Json.new(wire: Server::Types::ProblemDetails::Codec.to_wire(body))
 
         sig { override.returns(T.nilable(::String)) }
         def content_type = "application/problem+json"

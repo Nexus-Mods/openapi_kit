@@ -12,17 +12,27 @@ module Server
         http_request: request
       )
 
-      response = handler.get_health(request: decoded)
-      body = response.to_wire
-
-      return head(response.status) if body.nil?
-
-      render(json: body, status: response.status, content_type: response.content_type)
+      render_response(handler.get_health(request: decoded))
     end
 
     private
 
     sig { returns(Server::Handlers::System) }
     def handler = Server.registry.system
+
+    sig { params(result: ::Oapi::Response).void }
+    def render_response(result)
+      case (body = result.to_body)
+      when ::Oapi::Body::Empty
+        head(result.status)
+      when ::Oapi::Body::Json
+        render(json: body.wire, status: result.status, content_type: result.content_type)
+      when ::Oapi::Body::Binary
+        response.headers["Content-Type"] = result.content_type.to_s
+        response.status = result.status
+        self.response_body = body
+      else T.absurd(body)
+      end
+    end
   end
 end

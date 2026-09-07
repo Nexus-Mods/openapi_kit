@@ -12,19 +12,10 @@ module Server
       end
 
       module Response
-        extend T::Sig
         extend T::Helpers
+        include ::Oapi::Response
         abstract!
         sealed!
-
-        sig { abstract.returns(::Integer) }
-        def status; end
-
-        sig { abstract.returns(::Oapi::Wire) }
-        def to_wire; end
-
-        sig { abstract.returns(T.nilable(::String)) }
-        def content_type; end
       end
 
       class Ok < T::Struct
@@ -34,8 +25,8 @@ module Server
         sig { override.returns(::Integer) }
         def status = 200
 
-        sig { override.returns(::Oapi::Wire) }
-        def to_wire = nil
+        sig { override.returns(::Oapi::Body) }
+        def to_body = ::Oapi::Body::Empty.new
 
         sig { override.returns(T.nilable(::String)) }
         def content_type = nil

@@ -18,6 +18,21 @@ module Oapi
           T::Hash[String, String]
         )
 
+        RENDERINGS = T.let(
+          {
+            "::Oapi::Body::Empty" => ["head(result.status)"],
+            "::Oapi::Body::Json" => [
+              "render(json: body.wire, status: result.status, content_type: result.content_type)"
+            ],
+            "::Oapi::Body::Binary" => [
+              %(response.headers["Content-Type"] = result.content_type.to_s),
+              "response.status = result.status",
+              "self.response_body = body"
+            ]
+          }.freeze,
+          T::Hash[String, T::Array[String]]
+        )
+
         sig { params(document: Model::Document, registry: TypeRegistry, config: Config).void }
         def initialize(document:, registry:, config:)
           @document = document
@@ -51,6 +66,8 @@ module Oapi
             buffer.line("private")
             buffer.blank
             emit_handler(buffer, tag)
+            buffer.blank
+            emit_render_response(buffer)
 
             operations.select { |operation| context?(operation) }.each do |operation|
               buffer.blank
@@ -151,12 +168,20 @@ module Oapi
 
         sig { params(buffer: Buffer, operation: Model::Operation).void }
         def emit_dispatch(buffer, operation)
-          buffer.line("response = handler.#{Naming.identifier(operation.id)}(request: decoded)")
-          buffer.line("body = response.to_wire")
-          buffer.blank
-          buffer.line("return head(response.status) if body.nil?")
-          buffer.blank
-          buffer.line("render(json: body, status: response.status, content_type: response.content_type)")
+          buffer.line("render_response(handler.#{Naming.identifier(operation.id)}(request: decoded))")
+        end
+
+        sig { params(buffer: Buffer).void }
+        def emit_render_response(buffer)
+          buffer.line("sig { params(result: ::Oapi::Response).void }")
+          buffer.nest("def render_response(result)") do
+            buffer.case_of("(body = result.to_body)") do
+              RENDERINGS.each do |kind, lines|
+                buffer.when_of(kind) { lines.each { |line| buffer.line(line) } }
+              end
+              buffer.line("else T.absurd(body)")
+            end
+          end
         end
 
         sig { params(buffer: Buffer, group: String, parameters: T::Array[Model::Parameter]).void }

@@ -18,6 +18,14 @@ module ActionDispatch
     def request_parameters; end
   end
 
+  class Response
+    sig { returns(T::Hash[String, T.untyped]) }
+    def headers; end
+
+    sig { params(status: Integer).void }
+    def status=(status); end
+  end
+
   module Http
     class UploadedFile
       sig { returns(String) }
@@ -79,6 +87,12 @@ module ActionController
 
     sig { params(json: T.untyped, status: T.untyped, content_type: T.untyped).void }
     def render(json:, status:, content_type:); end
+
+    sig { returns(ActionDispatch::Response) }
+    def response; end
+
+    sig { params(body: T.untyped).void }
+    def response_body=(body); end
   end
 end
 

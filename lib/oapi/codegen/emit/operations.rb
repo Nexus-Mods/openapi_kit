@@ -143,19 +143,10 @@ module Oapi
           variants = variants_for(operation)
 
           buffer.nest("module Response") do
-            buffer.line("extend T::Sig")
             buffer.line("extend T::Helpers")
+            buffer.line("include ::Oapi::Response")
             buffer.line("abstract!")
             buffer.line("sealed!")
-            buffer.blank
-            buffer.line("sig { abstract.returns(::Integer) }")
-            buffer.line("def status; end")
-            buffer.blank
-            buffer.line("sig { abstract.returns(::Oapi::Wire) }")
-            buffer.line("def to_wire; end")
-            buffer.blank
-            buffer.line("sig { abstract.returns(T.nilable(::String)) }")
-            buffer.line("def content_type; end")
           end
 
           variants.each do |variant|
@@ -164,50 +155,103 @@ module Oapi
           end
         end
 
+        module Payload
+          extend T::Helpers
+          abstract!
+          sealed!
+
+          class Empty < T::Struct
+            include Payload
+          end
+
+          class Json < T::Struct
+            include Payload
+
+            const :schema, Model::Schema
+          end
+        end
+
         class Variant < T::Struct
           const :name, String
           const :status, Model::Status
           const :media_type, T.nilable(String)
-          const :schema, T.nilable(Model::Schema)
+          const :payload, Payload
         end
 
         sig { params(operation: Model::Operation).returns(T::Array[Variant]) }
         def variants_for(operation)
           operation.responses.flat_map do |response|
             base = Model::Status.constant(response.status)
-            next [Variant.new(name: base, status: response.status, media_type: nil, schema: nil)] if
-              response.contents.empty?
+            next [empty_variant(base, response.status)] if response.contents.empty?
 
             multiple = response.contents.size > 1
             response.contents.map do |content|
               suffix = multiple ? Naming.pascal(content.media_type.split("/").last.to_s.split("+").first.to_s) : ""
               Variant.new(name: "#{base}#{suffix}", status: response.status,
-                          media_type: content.media_type, schema: content.schema)
+                          media_type: content.media_type, payload: payload_for(content))
             end
           end
         end
 
+        sig { params(name: String, status: Model::Status).returns(Variant) }
+        def empty_variant(name, status)
+          Variant.new(name: name, status: status, media_type: nil, payload: Payload::Empty.new)
+        end
+
+        sig { params(content: Model::Content).returns(Payload) }
+        def payload_for(content)
+          schema = content.schema
+          return Payload::Empty.new if schema.nil?
+
+          Payload::Json.new(schema: schema)
+        end
+
         sig { params(buffer: Buffer, variant: Variant).void }
         def emit_variant(buffer, variant)
-          schema = variant.schema
-          status = variant.status
-
           buffer.nest("class #{variant.name} < T::Struct") do
             buffer.line("extend T::Sig")
             buffer.line("include Response")
             buffer.blank
-            buffer.line("const :body, #{@registry.sorbet_type(schema)}") if schema
-            buffer.line("const :status_code, ::Integer") if status.is_a?(Model::DefaultStatus)
-            buffer.blank unless schema.nil? && !status.is_a?(Model::DefaultStatus)
+
+            props = variant_props(variant)
+            props.each { |prop| buffer.line(prop) }
+            buffer.blank unless props.empty?
 
             buffer.line("sig { override.returns(::Integer) }")
-            buffer.line(status_method(status))
+            buffer.line(status_method(variant.status))
             buffer.blank
-            buffer.line("sig { override.returns(::Oapi::Wire) }")
-            buffer.line("def to_wire = #{schema ? @registry.to_wire_expr(schema, value: "body") : "nil"}")
+            buffer.line("sig { override.returns(::Oapi::Body) }")
+            buffer.line("def to_body = #{to_body(variant.payload)}")
             buffer.blank
             buffer.line("sig { override.returns(T.nilable(::String)) }")
             buffer.line("def content_type = #{variant.media_type.inspect}")
+          end
+        end
+
+        sig { params(variant: Variant).returns(T::Array[String]) }
+        def variant_props(variant)
+          props = payload_props(variant.payload)
+          return props unless variant.status.is_a?(Model::DefaultStatus)
+
+          props + ["const :status_code, ::Integer"]
+        end
+
+        sig { params(payload: Payload).returns(T::Array[String]) }
+        def payload_props(payload)
+          case payload
+          when Payload::Empty then []
+          when Payload::Json then ["const :body, #{@registry.sorbet_type(payload.schema)}"]
+          else T.absurd(payload)
+          end
+        end
+
+        sig { params(payload: Payload).returns(String) }
+        def to_body(payload)
+          case payload
+          when Payload::Empty then "::Oapi::Body::Empty.new"
+          when Payload::Json
+            "::Oapi::Body::Json.new(wire: #{@registry.to_wire_expr(payload.schema, value: "body")})"
+          else T.absurd(payload)
           end
         end
 
