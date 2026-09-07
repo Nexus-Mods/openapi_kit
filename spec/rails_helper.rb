@@ -11,5 +11,4 @@ require_relative "dummy/config/environment"
 
 RSpec.configure do |config|
   config.include Rack::Test::Methods, type: :request
-  config.define_derived_metadata(file_path: %r{/spec/generated/rails_}) { |meta| meta[:type] = :request }
 end

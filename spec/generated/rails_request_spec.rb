@@ -5,7 +5,7 @@ require "rails_helper"
 # Generated code loaded by Rails' own autoloader out of the dummy application's
 # app/api, so routing, parameter decoding, handler dispatch and rendering all run
 # through the real stack.
-RSpec.describe "a generated API inside a Rails application" do
+RSpec.describe "a generated API inside a Rails application", type: :request do
   def app = Dummy::Application
 
   def parsed_body = JSON.parse(last_response.body)
