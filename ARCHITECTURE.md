@@ -7,8 +7,17 @@ spec files ─▶ Loader ─▶ Model ─▶ TypeRegistry ─▶ Emit::* ─▶ 
 ```
 
 Two gems in one repo. `oapi-runtime` is what generated code calls: codecs, decoding
-primitives, `Optional`, the errors. `oapi` is the generator and is never loaded in
-production.
+primitives, `Optional`, `Body`, `Response`, `Form`, the errors. `oapi` is the generator
+and is never loaded in production.
+
+One distinction runs through all of it: **values against streams**. `Oapi::Wire` is the
+parsed value model every supported media type shares — `application/json` and `+json`,
+form-urlencoded, a multipart body's text fields, and path, query and header values all
+arrive as the same scalars, arrays and hashes — and a codec converts between one of those
+and a Ruby type, both ways. A file is outside that model, so it never reaches a codec:
+`format: binary` decodes to an uploaded file and a binary response sends bytes. That is
+why `Model::FormDef` exists rather than a predicate, and why a response answers a sealed
+`Oapi::Body` rather than `Oapi::Wire`.
 
 ## The layers
 
@@ -17,12 +26,18 @@ touches `openapi3_parser`, whose node types are declared in
 `sorbet/rbi/shims/openapi3_parser.rbi`. It also hoists inline schemas into named types,
 flattens `allOf`, and refuses documents oapi cannot generate from.
 
-**`Model`** is sealed structs with no behaviour: `Schema`, `TypeDef`, `Operation`,
-`Parameter`, `Status`. Adding a variant makes every `case` over it fail to typecheck
-until handled, which is the point.
+**`Model`** is sealed structs: `Schema`, `TypeDef`, `Operation`, `Parameter`, `Status`.
+Adding a variant makes every `case` over it fail to typecheck until handled, which is the
+point — `FormDef` was added that way, and the compiler named every site that had to
+change. Behaviour is limited to what a variant can answer about itself, like
+`Schema.file?` and `Content#multipart?`; anything that needs the document or the config
+belongs in the layers below.
 
 **`TypeRegistry`** answers "what Ruby type is this schema, and what converts it". It owns
-`DEFAULT_TYPE_MAPPINGS` and merges your `type_mappings` over them.
+`DEFAULT_TYPE_MAPPINGS`, merges your `type_mappings` over them, and refuses one you may
+not set: `string:binary`, since a file has no codec. It declines the question for a binary
+schema rather than guessing, because the answer differs by direction — an uploaded file in,
+a stream out — and the emitter asking is the only thing that knows which.
 
 **`Emit::*`** each render one kind of file, through the `Buffer` DSL rather than
 templates. `Source.file` wraps a body in its module nesting.
@@ -42,6 +57,7 @@ then wipes and writes. Nothing is deleted until everything is known good.
 | how an application supplies handlers and authenticators | `Emit::Registry` |
 | what a document must contain | `Loader`, which raises `SchemaError` |
 | a new built-in codec | `lib/oapi/codec/`, then the mappings table |
+| how a request field is read out of a hash | `Oapi::Decode`, one method per required/nullable case |
 | where `format: binary` may appear | `Loader#reject_misplaced_binary!` |
 | how an uploaded file is decoded | `Model::FormDef`, then `Emit::Forms` |
 | how a response body reaches Rack | `Oapi::Body`, then `Emit::Controllers` |
@@ -59,4 +75,10 @@ too, so output that does not typecheck fails the build.
 
 `spec/dummy` is a real Rails application whose `app/api` is generated the same way.
 `spec/generated/rails_request_spec.rb` issues real requests against it, which is what
-catches the things static checks cannot, like Rails handing back Symbol keys.
+catches the things static checks cannot: Rails handing back Symbol keys, a streamed
+response actually reaching the client in chunks, a multipart upload arriving as the file
+Rails parsed, and an under-scoped caller getting 403 rather than 401.
+
+`spec/typecheck` holds the other half of that. `valid/` must typecheck; every file in
+`invalid/` must fail, with `spec/generated/static_guarantees_spec.rb` asserting on the
+`srb tc` output, because "this cannot compile" is not a property rspec can express.
