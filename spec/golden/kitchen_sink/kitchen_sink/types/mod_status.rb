@@ -18,13 +18,8 @@ module KitchenSink
 
         Value = type_template { { fixed: KitchenSink::Types::ModStatus } }
 
-        VALUES = T.let(["live", "under-moderation", "hidden"].freeze, T::Array[::Oapi::Wire])
-
         sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::ModStatus) }
-        def self.from_wire(value)
-          KitchenSink::Types::ModStatus.try_deserialize(value) ||
-            raise(::Oapi::DecodeError.new("expected one of #{VALUES.join(", ")}, got #{value.inspect}"))
-        end
+        def self.from_wire(value) = ::Oapi::Decode.enum(KitchenSink::Types::ModStatus, value)
 
         sig { override.params(value: KitchenSink::Types::ModStatus).returns(::Oapi::Wire) }
         def self.to_wire(value) = value.serialize

@@ -44,12 +44,6 @@ module Oapi
 
         sig { params(buffer: Buffer, type: Codecable).void }
         def emit_codec_constants(buffer, type)
-          if type.is_a?(Model::EnumDef)
-            values = type.members.map { |member| member.value.inspect }.join(", ")
-            buffer.line("VALUES = T.let([#{values}].freeze, T::Array[::Oapi::Wire])")
-            buffer.blank
-          end
-
           tag = type.is_a?(Model::UnionDef) ? type.tag : nil
           return unless tag.is_a?(Model::Tagged)
 
@@ -87,12 +81,7 @@ module Oapi
 
         sig { params(buffer: Buffer, type: Model::EnumDef).void }
         def emit_enum_from_wire(buffer, type)
-          buffer.nest("def self.from_wire(value)") do
-            buffer.line("#{qualified(type.name)}.try_deserialize(value) ||")
-            message = Literal.string("expected one of ", Literal.expr(%(VALUES.join(", "))),
-                                     ", got ", Literal.expr("value.inspect"))
-            buffer.indent { buffer.line("raise(::Oapi::DecodeError.new(#{message}))") }
-          end
+          buffer.line("def self.from_wire(value) = ::Oapi::Decode.enum(#{qualified(type.name)}, value)")
         end
 
         sig { params(buffer: Buffer, type: Model::ObjectDef).void }

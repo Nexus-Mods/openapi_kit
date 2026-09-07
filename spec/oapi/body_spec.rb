@@ -51,9 +51,15 @@ RSpec.describe Oapi::Body do
 
     it "closes the stream when iteration is abandoned part way" do
       stream = StringIO.new("abcdef")
+      seen = 0
 
-      expect { described_class.new(stream: stream, chunk: 2).each { raise "client vanished" } }
-        .to raise_error("client vanished")
+      expect do
+        described_class.new(stream: stream, chunk: 2).each do
+          seen += 1
+          raise "client vanished" if seen == 2
+        end
+      end.to raise_error("client vanished")
+
       expect(stream).to be_closed
     end
   end

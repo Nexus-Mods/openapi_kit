@@ -143,6 +143,17 @@ module Oapi
       raise DecodeError.new("did not match any member of #{name}")
     end
 
+    sig do
+      type_parameters(:Enum)
+        .params(enum: T.all(T::Class[T.type_parameter(:Enum)], T.class_of(T::Enum)), value: T.untyped)
+        .returns(T.type_parameter(:Enum))
+    end
+    def self.enum(enum, value)
+      enum.try_deserialize(value) ||
+        raise(DecodeError.new("expected one of #{enum.values.map(&:serialize).join(", ")}, " \
+                              "got #{value.inspect}"))
+    end
+
     sig { params(value: T.untyped).returns(::ActionDispatch::Http::UploadedFile) }
     def self.file(value)
       return value if value.is_a?(::ActionDispatch::Http::UploadedFile)

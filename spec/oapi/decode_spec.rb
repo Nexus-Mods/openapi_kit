@@ -1,5 +1,12 @@
 # frozen_string_literal: true
 
+class SpecStatus < T::Enum
+  enums do
+    Live = new("live")
+    Hidden = new("hidden")
+  end
+end
+
 RSpec.describe Oapi::Decode do
   describe ".required" do
     it "decodes a present value" do
@@ -69,6 +76,19 @@ RSpec.describe Oapi::Decode do
     it "numbers the pointer by index" do
       expect { described_class.required({ "tags" => %w[1 x] }, "tags") { |v| described_class.each(v) { |i| Oapi::Codec::Integer.from_wire(i) } } }
         .to raise_error(Oapi::DecodeError, "/tags/1: expected an integer, got \"x\"")
+    end
+  end
+
+  describe ".enum" do
+    it "deserializes a member" do
+      expect(described_class.enum(SpecStatus, "live")).to eq(SpecStatus::Live)
+    end
+
+    # The message lists what the document allows, which the enum already knows, so
+    # nothing needs generating alongside it.
+    it "names every permitted value when the wire value is not one" do
+      expect { described_class.enum(SpecStatus, "banana") }
+        .to raise_error(Oapi::DecodeError, %(expected one of live, hidden, got "banana"))
     end
   end
 
