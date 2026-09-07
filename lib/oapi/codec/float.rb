@@ -12,7 +12,7 @@ module Oapi
 
       Value = type_template { { fixed: ::Float } }
 
-      sig { override.params(value: T.untyped).returns(::Float) }
+      sig { override.params(value: Oapi::Wire).returns(::Float) }
       def self.from_wire(value)
         return value.to_f if value.is_a?(::Numeric)
 

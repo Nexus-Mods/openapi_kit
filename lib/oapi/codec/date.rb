@@ -14,7 +14,7 @@ module Oapi
 
       Value = type_template { { fixed: ::Date } }
 
-      sig { override.params(value: T.untyped).returns(::Date) }
+      sig { override.params(value: Oapi::Wire).returns(::Date) }
       def self.from_wire(value)
         raise DecodeError.new("expected an ISO 8601 date, got #{value.inspect}") unless value.is_a?(::String)
 

@@ -12,7 +12,7 @@ module Oapi
 
       Value = type_template { { fixed: ::String } }
 
-      sig { override.params(value: T.untyped).returns(::String) }
+      sig { override.params(value: Oapi::Wire).returns(::String) }
       def self.from_wire(value)
         raise DecodeError.new("expected base64, got #{value.inspect}") unless value.is_a?(::String)
 

@@ -37,6 +37,9 @@ RSpec.describe "static guarantees" do
     )
   end
 
+  # Only for a codec that declares the contract's parameter type. Sorbet lets an override
+  # widen it back to T.untyped, so this states the contract's intent; the loader's
+  # refusals are what enforce it.
   it "rejects a codec that decodes a file, since Wire cannot carry one" do
     expect(invalid("file_codec")).to include("This code is unreachable")
   end

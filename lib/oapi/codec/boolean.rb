@@ -15,7 +15,7 @@ module Oapi
       TRUTHY = T.let(%w[true 1].freeze, T::Array[::String])
       FALSEY = T.let(%w[false 0].freeze, T::Array[::String])
 
-      sig { override.params(value: T.untyped).returns(T::Boolean) }
+      sig { override.params(value: Oapi::Wire).returns(T::Boolean) }
       def self.from_wire(value)
         return value if value.is_a?(::TrueClass) || value.is_a?(::FalseClass)
 

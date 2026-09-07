@@ -12,7 +12,7 @@ module Oapi
 
       Value = type_template { { fixed: ::Integer } }
 
-      sig { override.params(value: T.untyped).returns(::Integer) }
+      sig { override.params(value: Oapi::Wire).returns(::Integer) }
       def self.from_wire(value)
         return value if value.is_a?(::Integer)
         return value.to_i if value.is_a?(::String) && value.match?(/\A[+-]?\d+\z/)

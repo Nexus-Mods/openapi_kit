@@ -11,9 +11,11 @@ a Ruby type.
 
 A file is outside that model. It is opaque bytes that were never parsed, so no codec can
 convert it, and a binary response sends bytes rather than a value. `Codec::Contract` stays
-one thing, both directions, with `from_wire` narrowed from `T.untyped` to `Oapi::Wire` — at
-which point a file codec cannot be written at all: `Wire` is a closed union, so
-`value.is_a?(UploadedFile)` is dead code and `srb tc` says so. Every other generator lands
+one thing, both directions, with `from_wire` narrowed from `T.untyped` to `Oapi::Wire`. A
+codec that declares that parameter type then cannot decode a file: `Wire` is a closed
+union, so `value.is_a?(UploadedFile)` is dead code and `srb tc` says so. Sorbet does allow
+an override to widen a parameter back to `T.untyped`, which makes it writable again — so
+this is the contract stating its intent, and the refusals below are what enforce it. Every other generator lands
 in the same place, with files bypassing the serializer and a different type per direction:
 `MultipartFile` and `StreamingResponseBody` in openapi-generator, `UploadFile` and
 `StreamingResponse` in FastAPI, `IFormFile` and `FileResult` in NSwag.
