@@ -6,7 +6,7 @@
 RSpec.describe "packaging" do
   # A require path is not always its gem name, and some are stdlib.
   let(:gem_for_require) { { "action_dispatch" => "actionpack", "action_controller" => "actionpack" } }
-  let(:stdlib) { %w[date time set json yaml pathname fileutils optparse stringio] }
+  let(:stdlib) { %w[date time set json yaml pathname fileutils optparse stringio tempfile] }
   let(:root) { Pathname.new(__dir__).join("..") }
 
   def gemspec(name) = Gem::Specification.load(root.join("#{name}.gemspec").to_s)
