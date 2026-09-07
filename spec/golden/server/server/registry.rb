@@ -5,6 +5,7 @@
 module Server
   class Registry < T::Struct
     const :mods, Server::Handlers::Mods
+    const :files, Server::Handlers::Files
     const :system, Server::Handlers::System
     const :bearer_auth, Server::Security::BearerAuth
     const :api_key_auth, Server::Security::ApiKeyAuth

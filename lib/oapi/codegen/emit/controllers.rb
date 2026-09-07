@@ -268,7 +268,8 @@ module Oapi
           return "nil" if schema.nil?
 
           source = body_source(schema)
-          inner = @registry.from_wire_expr(schema, value: source)
+          inner = @registry.from_form_expr(schema, value: source) ||
+                  @registry.from_wire_expr(schema, value: source)
           body.required ? inner : "(#{inner} if #{body_present(schema)})"
         end
 

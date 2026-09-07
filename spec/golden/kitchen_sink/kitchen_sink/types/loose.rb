@@ -14,7 +14,7 @@ module KitchenSink
 
         Value = type_template { { fixed: KitchenSink::Types::Loose::Value } }
 
-        sig { override.params(value: T.untyped).returns(KitchenSink::Types::Loose::Value) }
+        sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::Loose::Value) }
         def self.from_wire(value)
           ::Oapi::Decode.first_of(value, "Loose", [
             ->(candidate) { ::Oapi::Codec::String.from_wire(candidate) },

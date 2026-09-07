@@ -16,7 +16,11 @@ module Oapi
         end
         def self.expression(source:, key:, schema:, required:, registry:)
           meta = Model::Schema.meta(schema)
-          inner = registry.from_wire_expr(schema, value: "v")
+          inner = if Model::Schema.file?(schema)
+                    "::Oapi::Decode.file(v)"
+                  else
+                    registry.from_wire_expr(schema, value: "v")
+                  end
           quoted = key.inspect
           default = meta.default
 

@@ -36,13 +36,21 @@ module Oapi
         sig { params(type_def: TypeDef).returns(String) }
         def self.name_of(type_def)
           case type_def
-          when ObjectDef, EnumDef, UnionDef, AliasDef then type_def.name
+          when ObjectDef, FormDef, EnumDef, UnionDef, AliasDef then type_def.name
           else T.absurd(type_def)
           end
         end
       end
 
       class ObjectDef < T::Struct
+        include TypeDef
+        const :name, String
+        const :properties, T::Array[Property]
+        const :additional_properties, T.nilable(Schema), default: nil
+        const :meta, Meta, factory: -> { Meta.new }
+      end
+
+      class FormDef < T::Struct
         include TypeDef
         const :name, String
         const :properties, T::Array[Property]

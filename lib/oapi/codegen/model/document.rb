@@ -97,8 +97,18 @@ module Oapi
       end
 
       class Content < T::Struct
+        extend T::Sig
+
         const :media_type, String
         const :schema, T.nilable(Schema), default: nil
+
+        sig { params(media_type: String).returns(T::Boolean) }
+        def self.multipart?(media_type)
+          T.must(media_type.split(";").first).strip.downcase == "multipart/form-data"
+        end
+
+        sig { returns(T::Boolean) }
+        def multipart? = Content.multipart?(media_type)
       end
 
       class RequestBody < T::Struct

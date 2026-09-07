@@ -173,7 +173,6 @@ RSpec.describe "translating a document" do
       "{ type: integer, format: int64 }" => "::Integer",
       "{ type: number, format: decimal }" => "::BigDecimal",
       "{ type: boolean }" => "T::Boolean",
-      "{ type: string, format: binary }" => "::ActionDispatch::Http::UploadedFile",
       "{ type: object, additionalProperties: { type: integer } }" => "T::Hash[::String, ::Integer]"
     }.each do |schema, expected|
       it "renders #{schema} as #{expected}" do
@@ -188,30 +187,140 @@ RSpec.describe "translating a document" do
       expect(generated.type("mod")).to include("const :n, T.nilable(::Integer)")
     end
 
-    # A binary maps to a file Rails wrote to disk parsing a multipart request, so a
-    # response renders its name rather than its bytes. It warns rather than refusing,
-    # because the same component may be a legitimate request body elsewhere.
-    it "warns about format: binary in a response, however deeply nested" do
-      generated = document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
-                           "  /f:", "    get:", "      operationId: getFile", "      tags: [files]",
-                           "      responses:", %(        "200":), "          description: ok",
-                           "          content:", "            application/json:",
-                           "              schema:", "                type: array",
-                           "                items:", "                  type: object",
-                           "                  properties: { blob: { type: string, format: binary } }")
-
-      expect(generated.warnings.join).to include("A response of getFile declares format: binary")
+    # A file has no JSON representation, so binary is refused anywhere it could not
+    # produce one, rather than generating a decode that can never succeed.
+    it "refuses format: binary in a response, however deeply nested" do
+      expect do
+        document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
+                 "  /f:", "    get:", "      operationId: getFile", "      tags: [files]",
+                 "      responses:", %(        "200":), "          description: ok",
+                 "          content:", "            application/json:",
+                 "              schema:", "                type: array",
+                 "                items:", "                  type: object",
+                 "                  properties: { blob: { type: string, format: binary } }")
+      end.to raise_error(Oapi::SchemaError, /the Ok response of getFile declares format: binary/)
     end
 
-    it "says nothing about format: binary in a request body" do
+    it "refuses format: binary in a JSON request body" do
+      expect do
+        document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
+                 "  /f:", "    post:", "      operationId: postFile", "      tags: [files]",
+                 "      requestBody:", "        content:", "          application/json:",
+                 "            schema:", "              type: object",
+                 "              properties: { upload: { type: string, format: binary } }",
+                 %(      responses: { "204": { description: done } }))
+      end.to raise_error(Oapi::SchemaError, /the request body of postFile declares format: binary/)
+    end
+
+    it "refuses format: binary in a parameter" do
+      expect do
+        document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
+                 "  /f:", "    get:", "      operationId: getFile", "      tags: [files]",
+                 "      parameters:",
+                 "        - { name: blob, in: query, schema: { type: string, format: binary } }",
+                 %(      responses: { "204": { description: done } }))
+      end.to raise_error(Oapi::SchemaError, /parameter "blob" of getFile declares format: binary/)
+    end
+
+    it "accepts format: binary as a property of a multipart request body" do
+      generated = document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
+                           "  /f:", "    post:", "      operationId: postFile", "      tags: [files]",
+                           "      requestBody:", "        content:", "          multipart/form-data:",
+                           "            schema:", "              type: object",
+                           "              required: [upload]",
+                           "              properties: { upload: { type: string, format: binary } }",
+                           %(      responses: { "204": { description: done } }))
+
+      expect(generated.warnings).to be_empty
+      expect(generated.type("post_file_body")).to include(
+        "const :upload, ::ActionDispatch::Http::UploadedFile",
+        "module Form",
+        "sig { override.params(parts: ::Oapi::Form::Parts).returns(Api::Types::PostFileBody) }",
+        %(upload: ::Oapi::Decode.required(parts, "upload") { |v| ::Oapi::Decode.file(v) })
+      )
+      expect(generated["api/files_controller.rb"]).to include(
+        "Api::Types::PostFileBody::Form.from_parts(request.request_parameters)"
+      )
+    end
+
+    def multipart_component(properties)
+      <<~YAML
+        openapi: 3.0.3
+        info: { title: T, version: "1.0" }
+        paths:
+          /f:
+            post:
+              operationId: postFields
+              tags: [files]
+              requestBody:
+                content:
+                  multipart/form-data:
+                    schema: { $ref: "#/components/schemas/Fields" }
+              responses: { "204": { description: done } }
+        components:
+          schemas:
+            Fields:
+              type: object
+              required: [#{properties.keys.first}]
+              properties: { #{properties.map { |name, schema| "#{name}: #{schema}" }.join(", ")} }
+      YAML
+    end
+
+    # A file may live in a component: it becomes a form type, decoded but never encoded.
+    it "gives a referenced component holding a file a from_form and no codec" do
+      generated = generate_from(multipart_component("upload" => "{ type: string, format: binary }"))
+
+      expect(generated.type("fields")).to include("module Form", "def self.from_parts(parts)")
+      expect(generated.type("fields")).not_to include("module Codec")
+    end
+
+    # Without a file it is an ordinary type, so it keeps its codec and decodes through it,
+    # exactly as an urlencoded body of the same shape would.
+    it "leaves a referenced component without a file on the codec path" do
+      generated = generate_from(multipart_component("name" => "{ type: string }"))
+
+      expect(generated.type("fields")).to include("module Codec", "def self.to_wire(value)")
+      expect(generated["api/files_controller.rb"]).to include(
+        "Api::Types::Fields::Codec.from_wire(request.request_parameters)"
+      )
+    end
+
+    it "refuses a multipart body that is not an object" do
+      expect do
+        document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
+                 "  /f:", "    post:", "      operationId: postFile", "      tags: [files]",
+                 "      requestBody:", "        content:", "          multipart/form-data:",
+                 "            schema: { type: string }",
+                 %(      responses: { "204": { description: done } }))
+      end.to raise_error(Oapi::SchemaError, /is not an object/)
+    end
+
+    it "decodes the extra fields of a multipart body that allows them" do
       generated = document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
                            "  /f:", "    post:", "      operationId: postFile", "      tags: [files]",
                            "      requestBody:", "        content:", "          multipart/form-data:",
                            "            schema:", "              type: object",
                            "              properties: { upload: { type: string, format: binary } }",
+                           "              additionalProperties: { type: string }",
                            %(      responses: { "204": { description: done } }))
 
-      expect(generated.warnings).to be_empty
+      expect(generated.type("post_file_body")).to include(
+        %(additional_properties: ::Oapi::Decode.values(parts.except("upload")))
+      )
+    end
+
+    it "accepts format: binary as a whole response body, with any media type" do
+      generated = document("openapi: 3.0.3", %(info: { title: T, version: "1.0" }), "paths:",
+                           "  /f:", "    get:", "      operationId: getFile", "      tags: [files]",
+                           "      responses:", %(        "200":), "          description: ok",
+                           "          content:", "            image/png:",
+                           "              schema: { type: string, format: binary }")
+
+      expect(generated.operation("get_file")).to include(
+        "const :body, ::Oapi::Stream",
+        "def to_body = ::Oapi::Body::Binary.new(stream: body, chunk: chunk)",
+        %(def content_type = "image/png")
+      )
     end
 
     it "falls back to the base type for an unrecognised format, and says so" do
@@ -219,6 +328,18 @@ RSpec.describe "translating a document" do
 
       expect(generated.type("mod")).to include("const :it, ::Integer")
       expect(generated.warnings.join).to include('"integer:unix-time" has no Ruby type mapped')
+    end
+
+    it "refuses a type mapping for string:binary, which no codec can convert" do
+      binary = { "type" => "::MyBlob", "codec" => "MyApp::BlobCodec" }
+
+      expect do
+        generate_from(<<~YAML, "type_mappings" => { "string:binary" => binary })
+          openapi: 3.0.3
+          info: { title: T, version: "1.0" }
+          paths: {}
+        YAML
+      end.to raise_error(Oapi::ConfigError, /does not convert a file with a codec/)
     end
 
     it "uses a configured type and codec" do

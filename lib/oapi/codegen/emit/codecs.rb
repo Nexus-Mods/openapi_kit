@@ -14,12 +14,16 @@ module Oapi
           @config = config
         end
 
-        sig { params(buffer: Buffer, type: Model::TypeDef).void }
+        Codecable = T.type_alias do
+          T.any(Model::ObjectDef, Model::EnumDef, Model::UnionDef, Model::AliasDef)
+        end
+
+        sig { params(buffer: Buffer, type: Codecable).void }
         def emit(buffer, type) = emit_codec(buffer, type)
 
         private
 
-        sig { params(buffer: Buffer, type: Model::TypeDef).void }
+        sig { params(buffer: Buffer, type: Codecable).void }
         def emit_codec(buffer, type)
           name = Model::TypeDef.name_of(type)
           buffer.nest("module Codec") do
@@ -30,7 +34,7 @@ module Oapi
             buffer.line("Value = type_template { { fixed: #{qualified(name)} } }")
             buffer.blank
             emit_codec_constants(buffer, type)
-            buffer.line("sig { override.params(value: T.untyped).returns(#{qualified(name)}) }")
+            buffer.line("sig { override.params(value: ::Oapi::Wire).returns(#{qualified(name)}) }")
             emit_from_wire(buffer, type)
             buffer.blank
             buffer.line("sig { override.params(value: #{qualified(name)}).returns(::Oapi::Wire) }")
@@ -38,7 +42,7 @@ module Oapi
           end
         end
 
-        sig { params(buffer: Buffer, type: Model::TypeDef).void }
+        sig { params(buffer: Buffer, type: Codecable).void }
         def emit_codec_constants(buffer, type)
           if type.is_a?(Model::EnumDef)
             values = type.members.map { |member| member.value.inspect }.join(", ")
@@ -57,7 +61,7 @@ module Oapi
         sig { params(name: String).returns(String) }
         def qualified(name) = @registry.sorbet_type(Model::Ref.new(name: name))
 
-        sig { params(buffer: Buffer, type: Model::TypeDef).void }
+        sig { params(buffer: Buffer, type: Codecable).void }
         def emit_from_wire(buffer, type)
           case type
           when Model::EnumDef then emit_enum_from_wire(buffer, type)
@@ -69,7 +73,7 @@ module Oapi
           end
         end
 
-        sig { params(buffer: Buffer, type: Model::TypeDef).void }
+        sig { params(buffer: Buffer, type: Codecable).void }
         def emit_to_wire(buffer, type)
           case type
           when Model::EnumDef then buffer.line("def self.to_wire(value) = value.serialize")
@@ -97,7 +101,9 @@ module Oapi
             buffer.line("raw = ::Oapi::Decode.object(value)")
             buffer.line("#{qualified(type.name)}.new(")
             buffer.indent do
-              type.properties.each { |property| buffer.line("#{property.identifier}: #{decode_expr(property)},") }
+              type.properties.each do |property|
+                buffer.line("#{property.identifier}: #{decode_from(property, source: "raw")},")
+              end
               extra = type.additional_properties
               buffer.line("additional_properties: #{additional_decode(type, extra)},") if extra
             end
@@ -120,9 +126,9 @@ module Oapi
           "value.additional_properties.transform_values { |item| #{inner} }"
         end
 
-        sig { params(property: Model::Property).returns(String) }
-        def decode_expr(property)
-          Decode.expression(source: "raw", key: property.name, schema: property.schema,
+        sig { params(property: Model::Property, source: String).returns(String) }
+        def decode_from(property, source:)
+          Decode.expression(source: source, key: property.name, schema: property.schema,
                             required: property.required, registry: @registry)
         end
 

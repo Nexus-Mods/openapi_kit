@@ -27,7 +27,7 @@ module Server
 
         Value = type_template { { fixed: Server::Types::Mod } }
 
-        sig { override.params(value: T.untyped).returns(Server::Types::Mod) }
+        sig { override.params(value: ::Oapi::Wire).returns(Server::Types::Mod) }
         def self.from_wire(value)
           raw = ::Oapi::Decode.object(value)
           Server::Types::Mod.new(

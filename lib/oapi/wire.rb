@@ -2,9 +2,11 @@
 # frozen_string_literal: true
 
 module Oapi
-  # What a codec may return: JSON, and nothing that cannot be rendered as JSON. There is
-  # no matching type for what a codec receives, because that is whatever the framework
-  # hands over, and coercing it to the declared type is the codec's whole job.
+  # The parsed value model every supported media type leaves behind: application/json and
+  # +json, form-urlencoded, and a multipart body's text fields all arrive as these shapes,
+  # as do path, query and header values. A codec converts between one of them and a Ruby
+  # type, both ways. An uploaded file is the one thing outside it, so it never reaches a
+  # codec.
   Wire = T.type_alias do
     T.any(NilClass, String, Integer, Float, T::Boolean,
           T::Array[T.untyped], T::Hash[String, T.untyped])

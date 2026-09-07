@@ -33,6 +33,13 @@ module Oapi
           else T.absurd(schema)
           end
         end
+
+        sig { params(schema: Schema).returns(T::Boolean) }
+        def self.file?(schema)
+          return false unless schema.is_a?(StringSchema) && schema.format == "binary"
+
+          meta(schema).ruby_type.nil?
+        end
       end
 
       class Ref < T::Struct

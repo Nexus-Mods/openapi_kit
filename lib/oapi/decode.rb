@@ -1,6 +1,8 @@
 # typed: strict
 # frozen_string_literal: true
 
+require "action_dispatch"
+
 module Oapi
   module Decode
     extend T::Sig
@@ -139,6 +141,13 @@ module Oapi
       end
 
       raise DecodeError.new("did not match any member of #{name}")
+    end
+
+    sig { params(value: T.untyped).returns(::ActionDispatch::Http::UploadedFile) }
+    def self.file(value)
+      return value if value.is_a?(::ActionDispatch::Http::UploadedFile)
+
+      raise DecodeError.new("expected an uploaded file, got #{value.class}")
     end
 
     sig { params(raw: T.untyped).returns(T::Array[T.untyped]) }

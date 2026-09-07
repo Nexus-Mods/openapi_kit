@@ -5,6 +5,7 @@
 Rails.application.config.to_prepare do
   Dummy::V1.registry = Dummy::V1::Registry.new(
     mods: ModsHandler.new,
+    files: FilesHandler.new,
     system: SystemHandler.new,
     bearer_auth: BearerAuthenticator.new,
     api_key_auth: ApiKeyAuthenticator.new

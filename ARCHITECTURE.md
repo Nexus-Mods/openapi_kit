@@ -42,6 +42,9 @@ then wipes and writes. Nothing is deleted until everything is known good.
 | how an application supplies handlers and authenticators | `Emit::Registry` |
 | what a document must contain | `Loader`, which raises `SchemaError` |
 | a new built-in codec | `lib/oapi/codec/`, then the mappings table |
+| where `format: binary` may appear | `Loader#reject_misplaced_binary!` |
+| how an uploaded file is decoded | `Model::FormDef`, then `Emit::Forms` |
+| how a response body reaches Rack | `Oapi::Body`, then `Emit::Controllers` |
 
 ## Working on it
 

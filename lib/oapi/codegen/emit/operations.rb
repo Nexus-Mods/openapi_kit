@@ -169,6 +169,10 @@ module Oapi
 
             const :schema, Model::Schema
           end
+
+          class Stream < T::Struct
+            include Payload
+          end
         end
 
         class Variant < T::Struct
@@ -202,6 +206,7 @@ module Oapi
         def payload_for(content)
           schema = content.schema
           return Payload::Empty.new if schema.nil?
+          return Payload::Stream.new if Model::Schema.file?(schema)
 
           Payload::Json.new(schema: schema)
         end
@@ -241,6 +246,9 @@ module Oapi
           case payload
           when Payload::Empty then []
           when Payload::Json then ["const :body, #{@registry.sorbet_type(payload.schema)}"]
+          when Payload::Stream
+            ["const :body, #{TypeRegistry::STREAM}",
+             "const :chunk, ::Integer, default: ::Oapi::DEFAULT_CHUNK"]
           else T.absurd(payload)
           end
         end
@@ -251,6 +259,7 @@ module Oapi
           when Payload::Empty then "::Oapi::Body::Empty.new"
           when Payload::Json
             "::Oapi::Body::Json.new(wire: #{@registry.to_wire_expr(payload.schema, value: "body")})"
+          when Payload::Stream then "::Oapi::Body::Binary.new(stream: body, chunk: chunk)"
           else T.absurd(payload)
           end
         end

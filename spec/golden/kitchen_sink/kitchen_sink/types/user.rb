@@ -27,7 +27,7 @@ module KitchenSink
 
         Value = type_template { { fixed: KitchenSink::Types::User } }
 
-        sig { override.params(value: T.untyped).returns(KitchenSink::Types::User) }
+        sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::User) }
         def self.from_wire(value)
           raw = ::Oapi::Decode.object(value)
           KitchenSink::Types::User.new(

@@ -37,6 +37,10 @@ RSpec.describe "static guarantees" do
     )
   end
 
+  it "rejects a codec that decodes a file, since Wire cannot carry one" do
+    expect(invalid("file_codec")).to include("This code is unreachable")
+  end
+
   it "rejects a render that does not handle every kind of body" do
     expect(invalid("unhandled_body")).to include(
       "Control flow could reach `T.absurd` because the type `Oapi::Body::Binary` wasn't handled"

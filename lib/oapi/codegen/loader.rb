@@ -17,6 +17,11 @@ module Oapi
         T::Array[Symbol]
       )
 
+      MULTIPART_SHAPE = T.let(
+        "A multipart body must be an object whose properties are the fields it accepts.",
+        String
+      )
+
       DECODABLE_MEDIA_TYPES = T.let(
         %w[application/json application/x-www-form-urlencoded multipart/form-data].freeze,
         T::Array[String]
@@ -78,58 +83,106 @@ module Oapi
           subject: "tags",
           consequence: "each tag needs its own handler interface and controller"
         )
-        operations.each { |operation| warn_binary_response(operation) }
+        operations.each { |operation| reject_misplaced_binary!(operation) }
         operations
       end
 
-      # format: binary maps to a file Rails wrote to disk while parsing a multipart
-      # request. A response cannot produce one, and rendering it sends the filename in
-      # place of the bytes the document promises. This warns rather than refuses, because
-      # the same component may be a legitimate multipart request body elsewhere.
       sig { params(operation: Model::Operation).void }
-      def warn_binary_response(operation)
-        return if @config.type_mappings.key?("string:binary")
+      def reject_misplaced_binary!(operation)
+        operation.parameters.each do |parameter|
+          info = Model::Parameter.info(parameter)
+          reject_binary_within!(info.schema, "parameter #{info.name.inspect} of #{operation.id}")
+        end
 
-        operation.responses.each do |response|
-          response.contents.each do |content|
-            schema = content.schema
-            walk_for_binary(schema, Set.new, operation) unless schema.nil?
-          end
+        operation.request_body&.contents&.each { |content| reject_binary_in_request!(content, operation) }
+        operation.responses.each { |response| reject_binary_in_response!(response, operation) }
+      end
+
+      sig { params(content: Model::Content, operation: Model::Operation).void }
+      def reject_binary_in_request!(content, operation)
+        schema = content.schema
+        return if schema.nil?
+
+        where = "the request body of #{operation.id}"
+        return reject_binary_within!(schema, where) unless content.multipart?
+
+        reject_binary!(schema, where)
+        form_fields(schema).each do |property|
+          next if Model::Schema.file?(property.schema)
+
+          reject_binary_within!(property.schema, "#{property.name.inspect} in #{where}")
         end
       end
 
-      sig do
-        params(schema: Model::Schema, seen: T::Set[String], operation: Model::Operation).void
-      end
-      def walk_for_binary(schema, seen, operation)
-        case schema
-        when Model::StringSchema
-          return unless schema.format == "binary" && Model::Schema.meta(schema).ruby_type.nil?
+      sig { params(response: Model::Response, operation: Model::Operation).void }
+      def reject_binary_in_response!(response, operation)
+        where = "the #{Model::Status.constant(response.status)} response of #{operation.id}"
 
-          @warnings << "A response of #{operation.id} declares format: binary, which oapi " \
-                       "renders as the uploaded file's name, not its bytes. Use format: byte " \
-                       "to base64 the content, or map string:binary to a type of your own."
-        when Model::Ref then walk_type_for_binary(schema.name, seen, operation)
-        when Model::List then walk_for_binary(schema.items, seen, operation)
+        response.headers.each do |header|
+          reject_binary_within!(header.schema, "header #{header.name.inspect} of #{where}")
+        end
+
+        response.contents.each do |content|
+          schema = content.schema
+          next if schema.nil? || Model::Schema.file?(schema)
+
+          reject_binary_within!(schema, where)
+        end
+      end
+
+      sig { params(schema: Model::Schema, where: String, seen: T::Set[String]).void }
+      def reject_binary_within!(schema, where, seen = Set.new)
+        case schema
+        when Model::StringSchema then reject_binary!(schema, where)
+        when Model::Ref then reject_binary_in_type!(schema.name, where, seen)
+        when Model::List then reject_binary_within!(schema.items, where, seen)
         when Model::Freeform
           values = schema.values
-          walk_for_binary(values, seen, operation) unless values.nil?
+          reject_binary_within!(values, where, seen) unless values.nil?
         end
       end
 
-      sig { params(name: String, seen: T::Set[String], operation: Model::Operation).void }
-      def walk_type_for_binary(name, seen, operation)
+      sig { params(name: String, where: String, seen: T::Set[String]).void }
+      def reject_binary_in_type!(name, where, seen)
         return unless seen.add?(name)
 
-        key = @keys_by_name[name]
-        case (type = key && @types[key])
-        when Model::ObjectDef
-          type.properties.each { |property| walk_for_binary(property.schema, seen, operation) }
+        case (type = type_named(name))
+        when Model::ObjectDef, Model::FormDef
+          type.properties.each { |property| reject_binary_within!(property.schema, where, seen) }
           extra = type.additional_properties
-          walk_for_binary(extra, seen, operation) unless extra.nil?
-        when Model::UnionDef then type.members.each { |m| walk_for_binary(m, seen, operation) }
-        when Model::AliasDef then walk_for_binary(type.target, seen, operation)
+          reject_binary_within!(extra, where, seen) unless extra.nil?
+        when Model::UnionDef then type.members.each { |member| reject_binary_within!(member, where, seen) }
+        when Model::AliasDef then reject_binary_within!(type.target, where, seen)
+        when Model::EnumDef, nil then nil
+        else T.absurd(type)
         end
+      end
+
+      sig { params(schema: Model::Schema, where: String).void }
+      def reject_binary!(schema, where)
+        return unless Model::Schema.file?(schema)
+
+        raise SchemaError,
+              "#{where} declares format: binary, which cannot be produced there. It is only " \
+              "valid as a top-level property of a multipart/form-data request body, or as the " \
+              "whole schema of a response body. Use format: byte to carry bytes inside JSON, " \
+              "or x-ruby-type to name a type of your own."
+      end
+
+      sig { params(schema: Model::Schema).returns(T::Array[Model::Property]) }
+      def form_fields(schema)
+        return [] unless schema.is_a?(Model::Ref)
+
+        case (type = type_named(schema.name))
+        when Model::ObjectDef, Model::FormDef then type.properties
+        else []
+        end
+      end
+
+      sig { params(name: String).returns(T.nilable(Model::TypeDef)) }
+      def type_named(name)
+        key = @keys_by_name[name]
+        key && @types[key]
       end
 
       # With principals configured, oapi resolves the alternatives itself, so it has to be
@@ -261,7 +314,8 @@ module Oapi
       sig { params(node: Openapi3Parser::Node::RequestBody, hint: String).returns(Model::RequestBody) }
       def build_request_body(node, hint:)
         Model::RequestBody.new(
-          contents: contents(node, hint: "#{hint}Body", where: "the request body of #{hint}"),
+          contents: contents(node, hint: "#{hint}Body", where: "the request body of #{hint}",
+                                   request: true),
           required: !!node.required?,
           description: node.description
         )
@@ -292,30 +346,47 @@ module Oapi
 
       sig do
         params(node: T.any(Openapi3Parser::Node::RequestBody, Openapi3Parser::Node::Response), hint: String,
-               where: String).returns(T::Array[Model::Content])
+               where: String, request: T::Boolean).returns(T::Array[Model::Content])
       end
-      def contents(node, hint:, where:)
+      def contents(node, hint:, where:, request: false)
         content = node.content
         return [] if content.nil?
 
         multiple = content.keys.size > 1
         content.map do |media_type, media|
-          reject_undecodable_media_type!(media_type, where: where)
           suffix = multiple ? Naming.pascal(media_type.split("/").last.to_s.split("+").first.to_s) : ""
-          Model::Content.new(media_type: media_type,
-                             schema: (schema_for(media.schema, hint: "#{hint}#{suffix}") if media.schema))
+          schema = (schema_for(media.schema, hint: "#{hint}#{suffix}") if media.schema)
+          reject_undecodable_media_type!(media_type, where: where, schema: schema)
+          reject_unspreadable_multipart!(schema: schema, where: where) if
+            request && Model::Content.multipart?(media_type)
+          Model::Content.new(media_type: media_type, schema: schema)
         end
       end
 
-      sig { params(media_type: String, where: String).void }
-      def reject_undecodable_media_type!(media_type, where:)
+      sig { params(schema: T.nilable(Model::Schema), where: String).void }
+      def reject_unspreadable_multipart!(schema:, where:)
+        raise SchemaError, "#{multipart_prefix(where)} declares no schema. #{MULTIPART_SHAPE}" if schema.nil?
+
+        type = schema.is_a?(Model::Ref) ? type_named(schema.name) : nil
+        return if type.is_a?(Model::ObjectDef) || type.is_a?(Model::FormDef)
+
+        raise SchemaError, "#{multipart_prefix(where)} is not an object. #{MULTIPART_SHAPE}"
+      end
+
+      sig { params(where: String).returns(String) }
+      def multipart_prefix(where) = "The multipart/form-data content of #{where}"
+
+      sig { params(media_type: String, where: String, schema: T.nilable(Model::Schema)).void }
+      def reject_undecodable_media_type!(media_type, where:, schema:)
         base = T.must(media_type.split(";").first).strip.downcase
         return if DECODABLE_MEDIA_TYPES.include?(base) || base.end_with?("+json")
+        return if !schema.nil? && Model::Schema.file?(schema)
 
         raise SchemaError,
               "#{where} declares the content type #{media_type}, which oapi cannot decode or " \
-              "render. Supported content types are #{DECODABLE_MEDIA_TYPES.join(", ")} and any " \
-              "+json media type."
+              "render. Supported content types are #{DECODABLE_MEDIA_TYPES.join(", ")}, any " \
+              "+json media type, and any type at all for a response body whose schema is " \
+              "format: binary."
       end
 
       sig { params(document: Openapi3Parser::Document).returns(T::Array[Model::SecurityScheme]) }
@@ -543,16 +614,16 @@ module Oapi
         required = T.let(Set.new, T::Set[String])
         collect_properties(node, properties, required)
 
-        Model::ObjectDef.new(
-          name: name,
-          properties: properties.map do |pname, pnode|
-            Model::Property.new(name: pname, identifier: Naming.identifier(pname),
-                                schema: schema_for(pnode, hint: "#{name}#{Naming.pascal(pname)}"),
-                                required: required.include?(pname))
-          end,
-          additional_properties: additional_properties_for(node, name),
-          meta: meta_for(node)
-        )
+        fields = properties.map do |pname, pnode|
+          Model::Property.new(name: pname, identifier: Naming.identifier(pname),
+                              schema: schema_for(pnode, hint: "#{name}#{Naming.pascal(pname)}"),
+                              required: required.include?(pname))
+        end
+        kind = fields.any? { |field| Model::Schema.file?(field.schema) } ? Model::FormDef : Model::ObjectDef
+
+        kind.new(name: name, properties: fields,
+                 additional_properties: additional_properties_for(node, name),
+                 meta: meta_for(node))
       end
 
       sig { params(node: Openapi3Parser::Node::Schema, name: String).returns(T.nilable(Model::Schema)) }

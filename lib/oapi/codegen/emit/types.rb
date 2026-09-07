@@ -14,6 +14,7 @@ module Oapi
           @registry = registry
           @config = config
           @codecs = T.let(Codecs.new(document: document, registry: registry, config: config), Codecs)
+          @forms = T.let(Forms.new(registry: registry), Forms)
         end
 
         sig { override.returns(T::Array[SourceFile]) }
@@ -38,6 +39,7 @@ module Oapi
           when Model::EnumDef then emit_enum(buffer, type)
           when Model::UnionDef then emit_union(buffer, type)
           when Model::ObjectDef then emit_object(buffer, type)
+          when Model::FormDef then emit_form(buffer, type)
           when Model::AliasDef then nil
           else T.absurd(type)
           end
@@ -75,16 +77,31 @@ module Oapi
             extra = type.additional_properties
             buffer.line("const :additional_properties, #{additional_type(extra)}, factory: -> { {} }") if extra
             buffer.blank
-            emit_equality(buffer, type)
+            emit_equality(buffer, type.name)
             buffer.blank
             @codecs.emit(buffer, type)
           end
         end
 
-        sig { params(buffer: Buffer, type: Model::ObjectDef).void }
-        def emit_equality(buffer, type)
+        sig { params(buffer: Buffer, type: Model::FormDef).void }
+        def emit_form(buffer, type)
+          buffer.nest("class #{type.name} < T::Struct") do
+            buffer.line("extend T::Sig")
+            buffer.blank
+            type.properties.each { |property| buffer.line(prop_line(property)) }
+            extra = type.additional_properties
+            buffer.line("const :additional_properties, #{additional_type(extra)}, factory: -> { {} }") if extra
+            buffer.blank
+            emit_equality(buffer, type.name)
+            buffer.blank
+            @forms.emit(buffer, type)
+          end
+        end
+
+        sig { params(buffer: Buffer, name: String).void }
+        def emit_equality(buffer, name)
           buffer.line("sig { params(other: T.untyped).returns(T::Boolean) }")
-          buffer.line("def ==(other) = other.instance_of?(#{type.name}) && other.serialize == serialize")
+          buffer.line("def ==(other) = other.instance_of?(#{name}) && other.serialize == serialize")
           buffer.blank
           buffer.line("sig { params(other: T.untyped).returns(T::Boolean) }")
           buffer.line("def eql?(other) = self == other")
@@ -100,31 +117,35 @@ module Oapi
         def prop_line(property)
           meta = Model::Schema.meta(property.schema)
           declaration = "const :#{property.identifier}, #{prop_type(property)}"
-
           default = meta.default
-          return "#{declaration}, #{default_clause(property, default)}" if default && !property.required
-          if Decode.optional_nullable?(required: property.required, meta: meta)
-            return "#{declaration}, factory: -> { ::Oapi::Absent.new }"
+
+          if default && !property.required
+            clause = Defaults.clause(schema: property.schema, default: default, registry: @registry)
+            return "#{declaration}, #{clause}"
           end
+          return "#{declaration}, factory: -> { ::Oapi::Absent.new }" if optional_nullable?(property)
 
           declaration
-        end
-
-        sig { params(property: Model::Property, default: Model::Default).returns(String) }
-        def default_clause(property, default)
-          Defaults.clause(schema: property.schema, default: default, registry: @registry)
         end
 
         sig { params(property: Model::Property).returns(String) }
         def prop_type(property)
           meta = Model::Schema.meta(property.schema)
-          base = @registry.sorbet_type(property.schema)
-          if Decode.optional_nullable?(required: property.required, meta: Model::Schema.meta(property.schema))
-            return "::Oapi::Optional[T.nilable(#{base})]"
-          end
+          base = if Model::Schema.file?(property.schema)
+                   TypeRegistry::UPLOADED_FILE
+                 else
+                   @registry.sorbet_type(property.schema)
+                 end
+
+          return "::Oapi::Optional[T.nilable(#{base})]" if optional_nullable?(property)
           return "T.nilable(#{base})" if Defaults.nilable?(required: property.required, meta: meta)
 
           base
+        end
+
+        sig { params(property: Model::Property).returns(T::Boolean) }
+        def optional_nullable?(property)
+          Decode.optional_nullable?(required: property.required, meta: Model::Schema.meta(property.schema))
         end
       end
     end

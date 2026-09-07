@@ -106,6 +106,49 @@ RSpec.describe "a generated API inside a Rails application" do
     end
   end
 
+  describe "files" do
+    def upload(name: "mod.zip", body: "PK\x03\x04binary", description: nil)
+      params = { "upload" => Rack::Test::UploadedFile.new(StringIO.new(body), "application/zip",
+                                                          original_filename: name) }
+      params["description"] = description unless description.nil?
+
+      put "/v1/games/skyrim/mods/7/file", params
+    end
+
+    it "decodes a multipart upload into the file Rails parsed" do
+      upload(description: "a mod")
+
+      expect(last_response.status).to eq(204)
+      expect(last_response.body).to be_empty
+    end
+
+    it "streams a binary response body back as bytes, in chunks" do
+      upload(name: "cool.zip", body: "the actual bytes", description: "a mod")
+
+      get "/v1/games/skyrim/mods/7/file"
+
+      expect(last_response.status).to eq(200)
+      expect(last_response.headers["content-type"]).to eq("application/octet-stream")
+      expect(last_response.body).to eq("cool.zip|a mod|the actual bytes")
+    end
+
+    it "renders a JSON variant of the same operation as JSON" do
+      get "/v1/games/skyrim/mods/404/file"
+
+      expect(last_response.status).to eq(404)
+      expect(last_response.headers["content-type"]).to include("application/problem+json")
+      expect(parsed_body["title"]).to eq("no file for mod 404")
+    end
+
+    it "refuses a multipart body whose file field is not a file" do
+      put "/v1/games/skyrim/mods/7/file", { "upload" => "not-a-file" }
+
+      expect(last_response.status).to eq(400)
+      expect(parsed_body["field"]).to eq("/upload")
+      expect(parsed_body["error"]).to include("expected an uploaded file")
+    end
+  end
+
   # oapi raises and takes no view on the error body; the application decides.
   it "raises a DecodeError the application handles however it likes" do
     get "/v1/games/skyrim/mods?page=banana", {}, bearer

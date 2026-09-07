@@ -62,6 +62,9 @@ module GeneratorHelper
 
     sig { params(name: String).returns(String) }
     def type(name) = self["api/types/#{name}.rb"]
+
+    sig { params(name: String).returns(String) }
+    def operation(name) = self["api/operations/#{name}.rb"]
   end
 
   def relative_paths(dir)

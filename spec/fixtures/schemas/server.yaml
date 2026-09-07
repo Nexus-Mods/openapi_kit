@@ -46,6 +46,45 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/ProblemDetails" }
+  /games/{gameDomain}/mods/{modId}/file:
+    get:
+      operationId: download_mod_file
+      tags: [files]
+      security: []
+      parameters:
+        - { name: gameDomain, in: path, required: true, schema: { type: string } }
+        - { name: modId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        "200":
+          description: the file
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "404":
+          description: no such file
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetails" }
+    put:
+      operationId: upload_mod_file
+      tags: [files]
+      security: []
+      parameters:
+        - { name: gameDomain, in: path, required: true, schema: { type: string } }
+        - { name: modId, in: path, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [upload]
+              properties:
+                upload: { type: string, format: binary }
+                thumbnail: { type: string, format: binary }
+                description: { type: string }
+      responses:
+        "204": { description: stored }
   /health:
     get:
       operationId: get_health

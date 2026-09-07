@@ -16,7 +16,7 @@ module KitchenSink
 
         TAGS = T.let(["cat", "dog"].freeze, T::Array[::String])
 
-        sig { override.params(value: T.untyped).returns(KitchenSink::Types::Pet::Value) }
+        sig { override.params(value: ::Oapi::Wire).returns(KitchenSink::Types::Pet::Value) }
         def self.from_wire(value)
           raw = ::Oapi::Decode.object(value)
           tag = raw["kind"]

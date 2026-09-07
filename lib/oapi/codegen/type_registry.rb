@@ -18,8 +18,6 @@ module Oapi
           "string:uuid" => RubyType.new(type: "::String", codec: "::Oapi::Codec::Uuid"),
           "string:byte" => RubyType.new(type: "::String", codec: "::Oapi::Codec::Byte"),
           "string:decimal" => RubyType.new(type: "::BigDecimal", codec: "::Oapi::Codec::Decimal"),
-          "string:binary" => RubyType.new(type: "::ActionDispatch::Http::UploadedFile",
-                                          codec: "::Oapi::Codec::UploadedFile"),
 
           "string:time" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
           "string:duration" => RubyType.new(type: "::String", codec: "::Oapi::Codec::String"),
@@ -50,6 +48,8 @@ module Oapi
 
       sig { params(document: Model::Document, config: Config).returns(TypeRegistry) }
       def self.for(document, config)
+        reject_binary_mapping!(config.type_mappings)
+
         registry = new(
           namespace: config.namespace,
           type_mappings: DEFAULT_TYPE_MAPPINGS.merge(config.type_mappings),
@@ -58,6 +58,18 @@ module Oapi
 
         registry.reject_alias_cycles!
         registry
+      end
+
+      sig { params(mappings: T::Hash[String, RubyType]).void }
+      def self.reject_binary_mapping!(mappings)
+        return unless mappings.key?("string:binary")
+
+        raise ConfigError,
+              "type_mappings has an entry for \"string:binary\", but oapi does not convert a " \
+              "file with a codec: it has no wire form. An upload decodes to " \
+              "::ActionDispatch::Http::UploadedFile and a binary response body is a stream, " \
+              "neither through a codec. Convert to your own type in the handler, or use " \
+              "format: byte to carry bytes inside a value."
       end
 
       # An alias contributes no constant of its own: every reference to it expands to its
@@ -82,6 +94,17 @@ module Oapi
         @type_mappings = type_mappings
         @types = types
         @warnings = T.let(Set.new, T::Set[String])
+      end
+
+      UPLOADED_FILE = "::ActionDispatch::Http::UploadedFile"
+
+      STREAM = "::Oapi::Stream"
+
+      sig { params(schema: Model::Schema, value: String).returns(T.nilable(String)) }
+      def from_form_expr(schema, value:)
+        return nil unless schema.is_a?(Model::Ref) && @types[schema.name].is_a?(Model::FormDef)
+
+        "#{@namespace}::Types::#{schema.name}::Form.from_parts(#{value})"
       end
 
       sig { params(schema: Model::Schema).returns(String) }
@@ -179,6 +202,16 @@ module Oapi
 
       private
 
+      sig { params(schema: Model::Schema).void }
+      def reject_binary!(schema)
+        return unless Model::Schema.file?(schema)
+
+        raise SchemaError,
+              "format: binary has no JSON type, so it cannot be converted by a codec. It is " \
+              "only valid as a top-level property of a multipart/form-data request body, or " \
+              "as the whole schema of a response body."
+      end
+
       sig { params(schema: T.nilable(Model::Schema), seen: T::Array[String]).void }
       def walk_aliases(schema, seen)
         case schema
@@ -211,7 +244,7 @@ module Oapi
         return true if found.nil?
 
         case found
-        when Model::ObjectDef then true
+        when Model::ObjectDef, Model::FormDef then true
         when Model::EnumDef then false
         when Model::UnionDef then found.members.all? { |member| object?(member) }
         when Model::AliasDef then object?(found.target)
@@ -229,6 +262,8 @@ module Oapi
       def ruby_type_for(schema)
         override = Model::Schema.meta(schema).ruby_type
         return override if override
+
+        reject_binary!(schema)
 
         type, format = scalar_kind(schema)
         requested = format ? "#{type}:#{format}" : type
