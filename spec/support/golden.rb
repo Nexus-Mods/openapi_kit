@@ -9,7 +9,6 @@ module Golden
     "kitchen_sink" => { modules: %w[KitchenSink] },
     "server" => {
       modules: %w[Server],
-      container_prefix: "v1",
       principal: "::Demo::Principal"
     }
   }.freeze

@@ -29,7 +29,7 @@ RSpec.describe "a generated registry" do
     )
   end
 
-  # These two are what replaced the boot-time container check.
+  # These two are what replaced the boot-time resolution check.
   it "refuses an implementation that does not satisfy its interface" do
     expect { registry(mods: Object.new) }
       .to raise_error(TypeError, /Can't set Dummy::V1::Registry.mods to/)

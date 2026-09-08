@@ -1,7 +1,7 @@
 # oapi
 
 Generates Sorbet-typed Rails server stubs from an OpenAPI 3 document. Handlers are strict
-interfaces bound through your own container, responses are sealed, and authentication is
+interfaces bound through a generated registry, responses are sealed, and authentication is
 enforced where the document says it should be. Change the document and the build tells you
 what no longer compiles.
 
@@ -31,7 +31,6 @@ spec: openapi/mods.yaml
 output: app/api
 modules: [Mods, V1]
 controller_base: Api::BaseController
-container_prefix: v1
 principal: "::Mods::Principal"
 ```
 
@@ -41,7 +40,6 @@ principal: "::Mods::Principal"
 | `output` | directory the tree is written to; oapi owns it |
 | `modules` | namespace for every generated constant, so `Mods::V1::Types::Mod` |
 | `controller_base` | class the generated controllers inherit from |
-| `container_prefix` | prefixed onto every container key, so `v1.handlers.mods` |
 | `principal` | the class a successful authentication produces |
 | `type_mappings` | your Ruby type for a `type:format` pair |
 | `name_overrides` | a different Ruby name for a schema |

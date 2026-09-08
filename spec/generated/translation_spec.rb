@@ -389,7 +389,7 @@ RSpec.describe "translating a document" do
     expect(generated["api/routes.rb"]).to include("format: false")
   end
 
-  it "emits no routes, controllers or container for a components-only document" do
+  it "emits no routes, controllers or registry for a components-only document" do
     generated = schemas("Mod: { type: object, properties: { id: { type: integer } } }")
 
     expect(generated.paths).to eq(["api/types/mod.rb"])
@@ -494,7 +494,7 @@ RSpec.describe "translating a document" do
                     "raise(::Oapi::Unauthenticated)")
     end
 
-    it "resolves every alternative through the container, in document order" do
+    it "resolves every alternative through the registry, in document order" do
       generated = secured(
         "customAuth: { type: http, scheme: bearer }\nkeyAuth: { type: apiKey, in: header, name: X-Key }",
         requirement: "customAuth: [read] }, { keyAuth: []"

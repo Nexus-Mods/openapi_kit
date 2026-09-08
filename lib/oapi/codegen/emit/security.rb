@@ -68,9 +68,9 @@ module Oapi
           end
         end
 
-        # One interface per scheme, bound to an implementation through the container the
-        # same way handlers are. Returning nil means this alternative was not satisfied,
-        # so the next one is tried; raise to refuse outright.
+        # One interface per scheme, filled by a registry slot the same way handlers are.
+        # Returning nil means this alternative was not satisfied, so the next one is
+        # tried. Raise to refuse outright.
         sig { params(buffer: Buffer, scheme: Model::SecurityScheme).void }
         def emit_authenticator(buffer, scheme)
           name = Model::SecurityScheme.name_of(scheme)

@@ -14,7 +14,6 @@ module Dummy
         output: ROOT.join("app/api").expand_path,
         modules: %w[Dummy V1],
         controller_base: "Dummy::BaseController",
-        container_prefix: "v1",
         principal: "::Principal"
       )
 

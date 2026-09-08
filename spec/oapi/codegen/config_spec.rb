@@ -29,29 +29,6 @@ RSpec.describe Oapi::Codegen::Config do
     expect(config.namespace).to eq("API::V3")
   end
 
-  it "builds container keys from the prefix" do
-    config = described_class.from_file(write(<<~YAML))
-      spec: api.yaml
-      output: out
-      modules: [Api]
-      controller_base: ApiBaseController
-      container_prefix: v3
-    YAML
-
-    expect(config.container_key("handlers", "mods")).to eq("v3.handlers.mods")
-  end
-
-  it "omits an absent prefix rather than emitting a leading dot" do
-    config = described_class.from_file(write(<<~YAML))
-      spec: api.yaml
-      output: out
-      modules: [Api]
-      controller_base: ApiBaseController
-    YAML
-
-    expect(config.container_key("handlers", "mods")).to eq("handlers.mods")
-  end
-
   describe "type mappings" do
     def with_mapping(body)
       described_class.from_file(write(<<~YAML))
