@@ -161,11 +161,12 @@ module Oapi
         NATIVE_LITERALS.fetch(sorbet_type(schema), []).any? { |native| value.is_a?(native) }
       end
 
-      # Rails only hands back request_parameters verbatim for a JSON object; anything else it
-      # wraps under "_json". The emitters need to know which shape a body will arrive in.
       sig { params(name: String).returns(String) }
       def codec_reference(name) = "#{@namespace}::Types::#{name}::Codec"
 
+      # Rails only hands back request_parameters verbatim for a JSON object, and wraps
+      # anything else under "_json", so the emitters need to know which shape a body
+      # will arrive in.
       sig { params(schema: Model::Schema).returns(T::Boolean) }
       def object?(schema)
         case schema

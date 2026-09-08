@@ -95,46 +95,6 @@ module Oapi
             %("e.g. #{namespace}.registry = #{namespace}::Registry.new(...).")
           ]
         end
-
-        # Plain signatures rather than abstract ones, so an implementation may be a struct
-        # whose props satisfy them without restating every reader.
-        sig { params(buffer: Buffer).void }
-        def emit_readers(buffer)
-          slots.each do |slot|
-            reader = slot.reader
-            buffer.line("sig { returns(#{slot.interface}) }")
-            buffer.line(%(def #{reader} = raise(NotImplementedError, "\#{self.class} must provide #{reader}")))
-            buffer.blank
-          end
-        end
-
-        # Reads as constructing a Registry, and what it builds is an implementation
-        # detail: an application that wants something else implements the interface.
-        sig { params(buffer: Buffer).void }
-        def emit_factory(buffer)
-          buffer.line("sig do")
-          buffer.indent do
-            arguments = slots.map { |slot| [slot.reader, slot.interface] }
-            buffer.nest_call("params", arguments, tail: ".returns(Registry)")
-          end
-          buffer.line("end")
-          buffer.nest("def self.new(#{slots.map { |slot| "#{slot.reader}:" }.join(", ")})") do
-            buffer.line("Values.new(")
-            buffer.indent do
-              slots.each { |slot| buffer.line("#{slot.reader}: #{slot.reader},") }
-            end
-            buffer.line(")")
-          end
-        end
-
-        sig { params(buffer: Buffer).void }
-        def emit_values(buffer)
-          buffer.nest("class Values < T::Struct") do
-            buffer.line("include Registry")
-            buffer.blank
-            slots.each { |slot| buffer.line("const :#{slot.reader}, #{slot.interface}") }
-          end
-        end
       end
     end
   end

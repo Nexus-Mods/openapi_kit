@@ -12,9 +12,6 @@ module Oapi
 
     Value = type_member
 
-    sig { abstract.returns(T::Boolean) }
-    def present?; end
-
     sig { abstract.params(fallback: Value).returns(Value) }
     def value_or(fallback); end
   end
@@ -33,9 +30,6 @@ module Oapi
     def initialize(value:)
       @value = value
     end
-
-    sig { override.returns(T::Boolean) }
-    def present? = true
 
     sig { override.params(fallback: Value).returns(Value) }
     def value_or(fallback) = value
@@ -56,9 +50,6 @@ module Oapi
     include Optional
 
     Value = type_member
-
-    sig { override.returns(T::Boolean) }
-    def present? = false
 
     sig { override.params(fallback: Value).returns(Value) }
     def value_or(fallback) = fallback

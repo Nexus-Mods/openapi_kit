@@ -2,7 +2,6 @@
 # frozen_string_literal: true
 
 require "oapi/codec/contract"
-require "oapi/codec/untyped"
 require "oapi/codec/string"
 require "oapi/codec/integer"
 require "oapi/codec/float"
