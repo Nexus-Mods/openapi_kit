@@ -27,18 +27,18 @@ end
 
 ```yaml
 # oapi.yml
-spec: openapi/mods.yaml
+spec: openapi/petstore.yaml
 output: app/api
-modules: [Mods, V1]
+modules: [Petstore, V1]
 controller_base: Api::BaseController
-principal: "::Mods::Principal"
+principal: "::Petstore::Principal"
 ```
 
 | Option | Meaning |
 | --- | --- |
 | `spec` | root OpenAPI document, resolved relative to this file |
-| `output` | directory the tree is written to; oapi owns it |
-| `modules` | namespace for every generated constant, so `Mods::V1::Types::Mod` |
+| `output` | directory the tree is written to, which oapi owns |
+| `modules` | namespace for every generated constant, so `Petstore::V1::Types::Pet` |
 | `controller_base` | class the generated controllers inherit from |
 | `principal` | the class a successful authentication produces |
 | `type_mappings` | your Ruby type for a `type:format` pair |
@@ -48,13 +48,13 @@ The first four are required.
 
 ```console
 $ bundle exec oapi generate -c oapi.yml
-app/api/mods/v1/types/mod.rb
-app/api/mods/v1/operations/list_mods.rb
-app/api/mods/v1/handlers/mods.rb
-app/api/mods/v1/controllers/mods_controller.rb
-app/api/mods/v1/security.rb
-app/api/mods/v1/registry.rb
-app/api/mods/v1/routes.rb
+app/api/petstore/v1/types/pet.rb
+app/api/petstore/v1/operations/list_pets.rb
+app/api/petstore/v1/handlers/pets.rb
+app/api/petstore/v1/controllers/pets_controller.rb
+app/api/petstore/v1/security.rb
+app/api/petstore/v1/registry.rb
+app/api/petstore/v1/routes.rb
 ```
 
 One constant per file at the path that constant implies, so Rails autoloads it. Each run
@@ -76,27 +76,27 @@ config.autoload_paths << Rails.root.join("app/api").to_s
 # config/routes.rb
 Rails.application.routes.draw do
   scope "/v1" do
-    Mods::V1::Routes.draw(self)
+    Petstore::V1::Routes.draw(self)
   end
 end
 ```
 
-**Implement one handler per tag.** Miss an operation and Sorbet names the abstract method;
-return an undeclared response variant and it will not compile.
+**Implement one handler per tag.** Miss an operation and Sorbet names the abstract
+method. Return an undeclared response variant and it will not compile.
 
 ```ruby
-class ModsHandler
+class PetsHandler
   extend T::Sig
-  include Mods::V1::Handlers::Mods
+  include Petstore::V1::Handlers::Pets
 
   sig do
-    override.params(request: Mods::V1::Operations::ListMods::Request)
-            .returns(Mods::V1::Operations::ListMods::Response)
+    override.params(request: Petstore::V1::Operations::ListPets::Request)
+            .returns(Petstore::V1::Operations::ListPets::Response)
   end
-  def list_mods(request:)
-    mods = Mod.where(game: request.path.game_domain).page(request.query.page)
+  def list_pets(request:)
+    pets = Pet.where(store: request.path.store_id).page(request.query.page)
 
-    Mods::V1::Operations::ListMods::Ok.new(body: mods.map { |mod| present(mod) })
+    Petstore::V1::Operations::ListPets::Ok.new(body: pets.map { |pet| present(pet) })
   end
 end
 ```
@@ -104,7 +104,7 @@ end
 **Give the controllers a base class.** They inherit whatever you put there and need
 nothing from it, so this is where your own concerns and error mapping live. A request
 oapi cannot decode raises `Oapi::DecodeError`, carrying `detail` and a `json_pointer`
-naming the field; oapi takes no view on the wire format.
+naming the field, and oapi takes no view on the wire format.
 
 ```ruby
 # app/controllers/api/base_controller.rb
@@ -126,31 +126,23 @@ end
 ```
 
 **Assign the registry.** oapi generates a `Registry` struct with one slot per handler and
-authenticator, and controllers read it from `Mods::V1.registry`. Rails instantiates
+authenticator, and controllers read it from `Petstore::V1.registry`. Rails instantiates
 controllers itself, so they cannot be handed one. Omit a slot, or pass something that does
 not implement its interface, and it does not compile.
 
 ```ruby
 # config/initializers/oapi.rb
 Rails.application.config.to_prepare do
-  Mods::V1.registry = Mods::V1::Registry.new(
-    mods: ModsHandler.new,
+  Petstore::V1.registry = Petstore::V1::Registry.new(
+    pets: PetsHandler.new(repo: PetRepo.new),
     system: SystemHandler.new,
-    bearer_auth: BearerAuthenticator.new
+    bearer_auth: BearerAuthenticator.new(decoder: TokenDecoder.new)
   )
 end
 ```
 
-The registry is only oapi's boundary, not a dependency injection container. What each
-handler needs behind it is yours, and a container is the right tool there. Unlike
-controllers, *you* construct handlers, so constructor injection works:
-
-```ruby
-class ModsHandler
-  include Mods::V1::Handlers::Mods            # oapi's interface
-  include Deps["mod_repo", "search_client"]   # your container, via dry-auto_inject
-end
-```
+The registry is oapi's boundary and nothing more. What a handler needs behind it is
+yours, and unlike controllers *you* construct handlers, so they take whatever they need.
 
 Building the registry in `to_prepare` constructs every handler at boot, along with
 whatever their constructors resolve, and reassigns them on a code reload.
@@ -163,10 +155,10 @@ anything, and your handler receives the principal. Nothing else can reach the ha
 ```yaml
 security: [{ bearerAuth: [] }]              # the document's default
 paths:
-  /games/{gameDomain}/mods:
+  /stores/{storeId}/pets:
     post:
       security:                              # this operation overrides it
-        - bearerAuth: [mods:write]
+        - bearerAuth: [pets:write]
         - apiKeyAuth: []
 ```
 
@@ -174,18 +166,18 @@ Name what authentication produces, and seal it if your schemes produce different
 that is what makes a handler's `case` exhaustive.
 
 ```ruby
-module Mods::Principal
+module Petstore::Principal
   extend T::Helpers
   sealed!
 
   class Token < T::Struct           # a JWT carries its permissions
-    include Mods::Principal
+    include Petstore::Principal
     const :user_id, Integer
     const :permissions, T::Array[String]
   end
 
   class Key < T::Struct             # an API key does not
-    include Mods::Principal
+    include Petstore::Principal
     const :client, String
   end
 end
@@ -198,18 +190,23 @@ declares, so `credential` is implemented for you.
 ```ruby
 class BearerAuthenticator
   extend T::Sig
-  include Mods::V1::Security::BearerAuth
+  include Petstore::V1::Security::BearerAuth
+
+  sig { params(decoder: TokenDecoder).void }
+  def initialize(decoder:)
+    @decoder = decoder
+  end
 
   sig do
     override.params(request: ActionDispatch::Request, scopes: T::Array[String])
-            .returns(T.nilable(Mods::Principal::Token))
+            .returns(T.nilable(Petstore::Principal::Token))
   end
   def authenticate(request:, scopes:)
     token = credential(request) or return nil
-    claims = Jwt.verify(token) or return nil
+    claims = @decoder.decode(token) or return nil
     return nil unless scopes.all? { |scope| claims.scopes.include?(scope) }
 
-    Mods::Principal::Token.new(user_id: claims.sub, permissions: claims.scopes)
+    Petstore::Principal::Token.new(user_id: claims.sub, permissions: claims.scopes)
   end
 end
 ```
@@ -222,10 +219,10 @@ end
 Your handler then reads `request.principal`:
 
 ```ruby
-def create_mod(request:)
-  author = case request.principal
-           when Mods::Principal::Token then "user-#{request.principal.user_id}"
-           when Mods::Principal::Key then request.principal.client
+def create_pet(request:)
+  owner = case request.principal
+           when Petstore::Principal::Token then "user-#{request.principal.user_id}"
+           when Petstore::Principal::Key then request.principal.client
            else T.absurd(request.principal)
            end
 end
@@ -307,73 +304,59 @@ price:
 ## Files and binary responses
 
 A codec converts between a Ruby type and `Oapi::Wire`, the parsed value model every
-supported media type shares: a multipart body's text fields go through the same codecs as
-a JSON property, as do query and header values. A file is the one thing outside that
-model, so it never goes through a codec. `format: binary` is handled in two places
-instead, and refused everywhere else.
+supported media type shares. A file is the one thing outside that model, so it never goes
+through a codec. `format: binary` is handled in two places instead, and refused everywhere
+else.
 
-An upload is a property of a `multipart/form-data` request body. Such a body is still a
-type, but it carries a `Form` where other types carry a `Codec`, because a file has no
-wire form in either direction:
+**An upload is a property of a `multipart/form-data` request body.** Such a body is still
+a generated type, but it carries a `Form` where other types carry a `Codec`.
 
 ```ruby
-class UploadModFileBody < T::Struct
-  const :upload, ::ActionDispatch::Http::UploadedFile
+# app/api/petstore/v1/types/upload_pet_photo_body.rb, generated
+class UploadPetPhotoBody < T::Struct
+  const :photo, ::ActionDispatch::Http::UploadedFile
   const :description, T.nilable(::String)
 
   module Form
     extend ::Oapi::Form::Contract
 
-    sig { override.params(parts: ::Oapi::Form::Parts).returns(MyApi::Types::UploadModFileBody) }
+    sig { override.params(parts: ::Oapi::Form::Parts).returns(UploadPetPhotoBody) }
     def self.from_parts(parts) = # ...
   end
 end
 ```
 
-`Oapi::Form::Parts` is what a multipart body arrives as —
-`T::Hash[String, T.any(Oapi::Wire, ActionDispatch::Http::UploadedFile)]` — the one place a
-file and a value share a container. The names follow the HTTP world rather than Rails':
-the mapping is a *form* (`FormData` in browsers and Starlette, `multipart.Form` in Go,
-`IFormCollection` in ASP.NET Core) and its members are *parts* (RFC 7578, and OpenAPI's own
-wording that properties "are correlated with `multipart` parts"). `Oapi::Form::Contract`
-is a one-way interface, so `Types::X::Form.is_a?(Oapi::Form::Contract)` answers whether a
-type is form-decoded. The handler gets the struct:
+`Oapi::Form::Parts` is `T::Hash[String, T.any(Oapi::Wire, UploadedFile)]`, the one place a
+file and a value sit together. `Types::UploadPetPhotoBody::Form.is_a?(Oapi::Form::Contract)`
+answers whether a type is form-decoded. The handler gets the struct:
 
 ```ruby
-def upload_mod_file(request:)
-  Blob.store!(io: request.body.upload.tempfile,
-              filename: request.body.upload.original_filename)
+def upload_pet_photo(request:)
+  Blob.store!(io: request.body.photo.tempfile)
 
-  MyApi::Operations::UploadModFile::NoContent.new
+  Petstore::V1::Operations::UploadPetPhoto::NoContent.new
 end
 ```
 
-A multipart schema must be an object, since a form is fields. A component may hold a file
-and `$ref` works normally — it becomes a form type, decoded but never encoded, which the
-binary rules make safe: nothing needing a wire form can reach it. A multipart body with no
-file is an ordinary type on the ordinary codec path, the same as an urlencoded body of
-that shape.
-
-A binary response is the whole body, with whatever content type the document declares.
+**A binary response is the whole body**, with whatever content type the document declares.
 Its variant carries an `Oapi::Stream`, which is `T.any(::IO, ::StringIO)`, plus a `chunk`
-size that defaults to 16KB:
+size that defaults to 16KB.
 
 ```ruby
-def download_mod_file(request:)
-  MyApi::Operations::DownloadModFile::Ok.new(body: File.open(path, "rb"))
+def download_pet_photo(request:)
+  Petstore::V1::Operations::DownloadPetPhoto::Ok.new(body: File.open(path, "rb"))
 end
 ```
 
-Every response variant answers `to_body`, returning a sealed `Oapi::Body` — `Empty`,
-`Json` or `Binary` — and the generated controller cases over it to pick `head`, `render`
-or a streamed body. Adding a kind of body would stop the controllers compiling until it
-was handled. A streamed response sends no `Content-Length` and supports no `Range`.
+Every response variant answers `to_body`, returning a sealed `Oapi::Body` of `Empty`,
+`Json` or `Binary`, and the generated controller cases over it to pick `head`, `render` or
+a streamed body. A streamed response sends no `Content-Length` and supports no `Range`.
 
-`string:binary` has no entry in the default type mappings and cannot be given one, since
-`type_mappings` names codecs and a file has nothing for one to convert. Convert to your
-own type in the handler — `Shrine.upload(request.body.upload)` and the like. What does
-work is `x-ruby-type` on a single property: that says the property is not a file but your
-own type with your own codec, and it is then treated as an ordinary value everywhere.
+`string:binary` cannot be given a `type_mappings` entry, since a file has nothing for a
+codec to convert. Convert to your own type in the handler instead, with
+`Shrine.upload(request.body.photo)` and the like. `x-ruby-type` on a single property says
+that property is not a file but your own type with your own codec, treated as an ordinary
+value everywhere.
 
 ## Not supported yet
 
@@ -385,7 +368,7 @@ Refused at generation time, rather than mis-generated:
   schema is `format: binary` may declare any content type at all.
 - Two security schemes required together in one alternative (`{a: [], b: []}`). One scheme
   per alternative.
-- A path template Rails cannot route, such as `{game-domain}`.
+- A path template Rails cannot route, such as `{pet-id}`.
 
 Documented behaviour to know about:
 
@@ -399,8 +382,8 @@ Documented behaviour to know about:
   request body, or as the whole schema of a response body. Anywhere else is refused: a
   file is bytes rather than a parsed value, so no codec can convert it. Use `format: byte`
   to carry bytes inside a value.
-- An OAuth2 flow's `authorizationUrl`, `tokenUrl` and `refreshUrl` are not carried; they
-  tell a client where to obtain a token and a resource server never calls them.
+- An OAuth2 flow's `authorizationUrl`, `tokenUrl` and `refreshUrl` are not carried, since
+  they tell a client where to obtain a token and a resource server never calls them.
 
 ## Development
 
