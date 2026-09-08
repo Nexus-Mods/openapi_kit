@@ -157,7 +157,7 @@ security: [{ bearerAuth: [] }]              # the document's default
 paths:
   /stores/{storeId}/pets:
     post:
-      security:                              # this operation overrides it
+      security:                             # this operation overrides it
         - bearerAuth: [pets:write]
         - apiKeyAuth: []
 ```
