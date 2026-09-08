@@ -15,7 +15,7 @@ Gem::Specification.new do |spec|
                      "that a generated authenticator interface hands you."
   spec.homepage      = "https://github.com/Nexus-Mods/oapi"
   spec.license       = "MIT"
-  spec.required_ruby_version = ">= 3.3"
+  spec.required_ruby_version = ">= 3.4"
 
   spec.metadata["rubygems_mfa_required"] = "true"
   spec.metadata["source_code_uri"]       = spec.homepage
