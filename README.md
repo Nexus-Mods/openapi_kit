@@ -119,7 +119,7 @@ module Api
 
     def unprocessable(error)
       render json: { detail: error.detail, pointer: error.json_pointer },
-             status: :unprocessable_content
+             status: 422
     end
   end
 end
