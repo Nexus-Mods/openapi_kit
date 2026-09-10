@@ -5,7 +5,6 @@ module Oapi
   module Optional
     extend T::Sig
     extend T::Generic
-    extend T::Helpers
     include Kernel
     abstract!
     sealed!
