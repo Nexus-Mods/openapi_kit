@@ -8,7 +8,6 @@ module Oapi
     module Contract
       extend T::Sig
       extend T::Generic
-      extend T::Helpers
       interface!
 
       Value = type_member
