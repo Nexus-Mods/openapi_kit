@@ -67,7 +67,6 @@ RSpec/NestedGroups:
 RSpec/InstanceVariable:
   Exclude:
     - "spec/openapi_kit/codegen/writer_spec.rb"
-    - "spec/openapi_kit/codegen/config_spec.rb"
 RSpec/DescribeClass:
   Enabled: false
 RSpec/SpecFilePathFormat:

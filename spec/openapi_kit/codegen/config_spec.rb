@@ -3,35 +3,29 @@
 require "tmpdir"
 
 RSpec.describe OpenAPIKit::Codegen::Config do
-  around do |example|
-    Dir.mktmpdir do |dir|
-      @dir = Pathname.new(dir)
-      example.run
-    end
-  end
-
-  def write(yaml)
-    path = @dir.join("openapi_kit.yml")
-    path.write(yaml)
-    path
-  end
+  def parse(yaml) = described_class.from_yaml(yaml, relative_to: Pathname.new("/api/openapi_kit.yml"))
 
   it "resolves paths relative to the config file" do
-    config = described_class.from_file(write(<<~YAML))
-      spec: specs/api.yaml
-      output: generated
-      modules: [API, V3]
-      controller_base: ApiBaseController
-    YAML
+    Dir.mktmpdir do |tmp|
+      dir = Pathname.new(tmp)
+      dir.join("openapi_kit.yml").write(<<~YAML)
+        spec: specs/api.yaml
+        output: generated
+        modules: [API, V3]
+        controller_base: ApiBaseController
+      YAML
 
-    expect(config.spec).to eq(@dir.join("specs/api.yaml"))
-    expect(config.output).to eq(@dir.join("generated"))
-    expect(config.namespace).to eq("API::V3")
+      config = described_class.from_file(dir.join("openapi_kit.yml"))
+
+      expect(config.spec).to eq(dir.join("specs/api.yaml"))
+      expect(config.output).to eq(dir.join("generated"))
+      expect(config.namespace).to eq("API::V3")
+    end
   end
 
   describe "type mappings" do
     def with_mapping(body)
-      described_class.from_file(write(<<~YAML))
+      parse(<<~YAML)
         spec: openapi/api.yaml
         output: app/api
         modules: [Api]
@@ -72,23 +66,25 @@ RSpec.describe OpenAPIKit::Codegen::Config do
 
   describe "options it refuses to guess at" do
     it "names the unknown option and lists the valid ones" do
-      expect { described_class.from_file(write("spec: a\noutput: b\nmodules: [A]\ncontroller_base: C\nmodules_: x\n")) }
+      expect { parse("spec: a\noutput: b\nmodules: [A]\ncontroller_base: C\nmodules_: x\n") }
         .to raise_error(OpenAPIKit::ConfigError, /unknown option modules_\. Known options: spec, output/)
     end
 
     it "requires spec, output and modules" do
-      expect { described_class.from_file(write("spec: a\noutput: b\n")) }
+      expect { parse("spec: a\noutput: b\n") }
         .to raise_error(OpenAPIKit::ConfigError, /`modules` is required/)
     end
 
     it "rejects an empty modules list" do
-      expect { described_class.from_file(write("spec: a\noutput: b\nmodules: []\ncontroller_base: C\n")) }
+      expect { parse("spec: a\noutput: b\nmodules: []\ncontroller_base: C\n") }
         .to raise_error(OpenAPIKit::ConfigError, /must name at least one namespace, e\.g\. \[API, V3\]/)
     end
 
     it "reports a missing file rather than crashing" do
-      expect { described_class.from_file(@dir.join("nope.yml")) }
-        .to raise_error(OpenAPIKit::ConfigError, /No such config file/)
+      Dir.mktmpdir do |tmp|
+        expect { described_class.from_file(Pathname.new(tmp).join("nope.yml")) }
+          .to raise_error(OpenAPIKit::ConfigError, /No such config file/)
+      end
     end
   end
 end

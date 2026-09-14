@@ -41,10 +41,8 @@ module GeneratorHelper
     config = config_for(spec: dir.join("api.yaml"), output: dir.join("generated"),
                         modules: modules, **options)
     generator = OpenAPIKit::Codegen::Generator.new(config: config)
-    generator.generate
+    sources = generator.sources.to_h { |file| [file.path, file.contents] }
 
-    output = dir.join("generated")
-    sources = output.glob("**/*.rb").to_h { |file| [file.relative_path_from(output).to_s, file.read] }
     Generated.new(sources: sources, warnings: generator.warnings)
   end
 
