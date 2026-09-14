@@ -18,27 +18,6 @@ module Oapi
           T::Hash[String, String]
         )
 
-        RENDERINGS = T.let(
-          {
-            "::Oapi::Body::Empty" => ["head(result.status)"],
-            "::Oapi::Body::Json" => [
-              "render(json: body.wire, status: result.status, content_type: result.content_type)"
-            ],
-            "::Oapi::Body::Stream" => [
-              %(response.headers["Content-Type"] = result.content_type.to_s),
-              "response.status = result.status",
-              "self.response_body = body"
-            ],
-            "::Oapi::Body::File" => [
-              %(response.headers["Content-Type"] = result.content_type.to_s),
-              %(response.headers["Content-Length"] = body.size.to_s),
-              "response.status = result.status",
-              "response.send_file(body.path.to_s)"
-            ]
-          }.freeze,
-          T::Hash[String, T::Array[String]]
-        )
-
         sig { params(document: Model::Document, registry: TypeRegistry, config: Config).void }
         def initialize(document:, registry:, config:)
           @document = document
@@ -62,6 +41,7 @@ module Oapi
         def emit_controller(buffer, tag, operations)
           buffer.nest("class #{Naming.pascal(tag)}Controller < #{controller_base}") do
             buffer.line("extend T::Sig")
+            buffer.line("include ::Oapi::Rendering")
 
             operations.each do |operation|
               buffer.blank
@@ -72,8 +52,6 @@ module Oapi
             buffer.line("private")
             buffer.blank
             emit_handler(buffer, tag)
-            buffer.blank
-            emit_render_response(buffer)
 
             operations.select { |operation| principal?(operation) }.each do |operation|
               buffer.blank
@@ -175,19 +153,6 @@ module Oapi
         sig { params(buffer: Buffer, operation: Model::Operation).void }
         def emit_dispatch(buffer, operation)
           buffer.line("render_response(handler.#{Naming.identifier(operation.id)}(request: decoded))")
-        end
-
-        sig { params(buffer: Buffer).void }
-        def emit_render_response(buffer)
-          buffer.line("sig { params(result: ::Oapi::Response).void }")
-          buffer.nest("def render_response(result)") do
-            buffer.case_of("(body = result.to_body)") do
-              RENDERINGS.each do |kind, lines|
-                buffer.when_of(kind) { lines.each { |line| buffer.line(line) } }
-              end
-              buffer.line("else T.absurd(body)")
-            end
-          end
         end
 
         sig { params(buffer: Buffer, group: String, parameters: T::Array[Model::Parameter]).void }
