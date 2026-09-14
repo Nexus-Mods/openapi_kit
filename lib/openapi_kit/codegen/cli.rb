@@ -5,7 +5,7 @@ require "optparse"
 
 module OpenAPIKit
   module Codegen
-    class Cli
+    class CLI
       extend T::Sig
 
       sig { params(argv: T::Array[String], out: T.any(IO, StringIO), err: T.any(IO, StringIO)).returns(Integer) }
