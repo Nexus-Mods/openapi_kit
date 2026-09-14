@@ -26,8 +26,13 @@ module OpenAPIKit
         end
       end
 
+      # Rails renders a Time through as_json at three decimal places
+      # (ActiveSupport::JSON::Encoding.time_precision), so an application moving onto
+      # openapi_kit keeps emitting the timestamps its clients already parse.
+      PRECISION = 3
+
       sig { override.params(value: ::Time).returns(OpenAPIKit::Wire) }
-      def self.to_wire(value) = value.utc.iso8601
+      def self.to_wire(value) = value.utc.iso8601(PRECISION)
     end
   end
 end

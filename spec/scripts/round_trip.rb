@@ -48,7 +48,7 @@ check("uniq collapses equal values") { [mod, other].uniq.size == 1 }
 check("differing values are unequal") { KitchenSink::Types::Mod::Codec.from_wire(WIRE.merge("id" => 8)) != mod }
 
 wire = KitchenSink::Types::Mod::Codec.to_wire(mod)
-check("dumped date-time") { wire["updatedAt"] == "2026-09-02T10:00:00Z" }
+check("dumped date-time") { wire["updatedAt"] == "2026-09-02T10:00:00.000Z" }
 check("dumped enum") { wire["status"] == "under-moderation" }
 check("required nullable stays null") { wire.key?("deletedAt") && wire["deletedAt"].nil? }
 check("absent optional omitted") { !wire.key?("summary") }

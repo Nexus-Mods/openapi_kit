@@ -34,7 +34,13 @@ RSpec.describe OpenAPIKit::Codec do
   describe "round trips" do
     it "normalises a date-time to UTC" do
       value = described_class::DateTime.from_wire("2026-09-02T12:00:00+02:00")
-      expect(described_class::DateTime.to_wire(value)).to eq("2026-09-02T10:00:00Z")
+      expect(described_class::DateTime.to_wire(value)).to eq("2026-09-02T10:00:00.000Z")
+    end
+
+    it "keeps the sub-second precision Rails renders, so a migrating client sees no change" do
+      value = described_class::DateTime.from_wire("2026-09-02T12:00:00.250Z")
+
+      expect(described_class::DateTime.to_wire(value)).to eq("2026-09-02T12:00:00.250Z")
     end
 
     it "keeps decimal precision as a string" do
