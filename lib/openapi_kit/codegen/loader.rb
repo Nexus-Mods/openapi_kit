@@ -405,7 +405,7 @@ module OpenAPIKit
             Model::OAuth2Scheme.new(name: name, scopes: oauth_scopes(node, name: name), description: node.description,
                                     extensions: extensions(node))
           when "openIdConnect"
-            Model::OpenIdConnectScheme.new(name: name, url: node.open_id_connect_url.to_s,
+            Model::OpenIDConnectScheme.new(name: name, url: node.open_id_connect_url.to_s,
                                            description: node.description, extensions: extensions(node))
           else
             raise SchemaError, "Security scheme #{name.inspect} has unsupported type #{node.type.inspect}."

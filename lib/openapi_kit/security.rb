@@ -19,7 +19,7 @@ module OpenAPIKit
       case scheme
       when ApiKey then api_key(scheme, request)
       when Http then authorization(request, scheme.scheme)
-      when OAuth2, OpenIdConnect then authorization(request, "bearer")
+      when OAuth2, OpenIDConnect then authorization(request, "bearer")
       else T.absurd(scheme)
       end
     end
@@ -75,7 +75,7 @@ module OpenAPIKit
       sig { params(scheme: Scheme).returns(String) }
       def self.name_of(scheme)
         case scheme
-        when ApiKey, Http, OAuth2, OpenIdConnect then scheme.name
+        when ApiKey, Http, OAuth2, OpenIDConnect then scheme.name
         else T.absurd(scheme)
         end
       end
@@ -112,7 +112,7 @@ module OpenAPIKit
       const :extensions, T::Hash[String, T.untyped], default: {}
     end
 
-    class OpenIdConnect < T::Struct
+    class OpenIDConnect < T::Struct
       include Scheme
       const :name, String
       const :url, String
