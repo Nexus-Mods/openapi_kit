@@ -98,7 +98,7 @@ module Oapi
 
       UPLOADED_FILE = "::ActionDispatch::Http::UploadedFile"
 
-      STREAM = "::Oapi::Stream"
+      BYTES = "::Oapi::Body::Bytes"
 
       sig { params(schema: Model::Schema, value: String).returns(T.nilable(String)) }
       def from_form_expr(schema, value:)

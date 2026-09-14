@@ -50,10 +50,15 @@ module Server
           head(result.status)
         when ::Oapi::Body::Json
           render(json: body.wire, status: result.status, content_type: result.content_type)
-        when ::Oapi::Body::Binary
+        when ::Oapi::Body::Stream
           response.headers["Content-Type"] = result.content_type.to_s
           response.status = result.status
           self.response_body = body
+        when ::Oapi::Body::File
+          response.headers["Content-Type"] = result.content_type.to_s
+          response.headers["Content-Length"] = body.size.to_s
+          response.status = result.status
+          response.send_file(body.path.to_s)
         else T.absurd(body)
         end
       end

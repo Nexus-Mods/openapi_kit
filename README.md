@@ -339,18 +339,42 @@ end
 ```
 
 **A binary response is the whole body**, with whatever content type the document declares.
-Its variant carries an `Oapi::Stream`, which is `T.any(::IO, ::StringIO)`, plus a `chunk`
-size that defaults to 16KB.
+Its variant takes either a file on disk or a block that writes the bytes.
 
 ```ruby
 def download_pet_photo(request:)
-  Petstore::V1::Operations::DownloadPetPhoto::Ok.new(body: File.open(path, "rb"))
+  Petstore::V1::Operations::DownloadPetPhoto::Ok.new(
+    body: Oapi::Body::File.new(path: Rails.root.join("photos", name))
+  )
 end
 ```
 
+A path names the file and nothing more, so the server can send it however it likes. Puma
+opens it and reaches `IO.copy_stream`, which is `sendfile` on Linux, nginx and Apache get
+an `X-Accel-Redirect` or `X-Sendfile` from `Rack::Sendfile` and serve it without Ruby, and
+a server that takes none of those reads it in 16KB chunks. `Content-Length` is set from
+the file, so the client gets a progress bar.
+
+For bytes that are not a file yet, a zip built per request or a body proxied from
+elsewhere, pass a stream instead. Its block is called with a sink, and whatever the block
+opens it also closes, so oapi holds no descriptor of yours:
+
+```ruby
+body: Oapi::Body::Stream.new(
+  body: ->(sink) { Archive.open(pet) { |zip| IO.copy_stream(zip, sink) } }
+)
+```
+
+A sink answers `write`, `<<` and a `flush` that does nothing, since it never buffers, and
+`write` answers the byte count, which is all `IO.copy_stream` asks of it. Copying that
+way writes 16KB at a time, and one write is one chunk on the wire, so read in whatever
+size you want to send. A client that vanishes raises inside the block, where the `ensure`
+that closes what you opened already is.
+
 Every response variant answers `to_body`, returning a sealed `Oapi::Body` of `Empty`,
-`Json` or `Binary`, and the generated controller cases over it to pick `head`, `render` or
-a streamed body. A streamed response sends no `Content-Length` and supports no `Range`.
+`Json`, `Stream` or `File`, and the generated controller cases over it to pick `head`,
+`render`, a streamed body or `send_file`. A streamed response sends no `Content-Length`
+and neither kind supports `Range`.
 
 `string:binary` cannot be given a `type_mappings` entry, since a file has nothing for a
 codec to convert. Convert to your own type in the handler instead, with

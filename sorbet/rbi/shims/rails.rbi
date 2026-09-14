@@ -24,6 +24,9 @@ module ActionDispatch
 
     sig { params(status: Integer).void }
     def status=(status); end
+
+    sig { params(path: String).void }
+    def send_file(path); end
   end
 
   module Http

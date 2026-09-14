@@ -30,14 +30,13 @@ module Server
         extend T::Sig
         include Response
 
-        const :body, ::Oapi::Stream
-        const :chunk, ::Integer, default: ::Oapi::DEFAULT_CHUNK
+        const :body, ::Oapi::Body::Bytes
 
         sig { override.returns(::Integer) }
         def status = 200
 
         sig { override.returns(::Oapi::Body) }
-        def to_body = ::Oapi::Body::Binary.new(stream: body, chunk: chunk)
+        def to_body = body
 
         sig { override.returns(T.nilable(::String)) }
         def content_type = "application/octet-stream"

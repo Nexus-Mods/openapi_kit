@@ -46,7 +46,8 @@ RSpec.describe "static guarantees" do
 
   it "rejects a render that does not handle every kind of body" do
     expect(invalid("unhandled_body")).to include(
-      "Control flow could reach `T.absurd` because the type `Oapi::Body::Binary` wasn't handled"
+      "Control flow could reach `T.absurd` because the type " \
+      "`T.any(Oapi::Body::Stream, Oapi::Body::File)` wasn't handled"
     )
   end
 
