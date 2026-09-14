@@ -246,9 +246,7 @@ module Oapi
           case payload
           when Payload::Empty then []
           when Payload::Json then ["const :body, #{@registry.sorbet_type(payload.schema)}"]
-          when Payload::Stream
-            ["const :body, #{TypeRegistry::STREAM}",
-             "const :chunk, ::Integer, default: ::Oapi::DEFAULT_CHUNK"]
+          when Payload::Stream then ["const :body, #{TypeRegistry::BYTES}"]
           else T.absurd(payload)
           end
         end
@@ -259,7 +257,7 @@ module Oapi
           when Payload::Empty then "::Oapi::Body::Empty.new"
           when Payload::Json
             "::Oapi::Body::Json.new(wire: #{@registry.to_wire_expr(payload.schema, value: "body")})"
-          when Payload::Stream then "::Oapi::Body::Binary.new(stream: body, chunk: chunk)"
+          when Payload::Stream then "body"
           else T.absurd(payload)
           end
         end

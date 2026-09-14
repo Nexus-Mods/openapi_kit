@@ -6,23 +6,25 @@ class FilesHandler
   STORE = {}
 
   def download_mod_file(request:)
-    stored = STORE[request.path.mod_id]
+    body = STORE[request.path.mod_id]
 
-    if stored.nil?
+    if body.nil?
       return Dummy::V1::Operations::DownloadModFile::NotFound.new(
         body: Dummy::V1::Types::ProblemDetails.new(title: "no file for mod #{request.path.mod_id}")
       )
     end
 
-    Dummy::V1::Operations::DownloadModFile::Ok.new(body: StringIO.new(stored), chunk: 4)
+    Dummy::V1::Operations::DownloadModFile::Ok.new(body: body)
   end
 
   def upload_mod_file(request:)
-    STORE[request.path.mod_id] = [
+    bytes = [
       request.body.upload.original_filename,
       request.body.description,
       request.body.upload.tempfile.read
     ].compact.join("|")
+
+    STORE[request.path.mod_id] = Oapi::Body::Stream.new(body: ->(sink) { sink.write(bytes) })
 
     Dummy::V1::Operations::UploadModFile::NoContent.new
   end

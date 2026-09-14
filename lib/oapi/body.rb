@@ -1,15 +1,34 @@
 # typed: strict
 # frozen_string_literal: true
 
-require "stringio"
-require "tempfile"
+require "pathname"
 
 require "oapi/wire"
 
 module Oapi
-  Stream = T.type_alias { T.any(::IO, ::StringIO, ::Tempfile) }
+  class Sink
+    extend T::Sig
 
-  DEFAULT_CHUNK = 16_384
+    sig { params(block: T.proc.params(bytes: ::String).void).void }
+    def initialize(block)
+      @block = block
+    end
+
+    sig { params(bytes: ::String).returns(::Integer) }
+    def write(bytes)
+      @block.call(bytes.b)
+      bytes.bytesize
+    end
+
+    sig { params(bytes: ::String).returns(T.self_type) }
+    def <<(bytes)
+      write(bytes)
+      self
+    end
+
+    sig { returns(T.self_type) }
+    def flush = self
+  end
 
   module Body
     extend T::Sig
@@ -27,34 +46,26 @@ module Oapi
       const :wire, Oapi::Wire
     end
 
-    class Binary
+    class Stream < T::Struct
       extend T::Sig
       include Body
 
-      sig { returns(Oapi::Stream) }
-      attr_reader :stream
+      const :body, T.proc.params(sink: Oapi::Sink).void
+
+      sig { params(block: T.proc.params(bytes: ::String).void).void }
+      def each(&block) = body.call(Sink.new(block))
+    end
+
+    class File < T::Struct
+      extend T::Sig
+      include Body
+
+      const :path, ::Pathname
 
       sig { returns(::Integer) }
-      attr_reader :chunk
-
-      sig { params(stream: Oapi::Stream, chunk: ::Integer).void }
-      def initialize(stream:, chunk: Oapi::DEFAULT_CHUNK)
-        raise ArgumentError, "chunk must be positive, got #{chunk}" unless chunk.positive?
-
-        @stream = stream
-        @chunk = chunk
-      end
-
-      # Rack iterates the body once and its close does not reach here, so the stream is
-      # closed when iteration ends, whether that is exhaustion or the client vanishing.
-      sig { params(block: T.proc.params(bytes: ::String).void).void }
-      def each(&block)
-        while (bytes = stream.read(chunk))
-          block.call(bytes)
-        end
-      ensure
-        stream.close if stream.respond_to?(:close) && !stream.closed?
-      end
+      def size = path.size
     end
+
+    Bytes = T.type_alias { T.any(Oapi::Body::Stream, Oapi::Body::File) }
   end
 end

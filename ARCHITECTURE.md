@@ -37,7 +37,8 @@ belongs in the layers below.
 `DEFAULT_TYPE_MAPPINGS`, merges your `type_mappings` over them, and refuses one you may
 not set: `string:binary`, since a file has no codec. It declines the question for a binary
 schema rather than guessing, because the answer differs by direction — an uploaded file in,
-a stream out — and the emitter asking is the only thing that knows which.
+a file or a block writing bytes out — and the emitter asking is the only thing that
+knows which.
 
 **`Emit::*`** each render one kind of file, through the `Buffer` DSL rather than
 templates. `Source.file` wraps a body in its module nesting.
@@ -76,7 +77,7 @@ too, so output that does not typecheck fails the build.
 `spec/dummy` is a real Rails application whose `app/api` is generated the same way.
 `spec/generated/rails_request_spec.rb` issues real requests against it, which is what
 catches the things static checks cannot: Rails handing back Symbol keys, a streamed
-response actually reaching the client in chunks, a multipart upload arriving as the file
+response actually reaching the client, a multipart upload arriving as the file
 Rails parsed, and an under-scoped caller getting 403 rather than 401.
 
 `spec/typecheck` holds the other half of that. `valid/` must typecheck; every file in

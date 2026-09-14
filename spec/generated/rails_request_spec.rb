@@ -122,7 +122,7 @@ RSpec.describe "a generated API inside a Rails application", type: :request do
       expect(last_response.body).to be_empty
     end
 
-    it "streams a binary response body back as bytes, in chunks" do
+    it "streams a binary response body back as the bytes the handler wrote" do
       upload(name: "cool.zip", body: "the actual bytes", description: "a mod")
 
       get "/v1/games/skyrim/mods/7/file"
@@ -130,6 +130,20 @@ RSpec.describe "a generated API inside a Rails application", type: :request do
       expect(last_response.status).to eq(200)
       expect(last_response.headers["content-type"]).to eq("application/octet-stream")
       expect(last_response.body).to eq("cool.zip|a mod|the actual bytes")
+    end
+
+    it "sends a file body through the server, which may copy it itself" do
+      Tempfile.create("download") do |file|
+        file.write("the actual bytes")
+        file.flush
+        FilesHandler::STORE[8] = Oapi::Body::File.new(path: Pathname.new(file.path))
+
+        get "/v1/games/skyrim/mods/8/file"
+
+        expect(last_response.status).to eq(200)
+        expect(last_response.headers["content-length"]).to eq("16")
+        expect(last_response.body).to eq("the actual bytes")
+      end
     end
 
     it "renders a JSON variant of the same operation as JSON" do

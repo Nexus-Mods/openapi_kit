@@ -1,66 +1,106 @@
 # frozen_string_literal: true
 
 RSpec.describe Oapi::Body do
-  describe Oapi::Body::Binary do
+  describe Oapi::Body::Stream do
     def chunks(binary) = binary.enum_for(:each).to_a
 
-    it "reads a stream in chunks of the size it was given" do
-      binary = described_class.new(stream: StringIO.new("abcdefg"), chunk: 3)
+    it "yields what the body writes into the sink" do
+      binary = described_class.new(body: ->(sink) { sink.write("abc") && sink.write("def") })
 
-      expect(chunks(binary)).to eq(%w[abc def g])
+      expect(chunks(binary)).to eq(%w[abc def])
     end
 
-    it "defaults to a chunk large enough for a small body to arrive whole" do
-      binary = described_class.new(stream: StringIO.new("abcdefg"))
+    it "accepts << as well as write" do
+      binary = described_class.new(body: ->(sink) { sink << "abc" << "def" })
 
-      expect(chunks(binary)).to eq(["abcdefg"])
+      expect(chunks(binary)).to eq(%w[abc def])
     end
 
-    it "yields nothing for an empty stream" do
-      expect(chunks(described_class.new(stream: StringIO.new("")))).to be_empty
+    it "answers flush, which writes nothing of its own" do
+      binary = described_class.new(body: ->(sink) { sink.flush.write("abc") })
+
+      expect(chunks(binary)).to eq(%w[abc])
     end
 
-    # read(0) answers "" rather than nil, so a non-positive chunk would never terminate.
-    # It is refused on construction: by the time each runs, Rack has sent the headers.
-    it "refuses a chunk size that would not make progress" do
-      expect { described_class.new(stream: StringIO.new("abc"), chunk: 0) }
-        .to raise_error(ArgumentError, /chunk must be positive/)
+    it "yields nothing for a body that writes nothing" do
+      expect(chunks(described_class.new(body: ->(_sink) {}))).to be_empty
     end
 
-    it "refuses a String, which is not a stream" do
-      expect { described_class.new(stream: "abc") }.to raise_error(TypeError)
+    it "answers the byte count, so IO.copy_stream can drive the sink" do
+      written = []
+      binary = described_class.new(body: ->(sink) { written << sink.write("four") })
+
+      chunks(binary)
+
+      expect(written).to eq([4])
     end
 
-    it "accepts a Tempfile, which is what an upload arrives as" do
-      Tempfile.create("body") do |file|
+    # IO.copy_stream reads into one buffer over and over, so the sink copies a chunk
+    # before handing it on. Without that, every chunk here would hold the same bytes.
+    it "copies each chunk out of the buffer IO.copy_stream reuses" do
+      source = StringIO.new(("a" * 16_384) + ("b" * 16_384))
+      binary = described_class.new(body: ->(sink) { IO.copy_stream(source, sink) })
+
+      expect(chunks(binary).map { |bytes| bytes[0] }).to eq(%w[a b])
+    end
+
+    it "yields binary strings, whatever encoding the body wrote" do
+      binary = described_class.new(body: ->(sink) { sink.write("é") })
+
+      expect(chunks(binary).map(&:encoding)).to eq([Encoding::BINARY])
+    end
+
+    it "refuses a stream, which is not a body that writes one" do
+      expect { described_class.new(body: StringIO.new("abc")) }.to raise_error(TypeError)
+    end
+
+    describe "what the block opened" do
+      it "is closed by the block, not by oapi" do
+        file = Tempfile.new("body")
         file.write("stored")
         file.rewind
 
-        expect(chunks(described_class.new(stream: file))).to eq(["stored"])
+        chunks(described_class.new(body: ->(sink) { IO.copy_stream(file, sink) }))
+
+        expect(file).not_to be_closed
+      ensure
+        file&.close
+        file&.unlink
+      end
+
+      it "is closed the moment a client vanishes, by the block's own ensure" do
+        Tempfile.create("body") do |source|
+          source.write("abcdef")
+          source.rewind
+          opened = nil
+
+          binary = described_class.new(
+            body: lambda do |sink|
+              File.open(source.path, "rb") do |io|
+                opened = io
+                io.each_char { |char| sink.write(char) }
+              end
+            end
+          )
+
+          seen = 0
+          expect do
+            binary.each { raise "client vanished" if (seen += 1) == 2 }
+          end.to raise_error("client vanished")
+          expect(opened).to be_closed
+        end
       end
     end
+  end
 
-    # Rack calls close on the body, but Rails' wrapper does not pass that on, so the
-    # stream is closed when iteration ends or nothing closes it at all.
-    it "closes the stream once it has been read" do
-      stream = StringIO.new("abc")
-      chunks(described_class.new(stream: stream))
+  describe Oapi::Body::File do
+    it "answers the size of the file the server will send" do
+      Tempfile.create("body") do |file|
+        file.write("stored")
+        file.flush
 
-      expect(stream).to be_closed
-    end
-
-    it "closes the stream when iteration is abandoned part way" do
-      stream = StringIO.new("abcdef")
-      seen = 0
-
-      expect do
-        described_class.new(stream: stream, chunk: 2).each do
-          seen += 1
-          raise "client vanished" if seen == 2
-        end
-      end.to raise_error("client vanished")
-
-      expect(stream).to be_closed
+        expect(described_class.new(path: Pathname.new(file.path)).size).to eq(6)
+      end
     end
   end
 
