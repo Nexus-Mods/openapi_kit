@@ -246,7 +246,7 @@ module OpenAPIKit
           case payload
           when Payload::Empty then []
           when Payload::Json then ["const :body, #{@registry.sorbet_type(payload.schema)}"]
-          when Payload::Stream then ["const :body, #{TypeRegistry::BYTES}"]
+          when Payload::Stream then ["const :body, #{TypeRegistry::BINARY}"]
           else T.absurd(payload)
           end
         end

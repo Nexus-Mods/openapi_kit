@@ -98,7 +98,7 @@ module OpenAPIKit
 
       UPLOADED_FILE = "::ActionDispatch::Http::UploadedFile"
 
-      BYTES = "::OpenAPIKit::Body::Bytes"
+      BINARY = "::OpenAPIKit::Body::Binary"
 
       sig { params(schema: Model::Schema, value: String).returns(T.nilable(String)) }
       def from_form_expr(schema, value:)

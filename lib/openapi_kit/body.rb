@@ -66,6 +66,6 @@ module OpenAPIKit
       def size = path.size
     end
 
-    Bytes = T.type_alias { T.any(OpenAPIKit::Body::Stream, OpenAPIKit::Body::File) }
+    Binary = T.type_alias { T.any(OpenAPIKit::Body::Stream, OpenAPIKit::Body::File) }
   end
 end
