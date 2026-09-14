@@ -60,7 +60,16 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           sed -i "s/0\.0\.0/${version}/" lib/openapi_kit/version.rb
-          gem build openapi_kit.gemspec
-          gem push "openapi_kit-${version}.gem"
-          gem build openapi_kit-codegen.gemspec
-          gem push "openapi_kit-codegen-${version}.gem"
+
+          push() {
+            status=$(curl -s -o /dev/null -w '%{http_code}' \
+              "https://rubygems.org/api/v2/rubygems/$1/versions/${version}.json")
+            case "${status}" in
+              200) echo "$1 ${version} is already published, skipping" ;;
+              404) gem build "$1.gemspec" && gem push "$1-${version}.gem" ;;
+              *)   echo "rubygems.org answered ${status} for $1, refusing to guess"; exit 1 ;;
+            esac
+          }
+
+          push openapi_kit
+          push openapi_kit-codegen
