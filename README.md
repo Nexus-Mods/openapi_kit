@@ -303,34 +303,19 @@ price:
 
 ## Files and binary responses
 
-A codec converts between a Ruby type and `OpenAPIKit::Wire`, the parsed value model every
-supported media type shares. A file is the one thing outside that model, so it never goes
-through a codec. `format: binary` is handled in two places instead, and refused everywhere
-else.
+A file is the one thing outside `OpenAPIKit::Wire`, the value model every media type shares,
+so it never goes through a codec. `format: binary` is handled in two places instead, and
+refused everywhere else.
 
-**An upload is a property of a `multipart/form-data` request body.** Such a body is still
-a generated type, but it carries a `Form` where other types carry a `Codec`.
+**An upload is a property of a `multipart/form-data` request body**, decoded through a
+`Form` where other types carry a `Codec`:
 
 ```ruby
-# app/api/petstore/v1/types/upload_pet_photo_body.rb, generated
 class UploadPetPhotoBody < T::Struct
   const :photo, ::ActionDispatch::Http::UploadedFile
   const :description, T.nilable(::String)
-
-  module Form
-    extend ::OpenAPIKit::Form::Contract
-
-    sig { override.params(parts: ::OpenAPIKit::Form::Parts).returns(UploadPetPhotoBody) }
-    def self.from_parts(parts) = # ...
-  end
 end
-```
 
-`OpenAPIKit::Form::Parts` is `T::Hash[String, T.any(OpenAPIKit::Wire, UploadedFile)]`, the one place a
-file and a value sit together. `Types::UploadPetPhotoBody::Form.is_a?(OpenAPIKit::Form::Contract)`
-answers whether a type is form-decoded. The handler gets the struct:
-
-```ruby
 def upload_pet_photo(request:)
   Blob.store!(io: request.body.photo.tempfile)
 
@@ -338,49 +323,26 @@ def upload_pet_photo(request:)
 end
 ```
 
-**A binary response is the whole body**, with whatever content type the document declares.
-Its variant takes either a file on disk or a block that writes the bytes.
+**A binary response is the whole body**, taking a file on disk or a block that writes bytes:
 
 ```ruby
-def download_pet_photo(request:)
-  Petstore::V1::Operations::DownloadPetPhoto::Ok.new(
-    body: OpenAPIKit::Body::File.new(path: Rails.root.join("photos", name))
-  )
-end
-```
+body: OpenAPIKit::Body::File.new(path: Rails.root.join("photos", name))
 
-A path names the file and nothing more, so the server can send it however it likes. Puma
-opens it and reaches `IO.copy_stream`, which is `sendfile` on Linux, nginx and Apache get
-an `X-Accel-Redirect` or `X-Sendfile` from `Rack::Sendfile` and serve it without Ruby, and
-a server that takes none of those reads it in 16KB chunks. `Content-Length` is set from
-the file, so the client gets a progress bar.
-
-For bytes that are not a file yet, a zip built per request or a body proxied from
-elsewhere, pass a stream instead. Its block is called with a sink, and whatever the block
-opens it also closes, so openapi_kit holds no descriptor of yours:
-
-```ruby
 body: OpenAPIKit::Body::Stream.new(
   body: ->(sink) { Archive.open(pet) { |zip| IO.copy_stream(zip, sink) } }
 )
+
+body: OpenAPIKit::Body::Stream.new(body: ->(sink) { sink << header << row })
 ```
 
-A sink answers `write`, `<<` and a `flush` that does nothing, since it never buffers, and
-`write` answers the byte count, which is all `IO.copy_stream` asks of it. Copying that
-way writes 16KB at a time, and one write is one chunk on the wire, so read in whatever
-size you want to send. A client that vanishes raises inside the block, where the `ensure`
-that closes what you opened already is.
+A path names the file and nothing more, so the server sends it however it likes: `sendfile`
+under Puma, an `X-Accel-Redirect` or `X-Sendfile` under nginx and Apache through
+`Rack::Sendfile`, and `Content-Length` comes off the file. A stream sends no
+`Content-Length`, and whatever its block opens it also closes. Neither supports `Range`.
 
-Every response variant answers `to_body`, returning a sealed `OpenAPIKit::Body` of `Empty`,
-`Json`, `Stream` or `File`, and the generated controller cases over it to pick `head`,
-`render`, a streamed body or `send_file`. A streamed response sends no `Content-Length`
-and neither kind supports `Range`.
-
-`string:binary` cannot be given a `type_mappings` entry, since a file has nothing for a
-codec to convert. Convert to your own type in the handler instead, with
-`Shrine.upload(request.body.photo)` and the like. `x-ruby-type` on a single property says
-that property is not a file but your own type with your own codec, treated as an ordinary
-value everywhere.
+Every response variant answers `to_body`, a sealed `OpenAPIKit::Body` of `Empty`, `Json`,
+`Stream` or `File`. `string:binary` takes no [`type_mappings`](#custom-types) entry, since a
+file has nothing for a codec to convert.
 
 ## Not supported yet
 
