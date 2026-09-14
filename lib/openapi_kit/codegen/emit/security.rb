@@ -171,8 +171,8 @@ module OpenAPIKit
           when Model::OAuth2Scheme
             ["::OpenAPIKit::Security::OAuth2",
              [["name", scheme.name.inspect], ["scopes", scheme.scopes.inspect]]]
-          when Model::OpenIdConnectScheme
-            ["::OpenAPIKit::Security::OpenIdConnect",
+          when Model::OpenIDConnectScheme
+            ["::OpenAPIKit::Security::OpenIDConnect",
              [["name", scheme.name.inspect], ["url", scheme.url.inspect]]]
           else T.absurd(scheme)
           end

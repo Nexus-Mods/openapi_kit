@@ -179,7 +179,7 @@ module OpenAPIKit
         sig { params(scheme: SecurityScheme).returns(String) }
         def self.name_of(scheme)
           case scheme
-          when ApiKeyScheme, HttpScheme, OAuth2Scheme, OpenIdConnectScheme then scheme.name
+          when ApiKeyScheme, HttpScheme, OAuth2Scheme, OpenIDConnectScheme then scheme.name
           else T.absurd(scheme)
           end
         end
@@ -187,7 +187,7 @@ module OpenAPIKit
         sig { params(scheme: SecurityScheme).returns(T::Hash[String, T.untyped]) }
         def self.extensions_of(scheme)
           case scheme
-          when ApiKeyScheme, HttpScheme, OAuth2Scheme, OpenIdConnectScheme then scheme.extensions
+          when ApiKeyScheme, HttpScheme, OAuth2Scheme, OpenIDConnectScheme then scheme.extensions
           else T.absurd(scheme)
           end
         end
@@ -256,7 +256,7 @@ module OpenAPIKit
         const :extensions, T::Hash[String, T.untyped], default: {}
       end
 
-      class OpenIdConnectScheme < T::Struct
+      class OpenIDConnectScheme < T::Struct
         include SecurityScheme
         const :name, String
         const :url, String
