@@ -39,8 +39,8 @@ module Server
         def self.to_wire(value)
           wire = T.let({}, T::Hash[::String, ::OpenAPIKit::Wire])
           wire["title"] = ::OpenAPIKit::Codec::String.to_wire(value.title)
-          detail = value.detail
-          wire["detail"] = ::OpenAPIKit::Codec::String.to_wire(detail) unless detail.nil?
+          field = value.detail
+          wire["detail"] = ::OpenAPIKit::Codec::String.to_wire(field) unless field.nil?
           wire
         end
       end

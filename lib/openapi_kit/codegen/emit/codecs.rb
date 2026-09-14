@@ -139,9 +139,9 @@ module OpenAPIKit
           reader = property.identifier.to_s
 
           if Decode.optional_nullable?(required: property.required, meta: Model::Schema.meta(property.schema))
-            buffer.line("#{reader} = value.#{reader}")
-            buffer.nest("if #{reader}.is_a?(::OpenAPIKit::Present)") do
-              buffer.line("inner = #{reader}.value")
+            buffer.line("field = value.#{reader}")
+            buffer.nest("if field.is_a?(::OpenAPIKit::Present)") do
+              buffer.line("inner = field.value")
               buffer.line("wire[#{key}] = inner.nil? ? nil : #{@registry.to_wire_expr(property.schema,
                                                                                       value: "inner")}")
             end
@@ -153,13 +153,13 @@ module OpenAPIKit
             return
           end
 
-          buffer.line("#{reader} = value.#{reader}")
-          dumped = @registry.to_wire_expr(property.schema, value: reader)
+          buffer.line("field = value.#{reader}")
+          dumped = @registry.to_wire_expr(property.schema, value: "field")
 
           if property.required
-            buffer.line("wire[#{key}] = #{reader}.nil? ? nil : #{dumped}")
+            buffer.line("wire[#{key}] = field.nil? ? nil : #{dumped}")
           else
-            buffer.line("wire[#{key}] = #{dumped} unless #{reader}.nil?")
+            buffer.line("wire[#{key}] = #{dumped} unless field.nil?")
           end
         end
 

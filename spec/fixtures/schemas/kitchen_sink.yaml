@@ -48,6 +48,11 @@ components:
         since: { type: string, format: date-time, default: "2020-01-01T00:00:00Z" }
         cleared: { type: string, nullable: true, default: null }
         rate: { type: number, default: 1 }
+        value: { type: integer, nullable: true }
+        wire: { type: string }
+        inner: { type: string, nullable: true }
+        field: { type: string, nullable: true }
+        trailing: { type: string }
       additionalProperties: { type: string, format: date-time }
     snake_cat: { type: object, required: [kind], properties: { kind: { type: string } } }
     snake_dog: { type: object, required: [kind], properties: { kind: { type: string } } }

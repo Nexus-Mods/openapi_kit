@@ -42,8 +42,8 @@ module KitchenSink
           wire = T.let({}, T::Hash[::String, ::OpenAPIKit::Wire])
           wire["id"] = ::OpenAPIKit::Codec::Uuid.to_wire(value.id)
           wire["name"] = ::OpenAPIKit::Codec::String.to_wire(value.name)
-          friend = value.friend
-          wire["friend"] = KitchenSink::Types::User::Codec.to_wire(friend) unless friend.nil?
+          field = value.friend
+          wire["friend"] = KitchenSink::Types::User::Codec.to_wire(field) unless field.nil?
           wire
         end
       end

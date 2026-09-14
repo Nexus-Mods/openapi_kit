@@ -42,8 +42,8 @@ module Server
           wire = T.let({}, T::Hash[::String, ::OpenAPIKit::Wire])
           wire["id"] = ::OpenAPIKit::Codec::Integer.to_wire(value.id)
           wire["name"] = ::OpenAPIKit::Codec::String.to_wire(value.name)
-          status = value.status
-          wire["status"] = Server::Types::ModStatus::Codec.to_wire(status) unless status.nil?
+          field = value.status
+          wire["status"] = Server::Types::ModStatus::Codec.to_wire(field) unless field.nil?
           wire
         end
       end

@@ -60,31 +60,31 @@ module KitchenSink
           wire = T.let({}, T::Hash[::String, ::OpenAPIKit::Wire])
           wire["id"] = ::OpenAPIKit::Codec::Integer.to_wire(value.id)
           wire["name"] = ::OpenAPIKit::Codec::String.to_wire(value.name)
-          status = value.status
-          wire["status"] = KitchenSink::Types::ModStatus::Codec.to_wire(status) unless status.nil?
+          field = value.status
+          wire["status"] = KitchenSink::Types::ModStatus::Codec.to_wire(field) unless field.nil?
           wire["updatedAt"] = ::OpenAPIKit::Codec::DateTime.to_wire(value.updated_at)
-          deleted_at = value.deleted_at
-          wire["deletedAt"] = deleted_at.nil? ? nil : ::OpenAPIKit::Codec::DateTime.to_wire(deleted_at)
-          summary = value.summary
-          wire["summary"] = ::OpenAPIKit::Codec::String.to_wire(summary) unless summary.nil?
-          bio = value.bio
-          if bio.is_a?(::OpenAPIKit::Present)
-            inner = bio.value
+          field = value.deleted_at
+          wire["deletedAt"] = field.nil? ? nil : ::OpenAPIKit::Codec::DateTime.to_wire(field)
+          field = value.summary
+          wire["summary"] = ::OpenAPIKit::Codec::String.to_wire(field) unless field.nil?
+          field = value.bio
+          if field.is_a?(::OpenAPIKit::Present)
+            inner = field.value
             wire["bio"] = inner.nil? ? nil : ::OpenAPIKit::Codec::String.to_wire(inner)
           end
-          page_size = value.page_size
-          wire["pageSize"] = ::OpenAPIKit::Codec::Integer.to_wire(page_size) unless page_size.nil?
-          owner = value.owner
-          if owner.is_a?(::OpenAPIKit::Present)
-            inner = owner.value
+          field = value.page_size
+          wire["pageSize"] = ::OpenAPIKit::Codec::Integer.to_wire(field) unless field.nil?
+          field = value.owner
+          if field.is_a?(::OpenAPIKit::Present)
+            inner = field.value
             wire["owner"] = inner.nil? ? nil : KitchenSink::Types::User::Codec.to_wire(inner)
           end
-          tags = value.tags
-          wire["tags"] = tags.map { |item| ::OpenAPIKit::Codec::String.to_wire(item) } unless tags.nil?
-          meta = value.meta
-          wire["meta"] = KitchenSink::Types::ModMeta::Codec.to_wire(meta) unless meta.nil?
-          extra = value.extra
-          wire["extra"] = extra.transform_values { |item| ::OpenAPIKit::Codec::Integer.to_wire(item) } unless extra.nil?
+          field = value.tags
+          wire["tags"] = field.map { |item| ::OpenAPIKit::Codec::String.to_wire(item) } unless field.nil?
+          field = value.meta
+          wire["meta"] = KitchenSink::Types::ModMeta::Codec.to_wire(field) unless field.nil?
+          field = value.extra
+          wire["extra"] = field.transform_values { |item| ::OpenAPIKit::Codec::Integer.to_wire(item) } unless field.nil?
           wire
         end
       end
