@@ -63,7 +63,7 @@ module Server
           [
             -> { Server.registry.bearer_auth.authenticate(request: request, scopes: []) },
           ]
-        ) || raise(::OpenAPIKit::Unauthenticated)
+        ) || raise(::OpenAPIKit::SecurityError)
       end
 
       sig { returns(::Demo::Principal) }
@@ -73,7 +73,7 @@ module Server
             -> { Server.registry.bearer_auth.authenticate(request: request, scopes: ["mods:write"]) },
             -> { Server.registry.api_key_auth.authenticate(request: request, scopes: []) },
           ]
-        ) || raise(::OpenAPIKit::Unauthenticated)
+        ) || raise(::OpenAPIKit::SecurityError)
       end
     end
   end

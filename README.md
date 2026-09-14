@@ -111,7 +111,7 @@ naming the field, and openapi_kit takes no view on the wire format.
 module Api
   class BaseController < ApplicationController
     rescue_from OpenAPIKit::DecodeError, with: :unprocessable
-    rescue_from OpenAPIKit::Unauthenticated, with: :unauthorized
+    rescue_from OpenAPIKit::SecurityError, with: :unauthorized
 
     private
 
@@ -229,7 +229,7 @@ end
 ```
 
 Alternatives are tried in document order and the first to produce a principal wins. If
-none do, openapi_kit raises `OpenAPIKit::Unauthenticated`. An operation offering anonymous
+none do, openapi_kit raises `OpenAPIKit::SecurityError`. An operation offering anonymous
 access (`security: [..., {}]`) makes the context `T.nilable` and raises nothing.
 
 ### What each scheme type gives you
