@@ -15,19 +15,19 @@ module OpenAPIKit
         @warnings = T.let([], T::Array[String])
       end
 
-      sig { returns(T::Array[Pathname]) }
-      def generate
+      sig { returns(T::Array[Emit::SourceFile]) }
+      def sources
         loader = Loader.new(config: @config)
         document = loader.parse
         registry = TypeRegistry.for(document, @config)
-        writer = Writer.new(output: @config.output)
 
         files = emitters(document, registry).flat_map(&:render)
-        written = writer.write_all(files)
-
         @warnings = loader.warnings + registry.warnings
-        written
+        files
       end
+
+      sig { returns(T::Array[Pathname]) }
+      def generate = Writer.new(output: @config.output).write_all(sources)
 
       private
 

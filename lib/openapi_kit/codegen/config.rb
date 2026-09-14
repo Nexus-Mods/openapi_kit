@@ -30,21 +30,26 @@ module OpenAPIKit
         file = Pathname.new(path).expand_path
         raise ConfigError, "No such config file: #{file}" unless file.file?
 
-        raw = YAML.safe_load(file.read, permitted_classes: [], aliases: true) || {}
-        raise ConfigError, "#{file}: expected a YAML mapping, got #{raw.class}" unless raw.is_a?(Hash)
+        from_yaml(file.read, relative_to: file)
+      end
 
-        reject_unknown_options!(raw, file)
-        reject_missing_options!(raw, file)
-        base = file.dirname
+      sig { params(yaml: String, relative_to: Pathname).returns(Config) }
+      def self.from_yaml(yaml, relative_to:)
+        raw = YAML.safe_load(yaml, permitted_classes: [], aliases: true) || {}
+        raise ConfigError, "#{relative_to}: expected a YAML mapping, got #{raw.class}" unless raw.is_a?(Hash)
+
+        reject_unknown_options!(raw, relative_to)
+        reject_missing_options!(raw, relative_to)
+        base = relative_to.dirname
 
         new(
           spec: base.join(raw.fetch("spec").to_s).expand_path,
           output: base.join(raw.fetch("output").to_s).expand_path,
-          modules: modules_in(raw, file),
+          modules: modules_in(raw, relative_to),
           controller_base: raw.fetch("controller_base").to_s,
           type_mappings: parse_type_mappings(raw["type_mappings"]),
           name_overrides: stringify(raw["name_overrides"]),
-          principal: principal_type(raw["principal"], "#{file}: ")
+          principal: principal_type(raw["principal"], "#{relative_to}: ")
         )
       end
 
