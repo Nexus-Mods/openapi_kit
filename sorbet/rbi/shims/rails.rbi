@@ -78,24 +78,30 @@ module ActionDispatch
 end
 
 module ActionController
-  class API
-    sig { params(error: T.untyped, with: T.untyped).void }
-    def self.rescue_from(error, with:); end
-
+  class Metal
     sig { returns(ActionDispatch::Request) }
     def request; end
-
-    sig { params(status: T.untyped).void }
-    def head(status); end
-
-    sig { params(json: T.untyped, status: T.untyped, content_type: T.untyped).void }
-    def render(json:, status:, content_type:); end
 
     sig { returns(ActionDispatch::Response) }
     def response; end
 
     sig { params(body: T.untyped).void }
     def response_body=(body); end
+  end
+
+  module Head
+    sig { params(status: T.untyped).void }
+    def head(status); end
+  end
+
+  module Rendering
+    sig { params(json: T.untyped, status: T.untyped, content_type: T.untyped).void }
+    def render(json:, status:, content_type:); end
+  end
+
+  class API < Metal
+    include Head
+    include Rendering
   end
 end
 

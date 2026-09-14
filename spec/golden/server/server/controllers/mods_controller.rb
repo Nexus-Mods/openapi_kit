@@ -6,6 +6,7 @@ module Server
   module Controllers
     class ModsController < ::ApiBaseController
       extend T::Sig
+      include ::Oapi::Rendering
 
       sig { void }
       def list_mods
@@ -55,26 +56,6 @@ module Server
 
       sig { returns(Server::Handlers::Mods) }
       def handler = Server.registry.mods
-
-      sig { params(result: ::Oapi::Response).void }
-      def render_response(result)
-        case (body = result.to_body)
-        when ::Oapi::Body::Empty
-          head(result.status)
-        when ::Oapi::Body::Json
-          render(json: body.wire, status: result.status, content_type: result.content_type)
-        when ::Oapi::Body::Stream
-          response.headers["Content-Type"] = result.content_type.to_s
-          response.status = result.status
-          self.response_body = body
-        when ::Oapi::Body::File
-          response.headers["Content-Type"] = result.content_type.to_s
-          response.headers["Content-Length"] = body.size.to_s
-          response.status = result.status
-          response.send_file(body.path.to_s)
-        else T.absurd(body)
-        end
-      end
 
       sig { returns(::Demo::Principal) }
       def authenticate_list_mods
