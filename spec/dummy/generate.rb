@@ -11,7 +11,7 @@ module Dummy
     def self.call
       config = OpenAPIKit::Codegen::Config.new(
         spec: ROOT.join("../fixtures/schemas/server.yaml").expand_path,
-        output: ROOT.join("app/api").expand_path,
+        output: ROOT.join("app/api/dummy/v1").expand_path,
         modules: %w[Dummy V1],
         controller_base: "Dummy::BaseController",
         principal: "::Principal"

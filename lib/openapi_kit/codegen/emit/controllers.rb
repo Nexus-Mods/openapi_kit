@@ -28,7 +28,7 @@ module OpenAPIKit
         sig { override.returns(T::Array[SourceFile]) }
         def render
           @document.operations.group_by(&:tag).map do |tag, operations|
-            Source.file(path: "#{@config.module_path}/controllers/#{Naming.snake(tag)}_controller.rb",
+            Source.file(path: "controllers/#{Naming.snake(tag)}_controller.rb",
                         modules: @config.modules + ["Controllers"]) do |buffer|
               emit_controller(buffer, tag, operations)
             end

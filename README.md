@@ -28,7 +28,7 @@ end
 ```yaml
 # openapi_kit.yml
 spec: openapi/petstore.yaml
-output: app/api
+output: app/api/petstore/v1
 modules: [Petstore, V1]
 controller_base: Api::BaseController
 principal: "::Petstore::Principal"
@@ -37,8 +37,8 @@ principal: "::Petstore::Principal"
 | Option | Meaning |
 | --- | --- |
 | `spec` | root OpenAPI document, resolved relative to this file |
-| `output` | directory the tree is written to, which openapi_kit owns |
-| `modules` | namespace for every generated constant, so `Petstore::V1::Types::Pet` |
+| `output` | the directory the tree is written to, which openapi_kit owns |
+| `modules` | namespace every generated constant declares, so `Petstore::V1::Types::Pet` |
 | `controller_base` | class the generated controllers inherit from |
 | `principal` | the class a successful authentication produces |
 | `type_mappings` | your Ruby type for a `type:format` pair |
@@ -57,8 +57,14 @@ app/api/petstore/v1/registry.rb
 app/api/petstore/v1/routes.rb
 ```
 
-One constant per file at the path that constant implies, so Rails autoloads it. Each run
-wipes `output`, but only after checking openapi_kit generated every `.rb` in it.
+One constant per file. `output` says where the tree goes and `modules` says what it
+declares, so laying `output` out to match `modules` under an autoload root is what makes
+Rails resolve it — above, `app/api` is the root and `petstore/v1` is the namespace.
+
+Each run wipes `output` and the `.rb` beside it that names the namespace
+(`app/api/petstore/v1.rb`), but only after checking openapi_kit generated every one of
+them. Nothing else in the parent directory is touched, so the tree can sit beside
+hand-written code that shares its namespace.
 
 ## Integrating with Rails
 

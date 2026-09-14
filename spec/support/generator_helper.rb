@@ -9,7 +9,8 @@ module GeneratorHelper
   def generate(fixture, modules: %w[Demo V1], **options)
     dir = Pathname.new(Dir.mktmpdir)
     @generated_dirs << dir
-    config = config_for(spec: FIXTURES.join(fixture), output: dir.join("generated"),
+    config = config_for(spec: FIXTURES.join(fixture),
+                        output: dir.join("generated", module_path(modules)),
                         modules: modules, **options)
     generator = OpenAPIKit::Codegen::Generator.new(config: config)
     generator.generate
@@ -19,6 +20,10 @@ module GeneratorHelper
   def golden(name)
     GOLDEN.join(name)
   end
+
+  # `output` is the exact directory now, so a caller that wants Zeitwerk to resolve the
+  # namespace lays the path out to match it, the same way an application does.
+  def module_path(modules) = modules.map { |name| OpenAPIKit::Codegen::Naming.snake(name) }.join("/")
 
   def config_for(spec:, output:, modules:, principal: "::SpecPrincipal", **options)
     OpenAPIKit::Codegen::Config.new(
@@ -38,7 +43,8 @@ module GeneratorHelper
     dir = scratch_dir
     dir.join("api.yaml").write(yaml)
 
-    config = config_for(spec: dir.join("api.yaml"), output: dir.join("generated"),
+    config = config_for(spec: dir.join("api.yaml"),
+                        output: dir.join("generated", module_path(modules)),
                         modules: modules, **options)
     generator = OpenAPIKit::Codegen::Generator.new(config: config)
     sources = generator.sources.to_h { |file| [file.path, file.contents] }
@@ -59,10 +65,10 @@ module GeneratorHelper
     def paths = sources.keys.sort
 
     sig { params(name: String).returns(String) }
-    def type(name) = self["api/types/#{name}.rb"]
+    def type(name) = self["types/#{name}.rb"]
 
     sig { params(name: String).returns(String) }
-    def operation(name) = self["api/operations/#{name}.rb"]
+    def operation(name) = self["operations/#{name}.rb"]
   end
 
   def relative_paths(dir)

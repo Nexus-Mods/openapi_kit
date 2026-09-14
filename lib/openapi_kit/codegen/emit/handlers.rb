@@ -20,7 +20,7 @@ module OpenAPIKit
         sig { override.returns(T::Array[SourceFile]) }
         def render
           by_tag.map do |tag, operations|
-            Source.file(path: "#{@config.module_path}/handlers/#{Naming.snake(tag)}.rb",
+            Source.file(path: "handlers/#{Naming.snake(tag)}.rb",
                         modules: @config.modules + ["Handlers"]) do |buffer|
               emit_interface(buffer, tag, operations)
             end

@@ -23,6 +23,40 @@ RSpec.describe OpenAPIKit::Codegen::Writer do
     expect(writer.write("a/b/types.rb", "x").read).to include("x")
   end
 
+  describe "the namespace file beside the output" do
+    it "writes it outside the directory, where Zeitwerk looks for the namespace" do
+      path = writer.write("out.rb", "module Out; end", beside_output: true)
+
+      expect(path).to eq(@dir.join("out.rb"))
+      expect(path.read).to start_with("#{OpenAPIKit::Codegen::MARKER}\n")
+    end
+
+    it "cleans it, since it is ours" do
+      writer.write("out.rb", "module Out; end", beside_output: true)
+      writer.write("types.rb", "module Types; end")
+
+      writer.clean!
+
+      expect(@dir.join("out.rb")).not_to exist
+    end
+
+    it "refuses when a file of that name is not ours" do
+      @dir.join("out.rb").write("module Out; end")
+
+      expect { writer.clean! }
+        .to raise_error(OpenAPIKit::Error, /Refusing to clean.*out\.rb/m)
+    end
+
+    it "leaves the rest of the parent directory alone" do
+      @dir.join("neighbour.rb").write("module Neighbour; end")
+      writer.write("types.rb", "module Types; end")
+
+      writer.clean!
+
+      expect(@dir.join("neighbour.rb")).to exist
+    end
+  end
+
   # typify cannot emit unparseable Rust because quote! yields a TokenStream. Ruby has no
   # equivalent, so the writer parses instead: an escaping mistake in an emitter fails at
   # generation time rather than reaching a golden file.

@@ -28,10 +28,10 @@ module OpenAPIKit
           return [] if slots.empty?
 
           [
-            Source.file(path: "#{@config.module_path}/registry.rb",
+            Source.file(path: "registry.rb",
                         modules: @config.modules) { |buffer| emit_registry(buffer) },
-            Source.file(path: "#{@config.module_path}.rb",
-                        modules: @config.modules) { |buffer| emit_accessor(buffer) }
+            Source.file(path: "#{@config.output.basename}.rb", modules: @config.modules,
+                        beside_output: true) { |buffer| emit_accessor(buffer) }
           ]
         end
 
