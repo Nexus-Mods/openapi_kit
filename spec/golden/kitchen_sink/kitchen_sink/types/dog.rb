@@ -39,8 +39,8 @@ module KitchenSink
         def self.to_wire(value)
           wire = T.let({}, T::Hash[::String, ::OpenAPIKit::Wire])
           wire["kind"] = ::OpenAPIKit::Codec::String.to_wire(value.kind)
-          breed = value.breed
-          wire["breed"] = ::OpenAPIKit::Codec::String.to_wire(breed) unless breed.nil?
+          field = value.breed
+          wire["breed"] = ::OpenAPIKit::Codec::String.to_wire(field) unless field.nil?
           wire
         end
       end

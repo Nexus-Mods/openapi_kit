@@ -77,6 +77,21 @@ RSpec.describe "translating a document" do
 
       expect(generated.type("mod")).to include("const :dates, T.nilable(T::Array[::Time])")
     end
+
+    it "encodes a property whose name would shadow the codec's own argument" do
+      generated = schemas(<<~YAML)
+        Mod:
+          type: object
+          properties:
+            value: { type: integer, nullable: true }
+            wire: { type: string }
+            field: { type: string, nullable: true }
+            trailing: { type: string }
+      YAML
+
+      expect(generated.type("mod")).to include("field = value.value", "field = value.wire",
+                                               "field = value.field", "field = value.trailing")
+    end
   end
 
   describe "composition" do

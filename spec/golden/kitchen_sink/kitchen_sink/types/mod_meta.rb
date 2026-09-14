@@ -36,8 +36,8 @@ module KitchenSink
         sig { override.params(value: KitchenSink::Types::ModMeta).returns(::OpenAPIKit::Wire) }
         def self.to_wire(value)
           wire = T.let({}, T::Hash[::String, ::OpenAPIKit::Wire])
-          note = value.note
-          wire["note"] = ::OpenAPIKit::Codec::String.to_wire(note) unless note.nil?
+          field = value.note
+          wire["note"] = ::OpenAPIKit::Codec::String.to_wire(field) unless field.nil?
           wire
         end
       end

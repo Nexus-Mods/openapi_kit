@@ -11,6 +11,11 @@ module KitchenSink
       const :since, ::Time, factory: -> { ::OpenAPIKit::Codec::DateTime.from_wire("2020-01-01T00:00:00Z") }
       const :cleared, T.nilable(::String), default: nil
       const :rate, ::Float, factory: -> { ::OpenAPIKit::Codec::Float.from_wire(1) }
+      const :value, ::OpenAPIKit::Optional[T.nilable(::Integer)], default: ::OpenAPIKit::ABSENT
+      const :wire, T.nilable(::String)
+      const :inner, ::OpenAPIKit::Optional[T.nilable(::String)], default: ::OpenAPIKit::ABSENT
+      const :field, ::OpenAPIKit::Optional[T.nilable(::String)], default: ::OpenAPIKit::ABSENT
+      const :trailing, T.nilable(::String)
       const :additional_properties, T::Hash[::String, ::Time], factory: -> { {} }
 
       sig { params(other: T.untyped).returns(T::Boolean) }
@@ -37,7 +42,12 @@ module KitchenSink
             since: ::OpenAPIKit::Decode.defaulted(raw, "since", ::OpenAPIKit::Codec::DateTime.from_wire("2020-01-01T00:00:00Z")) { |v| ::OpenAPIKit::Codec::DateTime.from_wire(v) },
             cleared: ::OpenAPIKit::Decode.defaulted(raw, "cleared", nil) { |v| ::OpenAPIKit::Codec::String.from_wire(v) },
             rate: ::OpenAPIKit::Decode.defaulted(raw, "rate", ::OpenAPIKit::Codec::Float.from_wire(1)) { |v| ::OpenAPIKit::Codec::Float.from_wire(v) },
-            additional_properties: ::OpenAPIKit::Decode.values(raw.except("serialize", "since", "cleared", "rate")) { |item| ::OpenAPIKit::Codec::DateTime.from_wire(item) },
+            value: ::OpenAPIKit::Decode.optional_nullable(raw, "value") { |v| ::OpenAPIKit::Codec::Integer.from_wire(v) },
+            wire: ::OpenAPIKit::Decode.optional(raw, "wire") { |v| ::OpenAPIKit::Codec::String.from_wire(v) },
+            inner: ::OpenAPIKit::Decode.optional_nullable(raw, "inner") { |v| ::OpenAPIKit::Codec::String.from_wire(v) },
+            field: ::OpenAPIKit::Decode.optional_nullable(raw, "field") { |v| ::OpenAPIKit::Codec::String.from_wire(v) },
+            trailing: ::OpenAPIKit::Decode.optional(raw, "trailing") { |v| ::OpenAPIKit::Codec::String.from_wire(v) },
+            additional_properties: ::OpenAPIKit::Decode.values(raw.except("serialize", "since", "cleared", "rate", "value", "wire", "inner", "field", "trailing")) { |item| ::OpenAPIKit::Codec::DateTime.from_wire(item) },
           )
         end
 
@@ -45,12 +55,31 @@ module KitchenSink
         def self.to_wire(value)
           wire = T.let({}, T::Hash[::String, ::OpenAPIKit::Wire])
           wire["serialize"] = ::OpenAPIKit::Codec::String.to_wire(value.serialize_)
-          since = value.since
-          wire["since"] = ::OpenAPIKit::Codec::DateTime.to_wire(since) unless since.nil?
-          cleared = value.cleared
-          wire["cleared"] = ::OpenAPIKit::Codec::String.to_wire(cleared) unless cleared.nil?
-          rate = value.rate
-          wire["rate"] = ::OpenAPIKit::Codec::Float.to_wire(rate) unless rate.nil?
+          field = value.since
+          wire["since"] = ::OpenAPIKit::Codec::DateTime.to_wire(field) unless field.nil?
+          field = value.cleared
+          wire["cleared"] = ::OpenAPIKit::Codec::String.to_wire(field) unless field.nil?
+          field = value.rate
+          wire["rate"] = ::OpenAPIKit::Codec::Float.to_wire(field) unless field.nil?
+          field = value.value
+          if field.is_a?(::OpenAPIKit::Present)
+            inner = field.value
+            wire["value"] = inner.nil? ? nil : ::OpenAPIKit::Codec::Integer.to_wire(inner)
+          end
+          field = value.wire
+          wire["wire"] = ::OpenAPIKit::Codec::String.to_wire(field) unless field.nil?
+          field = value.inner
+          if field.is_a?(::OpenAPIKit::Present)
+            inner = field.value
+            wire["inner"] = inner.nil? ? nil : ::OpenAPIKit::Codec::String.to_wire(inner)
+          end
+          field = value.field
+          if field.is_a?(::OpenAPIKit::Present)
+            inner = field.value
+            wire["field"] = inner.nil? ? nil : ::OpenAPIKit::Codec::String.to_wire(inner)
+          end
+          field = value.trailing
+          wire["trailing"] = ::OpenAPIKit::Codec::String.to_wire(field) unless field.nil?
           wire.merge!(value.additional_properties.transform_values { |item| ::OpenAPIKit::Codec::DateTime.to_wire(item) })
           wire
         end
