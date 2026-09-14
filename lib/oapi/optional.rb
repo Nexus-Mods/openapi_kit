@@ -26,7 +26,7 @@ module Oapi
     attr_reader :value
 
     sig { params(value: Value).void }
-    def initialize(value:)
+    def initialize(value)
       @value = value
     end
 
@@ -62,4 +62,6 @@ module Oapi
     sig { returns(Integer) }
     def hash = Absent.hash
   end
+
+  ABSENT = T.let(Absent.new.freeze, Absent[T.untyped])
 end
