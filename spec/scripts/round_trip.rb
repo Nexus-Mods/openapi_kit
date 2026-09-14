@@ -33,7 +33,7 @@ check("date-time") { mod.updated_at == Time.utc(2026, 9, 2, 10) }
 check("required nullable") { mod.deleted_at.nil? }
 check("absent optional") { mod.summary.nil? }
 check("default applied") { mod.page_size == 20 }
-check("tristate present nil") { mod.bio == Oapi::Present.new(value: nil) }
+check("tristate present nil") { mod.bio == Oapi::Present.new(nil) }
 check("tristate present value") { mod.owner.value_or(nil)&.name == "jack" }
 check("alias inlined to String") { mod.owner.value_or(nil)&.id.is_a?(String) }
 check("array items") { mod.tags == %w[a b] }

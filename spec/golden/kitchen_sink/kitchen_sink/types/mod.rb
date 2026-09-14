@@ -13,9 +13,9 @@ module KitchenSink
       const :updated_at, ::Time
       const :deleted_at, T.nilable(::Time)
       const :summary, T.nilable(::String)
-      const :bio, ::Oapi::Optional[T.nilable(::String)], factory: -> { ::Oapi::Absent.new }
+      const :bio, ::Oapi::Optional[T.nilable(::String)], default: ::Oapi::ABSENT
       const :page_size, ::Integer, default: 20
-      const :owner, ::Oapi::Optional[T.nilable(KitchenSink::Types::User)], factory: -> { ::Oapi::Absent.new }
+      const :owner, ::Oapi::Optional[T.nilable(KitchenSink::Types::User)], default: ::Oapi::ABSENT
       const :tags, T.nilable(T::Array[::String])
       const :meta, T.nilable(KitchenSink::Types::ModMeta)
       const :extra, T.nilable(T::Hash[::String, ::Integer])

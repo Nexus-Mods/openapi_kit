@@ -70,12 +70,12 @@ module Oapi
         .returns(Oapi::Optional[T.nilable(T.type_parameter(:T))])
     end
     def self.optional_nullable(raw, key, &block)
-      return Absent[T.nilable(T.type_parameter(:T))].new unless raw.key?(key)
+      return Oapi::ABSENT unless raw.key?(key)
 
       value = raw[key]
-      return Present[T.nilable(T.type_parameter(:T))].new(value: nil) if value.nil?
+      return Present[T.nilable(T.type_parameter(:T))].new(nil) if value.nil?
 
-      Present[T.nilable(T.type_parameter(:T))].new(value: at("/#{key}") { block.call(value) })
+      Present[T.nilable(T.type_parameter(:T))].new(at("/#{key}") { block.call(value) })
     end
 
     sig do
