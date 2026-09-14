@@ -491,7 +491,7 @@ RSpec.describe "translating a document" do
       expect(generated["api/controllers/t_controller.rb"])
         .to include("principal = authenticate_get_a",
                     "Api.registry.custom_auth.authenticate(request: request, scopes: [])",
-                    "raise(::OpenAPIKit::Unauthenticated)")
+                    "raise(::OpenAPIKit::SecurityError)")
     end
 
     it "resolves every alternative through the registry, in document order" do
@@ -511,7 +511,7 @@ RSpec.describe "translating a document" do
                           requirement: "customAuth: [] }, {")
 
       expect(generated["api/operations/get_a.rb"]).to include("const :principal, T.nilable(::SpecPrincipal)")
-      expect(generated["api/controllers/t_controller.rb"]).not_to include("raise(::OpenAPIKit::Unauthenticated)")
+      expect(generated["api/controllers/t_controller.rb"]).not_to include("raise(::OpenAPIKit::SecurityError)")
     end
 
     it "refuses a document that declares security with no principal configured" do

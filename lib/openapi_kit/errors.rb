@@ -8,7 +8,7 @@ module OpenAPIKit
 
   class SchemaError < Error; end
 
-  class Unauthenticated < Error; end
+  class SecurityError < Error; end
 
   class DecodeError < Error
     extend T::Sig

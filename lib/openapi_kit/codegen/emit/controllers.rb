@@ -118,7 +118,7 @@ module OpenAPIKit
               end
               buffer.line("]")
             end
-            buffer.line(requirements.any?(&:anonymous?) ? ")" : ") || raise(::OpenAPIKit::Unauthenticated)")
+            buffer.line(requirements.any?(&:anonymous?) ? ")" : ") || raise(::OpenAPIKit::SecurityError)")
           end
         end
 

@@ -3,7 +3,7 @@
 module Dummy
   class BaseController < ActionController::API
     rescue_from OpenAPIKit::DecodeError, with: :bad_request
-    rescue_from OpenAPIKit::Unauthenticated, with: :unauthorized
+    rescue_from OpenAPIKit::SecurityError, with: :unauthorized
 
     private
 
