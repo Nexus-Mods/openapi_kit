@@ -6,6 +6,7 @@ AllCops:
   SuggestExtensions: false
   NewCops: enable
   Exclude:
+    - "gemfiles/**/*"
     - "spec/golden/**/*"
     - "spec/dummy/**/*"
     - "vendor/**/*"

@@ -8,7 +8,7 @@ gemspec name: "openapi_kit"
 gem "rake", "~> 13.0"
 
 group :development, :test do
-  gem "actionpack", "~> 8.0"
+  gem "appraisal", "~> 2.5", require: false
 
   # activesupport 8.1 calls JSON.parse with options json 3.0 removed, so Rails' own
   # parameter parsing raises and every request spec sees an empty 400.
@@ -21,6 +21,6 @@ end
 
 gem "zeitwerk", "~> 2.8", groups: %i[development test]
 
-gem "railties", "~> 8.1", groups: %i[development test]
+gem "railties", groups: %i[development test]
 
 gem "rack-test", "~> 2.2", groups: %i[development test]

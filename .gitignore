@@ -7,3 +7,4 @@ Gemfile.lock
 *.gem
 spec/dummy/app/api/
 spec/dummy/log/
+gemfiles/*.gemfile.lock
