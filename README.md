@@ -1,4 +1,4 @@
-# oapi
+# openapi_kit
 
 Generates Sorbet-typed Rails server stubs from an OpenAPI 3 document. Handlers are strict
 interfaces bound through a generated registry, responses are sealed, and authentication is
@@ -6,10 +6,10 @@ enforced where the document says it should be. Change the document and the build
 what no longer compiles.
 
 ```ruby
-gem "oapi-runtime"          # what generated code calls
+gem "openapi_kit"          # what generated code calls
 
 group :development do
-  gem "oapi"                # the generator
+  gem "openapi_kit-codegen"                # the generator
 end
 ```
 
@@ -26,7 +26,7 @@ end
 ## Generating
 
 ```yaml
-# oapi.yml
+# openapi_kit.yml
 spec: openapi/petstore.yaml
 output: app/api
 modules: [Petstore, V1]
@@ -37,7 +37,7 @@ principal: "::Petstore::Principal"
 | Option | Meaning |
 | --- | --- |
 | `spec` | root OpenAPI document, resolved relative to this file |
-| `output` | directory the tree is written to, which oapi owns |
+| `output` | directory the tree is written to, which openapi_kit owns |
 | `modules` | namespace for every generated constant, so `Petstore::V1::Types::Pet` |
 | `controller_base` | class the generated controllers inherit from |
 | `principal` | the class a successful authentication produces |
@@ -47,7 +47,7 @@ principal: "::Petstore::Principal"
 The first four are required.
 
 ```console
-$ bundle exec oapi generate -c oapi.yml
+$ bundle exec openapi_kit generate -c openapi_kit.yml
 app/api/petstore/v1/types/pet.rb
 app/api/petstore/v1/operations/list_pets.rb
 app/api/petstore/v1/handlers/pets.rb
@@ -58,7 +58,7 @@ app/api/petstore/v1/routes.rb
 ```
 
 One constant per file at the path that constant implies, so Rails autoloads it. Each run
-wipes `output`, but only after checking oapi generated every `.rb` in it.
+wipes `output`, but only after checking openapi_kit generated every `.rb` in it.
 
 ## Integrating with Rails
 
@@ -103,15 +103,15 @@ end
 
 **Give the controllers a base class.** They inherit whatever you put there and need
 nothing from it, so this is where your own concerns and error mapping live. A request
-oapi cannot decode raises `Oapi::DecodeError`, carrying `detail` and a `json_pointer`
-naming the field, and oapi takes no view on the wire format.
+openapi_kit cannot decode raises `OpenAPIKit::DecodeError`, carrying `detail` and a `json_pointer`
+naming the field, and openapi_kit takes no view on the wire format.
 
 ```ruby
 # app/controllers/api/base_controller.rb
 module Api
   class BaseController < ApplicationController
-    rescue_from Oapi::DecodeError, with: :unprocessable
-    rescue_from Oapi::Unauthenticated, with: :unauthorized
+    rescue_from OpenAPIKit::DecodeError, with: :unprocessable
+    rescue_from OpenAPIKit::Unauthenticated, with: :unauthorized
 
     private
 
@@ -125,13 +125,13 @@ module Api
 end
 ```
 
-**Assign the registry.** oapi generates a `Registry` struct with one slot per handler and
+**Assign the registry.** openapi_kit generates a `Registry` struct with one slot per handler and
 authenticator, and controllers read it from `Petstore::V1.registry`. Rails instantiates
 controllers itself, so they cannot be handed one. Omit a slot, or pass something that does
 not implement its interface, and it does not compile.
 
 ```ruby
-# config/initializers/oapi.rb
+# config/initializers/openapi_kit.rb
 Rails.application.config.to_prepare do
   Petstore::V1.registry = Petstore::V1::Registry.new(
     pets: PetsHandler.new(repo: PetRepo.new),
@@ -141,7 +141,7 @@ Rails.application.config.to_prepare do
 end
 ```
 
-The registry is oapi's boundary and nothing more. What a handler needs behind it is
+The registry is openapi_kit's boundary and nothing more. What a handler needs behind it is
 yours, and unlike controllers *you* construct handlers, so they take whatever they need.
 
 Building the registry in `to_prepare` constructs every handler at boot, along with
@@ -184,7 +184,7 @@ end
 ```
 
 Then write one authenticator per scheme. Return `nil` to say this alternative was not
-satisfied, so oapi tries the next one. Where the credential lives is what the document
+satisfied, so openapi_kit tries the next one. Where the credential lives is what the document
 declares, so `credential` is implemented for you.
 
 ```ruby
@@ -229,7 +229,7 @@ end
 ```
 
 Alternatives are tried in document order and the first to produce a principal wins. If
-none do, oapi raises `Oapi::Unauthenticated`. An operation offering anonymous
+none do, openapi_kit raises `OpenAPIKit::Unauthenticated`. An operation offering anonymous
 access (`security: [..., {}]`) makes the context `T.nilable` and raises nothing.
 
 ### What each scheme type gives you
@@ -277,14 +277,14 @@ a codec cannot decode one type and encode another:
 module MyApp::MoneyCodec
   extend T::Sig
   extend T::Generic
-  extend Oapi::Codec::Contract
+  extend OpenAPIKit::Codec::Contract
 
   Value = type_template { { fixed: ::Money } }
 
-  sig { override.params(value: Oapi::Wire).returns(::Money) }
-  def self.from_wire(value) = ::Money.parse(Oapi::Codec::String.from_wire(value))
+  sig { override.params(value: OpenAPIKit::Wire).returns(::Money) }
+  def self.from_wire(value) = ::Money.parse(OpenAPIKit::Codec::String.from_wire(value))
 
-  sig { override.params(value: ::Money).returns(Oapi::Wire) }
+  sig { override.params(value: ::Money).returns(OpenAPIKit::Wire) }
   def self.to_wire(value) = value.format
 end
 ```
@@ -303,7 +303,7 @@ price:
 
 ## Files and binary responses
 
-A codec converts between a Ruby type and `Oapi::Wire`, the parsed value model every
+A codec converts between a Ruby type and `OpenAPIKit::Wire`, the parsed value model every
 supported media type shares. A file is the one thing outside that model, so it never goes
 through a codec. `format: binary` is handled in two places instead, and refused everywhere
 else.
@@ -318,16 +318,16 @@ class UploadPetPhotoBody < T::Struct
   const :description, T.nilable(::String)
 
   module Form
-    extend ::Oapi::Form::Contract
+    extend ::OpenAPIKit::Form::Contract
 
-    sig { override.params(parts: ::Oapi::Form::Parts).returns(UploadPetPhotoBody) }
+    sig { override.params(parts: ::OpenAPIKit::Form::Parts).returns(UploadPetPhotoBody) }
     def self.from_parts(parts) = # ...
   end
 end
 ```
 
-`Oapi::Form::Parts` is `T::Hash[String, T.any(Oapi::Wire, UploadedFile)]`, the one place a
-file and a value sit together. `Types::UploadPetPhotoBody::Form.is_a?(Oapi::Form::Contract)`
+`OpenAPIKit::Form::Parts` is `T::Hash[String, T.any(OpenAPIKit::Wire, UploadedFile)]`, the one place a
+file and a value sit together. `Types::UploadPetPhotoBody::Form.is_a?(OpenAPIKit::Form::Contract)`
 answers whether a type is form-decoded. The handler gets the struct:
 
 ```ruby
@@ -344,7 +344,7 @@ Its variant takes either a file on disk or a block that writes the bytes.
 ```ruby
 def download_pet_photo(request:)
   Petstore::V1::Operations::DownloadPetPhoto::Ok.new(
-    body: Oapi::Body::File.new(path: Rails.root.join("photos", name))
+    body: OpenAPIKit::Body::File.new(path: Rails.root.join("photos", name))
   )
 end
 ```
@@ -357,10 +357,10 @@ the file, so the client gets a progress bar.
 
 For bytes that are not a file yet, a zip built per request or a body proxied from
 elsewhere, pass a stream instead. Its block is called with a sink, and whatever the block
-opens it also closes, so oapi holds no descriptor of yours:
+opens it also closes, so openapi_kit holds no descriptor of yours:
 
 ```ruby
-body: Oapi::Body::Stream.new(
+body: OpenAPIKit::Body::Stream.new(
   body: ->(sink) { Archive.open(pet) { |zip| IO.copy_stream(zip, sink) } }
 )
 ```
@@ -371,7 +371,7 @@ way writes 16KB at a time, and one write is one chunk on the wire, so read in wh
 size you want to send. A client that vanishes raises inside the block, where the `ensure`
 that closes what you opened already is.
 
-Every response variant answers `to_body`, returning a sealed `Oapi::Body` of `Empty`,
+Every response variant answers `to_body`, returning a sealed `OpenAPIKit::Body` of `Empty`,
 `Json`, `Stream` or `File`, and the generated controller cases over it to pick `head`,
 `render`, a streamed body or `send_file`. A streamed response sends no `Content-Length`
 and neither kind supports `Range`.

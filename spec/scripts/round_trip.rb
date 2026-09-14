@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "oapi-runtime"
+require "openapi_kit"
 require "zeitwerk"
 
 loader = Zeitwerk::Loader.new
@@ -33,7 +33,7 @@ check("date-time") { mod.updated_at == Time.utc(2026, 9, 2, 10) }
 check("required nullable") { mod.deleted_at.nil? }
 check("absent optional") { mod.summary.nil? }
 check("default applied") { mod.page_size == 20 }
-check("tristate present nil") { mod.bio == Oapi::Present.new(nil) }
+check("tristate present nil") { mod.bio == OpenAPIKit::Present.new(nil) }
 check("tristate present value") { mod.owner.value_or(nil)&.name == "jack" }
 check("alias inlined to String") { mod.owner.value_or(nil)&.id.is_a?(String) }
 check("array items") { mod.tags == %w[a b] }
@@ -64,14 +64,14 @@ check("untagged union integer") { KitchenSink::Types::Loose::Codec.from_wire(3) 
 begin
   KitchenSink::Types::Mod::Codec.from_wire(WIRE.merge("id" => "not a number"))
   raise "failed: expected a DecodeError"
-rescue Oapi::DecodeError => e
+rescue OpenAPIKit::DecodeError => e
   check("error names the field") { e.json_pointer == "/id" }
 end
 
 begin
   KitchenSink::Types::Mod::Codec.from_wire(WIRE.merge("tags" => ["a", 2]))
   raise "failed: expected a DecodeError"
-rescue Oapi::DecodeError => e
+rescue OpenAPIKit::DecodeError => e
   check("error indexes the element: #{e.json_pointer}") { e.json_pointer == "/tags/1" }
 end
 

@@ -33,11 +33,11 @@ RSpec.describe "translating a document" do
             properties:
               error: { $ref: "shared.yaml#/components/schemas/ProblemDetails" }
     YAML
-    config = Oapi::Codegen::Config.new(
+    config = OpenAPIKit::Codegen::Config.new(
       spec: dir.join("api.yaml"), output: dir.join("generated"),
       modules: %w[Api], controller_base: "ApiBaseController"
     )
-    Oapi::Codegen::Generator.new(config: config).generate
+    OpenAPIKit::Codegen::Generator.new(config: config).generate
     dir
   end
 
@@ -122,7 +122,7 @@ RSpec.describe "translating a document" do
       YAML
 
       expect(generated.type("mod"))
-        .to include("const :owner, ::Oapi::Optional[T.nilable(Api::Types::User)]")
+        .to include("const :owner, ::OpenAPIKit::Optional[T.nilable(Api::Types::User)]")
     end
 
     it "dispatches a discriminated union on the wire value, not the Ruby constant" do
@@ -141,7 +141,7 @@ RSpec.describe "translating a document" do
       generated = schemas("Loose: { anyOf: [{ type: string }, { type: integer }] }")
 
       expect(generated.type("loose")).to include("Value = T.type_alias { T.any(::String, ::Integer) }",
-                                                 "::Oapi::Decode.first_of")
+                                                 "::OpenAPIKit::Decode.first_of")
     end
 
     it "lets a schema refer to itself, suffixing a property named after a keyword" do
@@ -198,7 +198,7 @@ RSpec.describe "translating a document" do
                  "              schema:", "                type: array",
                  "                items:", "                  type: object",
                  "                  properties: { blob: { type: string, format: binary } }")
-      end.to raise_error(Oapi::SchemaError, /the Ok response of getFile declares format: binary/)
+      end.to raise_error(OpenAPIKit::SchemaError, /the Ok response of getFile declares format: binary/)
     end
 
     it "refuses format: binary in a JSON request body" do
@@ -209,7 +209,7 @@ RSpec.describe "translating a document" do
                  "            schema:", "              type: object",
                  "              properties: { upload: { type: string, format: binary } }",
                  %(      responses: { "204": { description: done } }))
-      end.to raise_error(Oapi::SchemaError, /the request body of postFile declares format: binary/)
+      end.to raise_error(OpenAPIKit::SchemaError, /the request body of postFile declares format: binary/)
     end
 
     it "refuses format: binary in a parameter" do
@@ -219,7 +219,7 @@ RSpec.describe "translating a document" do
                  "      parameters:",
                  "        - { name: blob, in: query, schema: { type: string, format: binary } }",
                  %(      responses: { "204": { description: done } }))
-      end.to raise_error(Oapi::SchemaError, /parameter "blob" of getFile declares format: binary/)
+      end.to raise_error(OpenAPIKit::SchemaError, /parameter "blob" of getFile declares format: binary/)
     end
 
     it "accepts format: binary as a property of a multipart request body" do
@@ -235,8 +235,8 @@ RSpec.describe "translating a document" do
       expect(generated.type("post_file_body")).to include(
         "const :upload, ::ActionDispatch::Http::UploadedFile",
         "module Form",
-        "sig { override.params(parts: ::Oapi::Form::Parts).returns(Api::Types::PostFileBody) }",
-        %(upload: ::Oapi::Decode.required(parts, "upload") { |v| ::Oapi::Decode.file(v) })
+        "sig { override.params(parts: ::OpenAPIKit::Form::Parts).returns(Api::Types::PostFileBody) }",
+        %(upload: ::OpenAPIKit::Decode.required(parts, "upload") { |v| ::OpenAPIKit::Decode.file(v) })
       )
       expect(generated["api/controllers/files_controller.rb"]).to include(
         "Api::Types::PostFileBody::Form.from_parts(request.request_parameters)"
@@ -292,7 +292,7 @@ RSpec.describe "translating a document" do
                  "      requestBody:", "        content:", "          multipart/form-data:",
                  "            schema: { type: string }",
                  %(      responses: { "204": { description: done } }))
-      end.to raise_error(Oapi::SchemaError, /is not an object/)
+      end.to raise_error(OpenAPIKit::SchemaError, /is not an object/)
     end
 
     it "decodes the extra fields of a multipart body that allows them" do
@@ -305,7 +305,7 @@ RSpec.describe "translating a document" do
                            %(      responses: { "204": { description: done } }))
 
       expect(generated.type("post_file_body")).to include(
-        %(additional_properties: ::Oapi::Decode.values(parts.except("upload")))
+        %(additional_properties: ::OpenAPIKit::Decode.values(parts.except("upload")))
       )
     end
 
@@ -317,7 +317,7 @@ RSpec.describe "translating a document" do
                            "              schema: { type: string, format: binary }")
 
       expect(generated.operation("get_file")).to include(
-        "const :body, ::Oapi::Body::Bytes",
+        "const :body, ::OpenAPIKit::Body::Bytes",
         "def to_body = body",
         %(def content_type = "image/png")
       )
@@ -331,7 +331,7 @@ RSpec.describe "translating a document" do
     end
 
     it "refuses a type mapping for string:binary, which no codec can convert" do
-      binary = Oapi::Codegen::RubyType.new(type: "::MyBlob", codec: "MyApp::BlobCodec")
+      binary = OpenAPIKit::Codegen::RubyType.new(type: "::MyBlob", codec: "MyApp::BlobCodec")
 
       expect do
         generate_from(<<~YAML, type_mappings: { "string:binary" => binary })
@@ -339,11 +339,11 @@ RSpec.describe "translating a document" do
           info: { title: T, version: "1.0" }
           paths: {}
         YAML
-      end.to raise_error(Oapi::ConfigError, /does not convert a file with a codec/)
+      end.to raise_error(OpenAPIKit::ConfigError, /does not convert a file with a codec/)
     end
 
     it "uses a configured type and codec" do
-      money = Oapi::Codegen::RubyType.new(type: "::Money", codec: "MyApp::MoneyCodec")
+      money = OpenAPIKit::Codegen::RubyType.new(type: "::Money", codec: "MyApp::MoneyCodec")
       generated = generate_from(<<~YAML, type_mappings: { "string:money" => money })
         openapi: 3.0.3
         info: { title: T, version: "1.0" }
@@ -468,14 +468,14 @@ RSpec.describe "translating a document" do
 
       expect(generated["api/security.rb"])
         .to include("def scheme = CUSTOM_AUTH",
-                    "def credential(request) = ::Oapi::Security.credential(scheme, request)")
+                    "def credential(request) = ::OpenAPIKit::Security.credential(scheme, request)")
     end
 
     it "decodes a basic scheme's credentials, since base64 is no use undecoded" do
       generated = secured("customAuth: { type: http, scheme: basic }")
 
       expect(generated["api/security.rb"])
-        .to include("def basic_credential(request) = ::Oapi::Security.basic(scheme, request)")
+        .to include("def basic_credential(request) = ::OpenAPIKit::Security.basic(scheme, request)")
     end
 
     it "offers no basic decoding for a scheme that is not basic" do
@@ -491,7 +491,7 @@ RSpec.describe "translating a document" do
       expect(generated["api/controllers/t_controller.rb"])
         .to include("principal = authenticate_get_a",
                     "Api.registry.custom_auth.authenticate(request: request, scopes: [])",
-                    "raise(::Oapi::Unauthenticated)")
+                    "raise(::OpenAPIKit::Unauthenticated)")
     end
 
     it "resolves every alternative through the registry, in document order" do
@@ -511,23 +511,23 @@ RSpec.describe "translating a document" do
                           requirement: "customAuth: [] }, {")
 
       expect(generated["api/operations/get_a.rb"]).to include("const :principal, T.nilable(::SpecPrincipal)")
-      expect(generated["api/controllers/t_controller.rb"]).not_to include("raise(::Oapi::Unauthenticated)")
+      expect(generated["api/controllers/t_controller.rb"]).not_to include("raise(::OpenAPIKit::Unauthenticated)")
     end
 
     it "refuses a document that declares security with no principal configured" do
       expect { secured("customAuth: { type: http, scheme: bearer }", principal: nil) }
-        .to raise_error(Oapi::ConfigError, /no `principal` is configured/)
+        .to raise_error(OpenAPIKit::ConfigError, /no `principal` is configured/)
     end
 
     it "refuses two schemes required together, which it cannot yet type" do
       expect do
         secured("customAuth: { type: http, scheme: bearer }\nkeyAuth: { type: apiKey, in: header, name: X-Key }",
                 requirement: "customAuth: [], keyAuth: []")
-      end.to raise_error(Oapi::SchemaError, /requires customAuth and keyAuth together/)
+      end.to raise_error(OpenAPIKit::SchemaError, /requires customAuth and keyAuth together/)
     end
 
     # A server checks scope names; the flows' URLs tell a client where to get a token, so
-    # oapi does not carry them. Scopes are unioned, and a disagreement is not silent.
+    # openapi_kit does not carry them. Scopes are unioned, and a disagreement is not silent.
     it "unions scopes across OAuth flows and warns when one is described two ways" do
       generated = secured(<<~YAML, requirement: "oauth: [read]")
         oauth:
@@ -548,7 +548,7 @@ RSpec.describe "translating a document" do
 
     it "refuses a scheme type it does not know" do
       expect { secured("customAuth: { type: mutualTLS }") }
-        .to raise_error(Oapi::SchemaError, /unsupported type "mutualTLS"/)
+        .to raise_error(OpenAPIKit::SchemaError, /unsupported type "mutualTLS"/)
     end
   end
 
@@ -558,7 +558,7 @@ RSpec.describe "translating a document" do
     end
 
     it "requires an operationId" do
-      expect { operation(<<~YAML) }.to raise_error(Oapi::SchemaError, %r{GET /a has no operationId})
+      expect { operation(<<~YAML) }.to raise_error(OpenAPIKit::SchemaError, %r{GET /a has no operationId})
         /a:
           get:
             responses: { "204": { description: done } }
@@ -567,11 +567,11 @@ RSpec.describe "translating a document" do
 
     it "requires an enum's values to be all one type" do
       expect { schemas("Mixed: { type: string, enum: [a, 1] }") }
-        .to raise_error(Oapi::SchemaError, /Enum Mixed has values of type Integer, String/)
+        .to raise_error(OpenAPIKit::SchemaError, /Enum Mixed has values of type Integer, String/)
     end
 
     it "refuses two operationIds that normalise to the same name" do
-      expect { operation(<<~YAML) }.to raise_error(Oapi::SchemaError, /operationIds getMods, get_mods/)
+      expect { operation(<<~YAML) }.to raise_error(OpenAPIKit::SchemaError, /operationIds getMods, get_mods/)
         /a:
           get:
             operationId: getMods
@@ -584,7 +584,7 @@ RSpec.describe "translating a document" do
     end
 
     it "refuses two tags that normalise to the same name" do
-      expect { operation(<<~YAML) }.to raise_error(Oapi::SchemaError, /tags Mods, mods/)
+      expect { operation(<<~YAML) }.to raise_error(OpenAPIKit::SchemaError, /tags Mods, mods/)
         /a:
           get:
             operationId: opA
@@ -599,14 +599,16 @@ RSpec.describe "translating a document" do
     end
 
     it "refuses a schema defined in terms of itself, naming the cycle" do
-      expect { schemas(<<~YAML) }.to raise_error(Oapi::SchemaError, /A is defined in terms of itself.*A -> B -> A/m)
+      cycle = /A is defined in terms of itself.*A -> B -> A/m
+
+      expect { schemas(<<~YAML) }.to raise_error(OpenAPIKit::SchemaError, cycle)
         A: { type: array, items: { $ref: "#/components/schemas/B" } }
         B: { type: array, items: { $ref: "#/components/schemas/A" } }
       YAML
     end
 
     it "refuses a discriminated union member that has no name to map onto" do
-      expect { schemas(<<~YAML) }.to raise_error(Oapi::SchemaError, /is an inline schema/)
+      expect { schemas(<<~YAML) }.to raise_error(OpenAPIKit::SchemaError, /is an inline schema/)
         Pet:
           oneOf:
             - { type: object, required: [kind], properties: { kind: { type: string } } }
@@ -615,7 +617,7 @@ RSpec.describe "translating a document" do
     end
 
     it "refuses a path template Rails cannot route" do
-      expect { operation(<<~YAML) }.to raise_error(Oapi::SchemaError, /path template \{game-domain\}/)
+      expect { operation(<<~YAML) }.to raise_error(OpenAPIKit::SchemaError, /path template \{game-domain\}/)
         /g/{game-domain}:
           get:
             operationId: getGame
@@ -624,7 +626,7 @@ RSpec.describe "translating a document" do
     end
 
     it "refuses a content type it can neither decode nor render" do
-      expect { operation(<<~YAML) }.to raise_error(Oapi::SchemaError, %r{content type text/plain})
+      expect { operation(<<~YAML) }.to raise_error(OpenAPIKit::SchemaError, %r{content type text/plain})
         /a:
           post:
             operationId: postA
@@ -648,7 +650,9 @@ RSpec.describe "translating a document" do
     end
 
     it "refuses a parameter style it cannot decode" do
-      expect { operation(<<~YAML) }.to raise_error(Oapi::SchemaError, /style "deepObject", which oapi does not decode/)
+      undecodable = /style "deepObject", which openapi_kit does not decode/
+
+      expect { operation(<<~YAML) }.to raise_error(OpenAPIKit::SchemaError, undecodable)
         /a:
           get:
             operationId: get_a

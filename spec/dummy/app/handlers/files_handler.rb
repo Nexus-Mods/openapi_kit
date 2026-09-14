@@ -24,7 +24,7 @@ class FilesHandler
       request.body.upload.tempfile.read
     ].compact.join("|")
 
-    STORE[request.path.mod_id] = Oapi::Body::Stream.new(body: ->(sink) { sink.write(bytes) })
+    STORE[request.path.mod_id] = OpenAPIKit::Body::Stream.new(body: ->(sink) { sink.write(bytes) })
 
     Dummy::V1::Operations::UploadModFile::NoContent.new
   end

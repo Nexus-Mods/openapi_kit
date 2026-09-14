@@ -11,7 +11,7 @@ module GeneratorHelper
     @generated_dirs << dir
     config = config_for(spec: FIXTURES.join(fixture), output: dir.join("generated"),
                         modules: modules, **options)
-    generator = Oapi::Codegen::Generator.new(config: config)
+    generator = OpenAPIKit::Codegen::Generator.new(config: config)
     generator.generate
     { dir: dir.join("generated"), warnings: generator.warnings }
   end
@@ -21,7 +21,7 @@ module GeneratorHelper
   end
 
   def config_for(spec:, output:, modules:, principal: "::SpecPrincipal", **options)
-    Oapi::Codegen::Config.new(
+    OpenAPIKit::Codegen::Config.new(
       spec: spec, output: output, modules: modules,
       controller_base: "ApiBaseController", principal: principal, **options
     )
@@ -40,7 +40,7 @@ module GeneratorHelper
 
     config = config_for(spec: dir.join("api.yaml"), output: dir.join("generated"),
                         modules: modules, **options)
-    generator = Oapi::Codegen::Generator.new(config: config)
+    generator = OpenAPIKit::Codegen::Generator.new(config: config)
     generator.generate
 
     output = dir.join("generated")

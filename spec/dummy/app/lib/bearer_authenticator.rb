@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Returning nil means this alternative was not satisfied, so oapi tries the next one.
+# Returning nil means this alternative was not satisfied, so openapi_kit tries the next one.
 class BearerAuthenticator
   include Dummy::V1::Security::BearerAuth
 
