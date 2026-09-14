@@ -3,7 +3,7 @@
 require "bundler/gem_helper"
 require "rspec/core/rake_task"
 
-Bundler::GemHelper.install_tasks(name: "oapi")
+Bundler::GemHelper.install_tasks(name: "openapi_kit")
 
 RSpec::Core::RakeTask.new(:spec)
 
@@ -21,7 +21,7 @@ desc "Regenerate the golden output and the dummy application's API"
 task :golden do
   require "pathname"
   $LOAD_PATH.unshift("lib")
-  require "oapi"
+  require "openapi_kit-codegen"
   require_relative "spec/support/golden"
   require_relative "spec/dummy/generate"
 

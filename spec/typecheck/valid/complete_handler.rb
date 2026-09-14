@@ -33,7 +33,7 @@ end
 module Render
   extend T::Sig
 
-  sig { params(response: Server::Operations::ListMods::Response).returns([::Integer, ::Oapi::Body]) }
+  sig { params(response: Server::Operations::ListMods::Response).returns([::Integer, ::OpenAPIKit::Body]) }
   def self.call(response)
     case response
     when Server::Operations::ListMods::Ok then [response.status, response.to_body]

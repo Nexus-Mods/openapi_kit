@@ -2,8 +2,8 @@
 
 source "https://rubygems.org"
 
-gemspec name: "oapi"
-gemspec name: "oapi-runtime"
+gemspec name: "openapi_kit-codegen"
+gemspec name: "openapi_kit"
 
 gem "rake", "~> 13.0"
 

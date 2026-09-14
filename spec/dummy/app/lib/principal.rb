@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# What `principal` names in oapi.yml. The application owns it and seals it, so a handler
+# What `principal` names in openapi_kit.yml. The application owns it and seals it, so a handler
 # casing over the variants is exhaustive. The variants are nested because sealed! needs
 # them in one file, and Zeitwerk only asks that the file define Principal.
 module Principal

@@ -57,7 +57,7 @@ RSpec.describe "a generated API inside a Rails application", type: :request do
     expect(last_response.body).to be_empty
   end
 
-  # oapi reports what the document requires and the application does the checking, so
+  # openapi_kit reports what the document requires and the application does the checking, so
   # these assert the wiring rather than any particular auth scheme.
   describe "security" do
     it "refuses an operation the document protects when no credential is sent" do
@@ -136,7 +136,7 @@ RSpec.describe "a generated API inside a Rails application", type: :request do
       Tempfile.create("download") do |file|
         file.write("the actual bytes")
         file.flush
-        FilesHandler::STORE[8] = Oapi::Body::File.new(path: Pathname.new(file.path))
+        FilesHandler::STORE[8] = OpenAPIKit::Body::File.new(path: Pathname.new(file.path))
 
         get "/v1/games/skyrim/mods/8/file"
 
@@ -163,7 +163,7 @@ RSpec.describe "a generated API inside a Rails application", type: :request do
     end
   end
 
-  # oapi raises and takes no view on the error body; the application decides.
+  # openapi_kit raises and takes no view on the error body; the application decides.
   it "raises a DecodeError the application handles however it likes" do
     get "/v1/games/skyrim/mods?page=banana", {}, bearer
 

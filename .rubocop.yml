@@ -47,15 +47,15 @@ Naming/PredicateMethod:
   Enabled: false
 Style/RaiseArgs:
   AllowedCompactTypes:
-    - Oapi::DecodeError
+    - OpenAPIKit::DecodeError
     - DecodeError
 Naming/FileName:
   Exclude:
-    - "lib/oapi-runtime.rb"
+    - "lib/openapi_kit-codegen.rb"
 Lint/UnusedMethodArgument:
   Exclude:
-    - "lib/oapi/optional.rb"
-    - "spec/oapi/container_spec.rb"
+    - "lib/openapi_kit/optional.rb"
+    - "spec/openapi_kit/container_spec.rb"
     - "spec/generated/**/*"
 RSpec/MultipleExpectations:
   Max: 6
@@ -65,10 +65,13 @@ RSpec/NestedGroups:
   Max: 4
 RSpec/InstanceVariable:
   Exclude:
-    - "spec/oapi/codegen/writer_spec.rb"
-    - "spec/oapi/codegen/config_spec.rb"
+    - "spec/openapi_kit/codegen/writer_spec.rb"
+    - "spec/openapi_kit/codegen/config_spec.rb"
 RSpec/DescribeClass:
   Enabled: false
+RSpec/SpecFilePathFormat:
+  CustomTransform:
+    OpenAPIKit: openapi_kit
 Metrics/ModuleLength:
   Max: 150
 Naming/BlockForwarding:
@@ -79,7 +82,7 @@ Style/ArgumentsForwarding:
 # nothing leaks out of the example.
 Lint/ConstantDefinitionInBlock:
   Exclude:
-    - "spec/oapi/codec/contract_spec.rb"
+    - "spec/openapi_kit/codec/contract_spec.rb"
 RSpec/LeakyConstantDeclaration:
   Exclude:
-    - "spec/oapi/codec/contract_spec.rb"
+    - "spec/openapi_kit/codec/contract_spec.rb"

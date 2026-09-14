@@ -2,8 +2,8 @@
 
 require "action_dispatch"
 
-require "oapi"
-require "oapi-runtime"
+require "openapi_kit-codegen"
+require "openapi_kit"
 require "fileutils"
 require "pathname"
 Dir[File.join(__dir__, "support", "**", "*.rb")].each { |f| require f }

@@ -2,7 +2,7 @@
 
 require "action_controller/railtie"
 
-require "oapi/runtime"
+require "openapi_kit/runtime"
 
 module Dummy
   class Application < ::Rails::Application

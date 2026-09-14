@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-# The typed boundary between oapi's interfaces and an application's objects, and the
+# The typed boundary between openapi_kit's interfaces and an application's objects, and the
 # accessor a generated controller reads it from.
 RSpec.describe "a generated registry" do
   def handler(interface, method)

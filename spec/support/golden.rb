@@ -15,14 +15,14 @@ module Golden
 
   def self.call
     FIXTURES.map do |name, options|
-      config = Oapi::Codegen::Config.new(
+      config = OpenAPIKit::Codegen::Config.new(
         spec: ROOT.join("../fixtures/schemas/#{name}.yaml").expand_path,
         output: ROOT.join(name).expand_path,
         controller_base: "ApiBaseController",
         **options
       )
 
-      Oapi::Codegen::Generator.new(config: config).generate
+      OpenAPIKit::Codegen::Generator.new(config: config).generate
     end.flatten
   end
 end

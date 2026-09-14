@@ -1,4 +1,4 @@
-# How oapi works
+# How openapi_kit works
 
 ```
 spec files ─▶ Loader ─▶ Model ─▶ TypeRegistry ─▶ Emit::* ─▶ Writer
@@ -6,25 +6,25 @@ spec files ─▶ Loader ─▶ Model ─▶ TypeRegistry ─▶ Emit::* ─▶ 
                         structs   and codecs      text       and write
 ```
 
-Two gems in one repo. `oapi-runtime` is what generated code calls: codecs, decoding
-primitives, `Optional`, `Body`, `Response`, `Form`, the errors. `oapi` is the generator
+Two gems in one repo. `openapi_kit` is what generated code calls: codecs, decoding
+primitives, `Optional`, `Body`, `Response`, `Form`, the errors. `openapi_kit` is the generator
 and is never loaded in production.
 
-One distinction runs through all of it: **values against streams**. `Oapi::Wire` is the
+One distinction runs through all of it: **values against streams**. `OpenAPIKit::Wire` is the
 parsed value model every supported media type shares — `application/json` and `+json`,
 form-urlencoded, a multipart body's text fields, and path, query and header values all
 arrive as the same scalars, arrays and hashes — and a codec converts between one of those
 and a Ruby type, both ways. A file is outside that model, so it never reaches a codec:
 `format: binary` decodes to an uploaded file and a binary response sends bytes. That is
 why `Model::FormDef` exists rather than a predicate, and why a response answers a sealed
-`Oapi::Body` rather than `Oapi::Wire`.
+`OpenAPIKit::Body` rather than `OpenAPIKit::Wire`.
 
 ## The layers
 
 **`Loader`** turns an OpenAPI document into the `Model`. It is the only place that
 touches `openapi3_parser`, whose node types are declared in
 `sorbet/rbi/shims/openapi3_parser.rbi`. It also hoists inline schemas into named types,
-flattens `allOf`, and refuses documents oapi cannot generate from.
+flattens `allOf`, and refuses documents openapi_kit cannot generate from.
 
 **`Model`** is sealed structs: `Schema`, `TypeDef`, `Operation`, `Parameter`, `Status`.
 Adding a variant makes every `case` over it fail to typecheck until handled, which is the
@@ -57,11 +57,11 @@ then wipes and writes. Nothing is deleted until everything is known good.
 | the security scheme catalogue and authenticator interfaces | `Emit::Security` |
 | how an application supplies handlers and authenticators | `Emit::Registry` |
 | what a document must contain | `Loader`, which raises `SchemaError` |
-| a new built-in codec | `lib/oapi/codec/`, then the mappings table |
-| how a request field is read out of a hash | `Oapi::Decode`, one method per required/nullable case |
+| a new built-in codec | `lib/openapi_kit/codec/`, then the mappings table |
+| how a request field is read out of a hash | `OpenAPIKit::Decode`, one method per required/nullable case |
 | where `format: binary` may appear | `Loader#reject_misplaced_binary!` |
 | how an uploaded file is decoded | `Model::FormDef`, then `Emit::Forms` |
-| how a response body reaches Rack | `Oapi::Body`, then `Emit::Controllers` |
+| how a response body reaches Rack | `OpenAPIKit::Body`, then `Emit::Controllers` |
 
 ## Working on it
 

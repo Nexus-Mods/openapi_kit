@@ -47,14 +47,14 @@ RSpec.describe "static guarantees" do
   it "rejects a render that does not handle every kind of body" do
     expect(invalid("unhandled_body")).to include(
       "Control flow could reach `T.absurd` because the type " \
-      "`T.any(Oapi::Body::Stream, Oapi::Body::File)` wasn't handled"
+      "`T.any(OpenAPIKit::Body::Stream, OpenAPIKit::Body::File)` wasn't handled"
     )
   end
 
   it "rejects a codec whose from_wire and to_wire disagree" do
     expect(invalid("mismatched_codec")).to include(
       "Parameter `value` of type `String` not compatible with type of abstract method " \
-      "`Oapi::Codec::Contract#to_wire`"
+      "`OpenAPIKit::Codec::Contract#to_wire`"
     )
   end
 end

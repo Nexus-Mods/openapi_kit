@@ -16,39 +16,39 @@ RSpec.describe "packaging" do
     return seen unless path.file?
     return seen unless seen.add?("lib/#{entry}.rb")
 
-    path.read.scan(/^require "(oapi[^"]*)"/).flatten.each { |nested| required_files(nested, seen) }
+    path.read.scan(/^require "(openapi_kit[^"]*)"/).flatten.each { |nested| required_files(nested, seen) }
     seen
   end
 
   def external_requires(files)
     requires = files.flat_map { |file| root.join(file).read.scan(%r{^require "([a-z][a-z0-9_/-]*)"}) }
     requires.flatten
-            .reject { |name| name.start_with?("oapi") }
+            .reject { |name| name.start_with?("openapi_kit") }
             .map { |name| gem_for_require.fetch(name, name.split("/").first) }
             .uniq
   end
 
-  it "packages every file oapi-runtime requires" do
-    expect(required_files("oapi-runtime") - gemspec("oapi-runtime").files).to be_empty
+  it "packages every file openapi_kit requires" do
+    expect(required_files("openapi_kit") - gemspec("openapi_kit").files).to be_empty
   end
 
-  it "packages every file the oapi generator requires" do
-    packaged = gemspec("oapi").files + gemspec("oapi-runtime").files
+  it "packages every file the openapi_kit generator requires" do
+    packaged = gemspec("openapi_kit-codegen").files + gemspec("openapi_kit").files
 
-    expect(required_files("oapi") - packaged).to be_empty
+    expect(required_files("openapi_kit-codegen") - packaged).to be_empty
   end
 
   it "ships the generator's own sources, not just its entry point" do
-    expect(gemspec("oapi").files.grep(%r{lib/oapi/codegen/}).size).to be > 10
+    expect(gemspec("openapi_kit-codegen").files.grep(%r{lib/openapi_kit/codegen/}).size).to be > 10
   end
 
   it "keeps the runtime gem free of generator sources" do
-    expect(gemspec("oapi-runtime").files.grep(%r{lib/oapi/codegen})).to be_empty
+    expect(gemspec("openapi_kit").files.grep(%r{lib/openapi_kit/codegen})).to be_empty
   end
 
   it "declares every gem the runtime actually requires" do
-    declared = gemspec("oapi-runtime").dependencies.map(&:name)
+    declared = gemspec("openapi_kit").dependencies.map(&:name)
 
-    expect(external_requires(required_files("oapi-runtime")) - declared - stdlib).to be_empty
+    expect(external_requires(required_files("openapi_kit")) - declared - stdlib).to be_empty
   end
 end
