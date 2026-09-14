@@ -221,10 +221,10 @@ Your handler then reads `request.principal`:
 ```ruby
 def create_pet(request:)
   owner = case request.principal
-           when Petstore::Principal::Token then "user-#{request.principal.user_id}"
-           when Petstore::Principal::Key then request.principal.client
-           else T.absurd(request.principal)
-           end
+          when Petstore::Principal::Token then "user-#{request.principal.user_id}"
+          when Petstore::Principal::Key then request.principal.client
+          else T.absurd(request.principal)
+          end
 end
 ```
 
