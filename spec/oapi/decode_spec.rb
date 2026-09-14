@@ -46,17 +46,17 @@ RSpec.describe Oapi::Decode do
   # The only case where nil is genuinely ambiguous: optional AND nullable.
   describe ".optional_nullable" do
     it "is Absent when the key is missing" do
-      expect(described_class.optional_nullable({}, "bio") { |v| v }).to eq(Oapi::Absent.new)
+      expect(described_class.optional_nullable({}, "bio") { |v| v }).to eq(Oapi::ABSENT)
     end
 
     it "is Present(nil) for an explicit null" do
       expect(described_class.optional_nullable({ "bio" => nil }, "bio") { |v| v })
-        .to eq(Oapi::Present.new(value: nil))
+        .to eq(Oapi::Present.new(nil))
     end
 
     it "hashes consistently with equality" do
-      one = Oapi::Present.new(value: 1)
-      other = Oapi::Present.new(value: 1)
+      one = Oapi::Present.new(1)
+      other = Oapi::Present.new(1)
 
       expect(other.hash).to eq(one.hash)
       expect(other).to eql(one)
@@ -68,7 +68,7 @@ RSpec.describe Oapi::Decode do
       expect(described_class.optional_nullable({ "bio" => "hi" }, "bio") do |v|
         Oapi::Codec::String.from_wire(v)
       end)
-        .to eq(Oapi::Present.new(value: "hi"))
+        .to eq(Oapi::Present.new("hi"))
     end
   end
 

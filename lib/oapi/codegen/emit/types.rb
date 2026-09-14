@@ -123,7 +123,7 @@ module Oapi
             clause = Defaults.clause(schema: property.schema, default: default, registry: @registry)
             return "#{declaration}, #{clause}"
           end
-          return "#{declaration}, factory: -> { ::Oapi::Absent.new }" if optional_nullable?(property)
+          return "#{declaration}, default: ::Oapi::ABSENT" if optional_nullable?(property)
 
           declaration
         end
