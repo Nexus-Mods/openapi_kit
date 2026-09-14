@@ -3,4 +3,4 @@
 
 require "openapi_kit-codegen"
 
-exit(OpenAPIKit::Codegen::Cli.run(ARGV))
+exit(OpenAPIKit::Codegen::CLI.run(ARGV))
