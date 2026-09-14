@@ -317,7 +317,7 @@ RSpec.describe "translating a document" do
                            "              schema: { type: string, format: binary }")
 
       expect(generated.operation("get_file")).to include(
-        "const :body, ::OpenAPIKit::Body::Bytes",
+        "const :body, ::OpenAPIKit::Body::Binary",
         "def to_body = body",
         %(def content_type = "image/png")
       )

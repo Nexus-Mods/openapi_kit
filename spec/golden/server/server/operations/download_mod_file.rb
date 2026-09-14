@@ -30,7 +30,7 @@ module Server
         extend T::Sig
         include Response
 
-        const :body, ::OpenAPIKit::Body::Bytes
+        const :body, ::OpenAPIKit::Body::Binary
 
         sig { override.returns(::Integer) }
         def status = 200
