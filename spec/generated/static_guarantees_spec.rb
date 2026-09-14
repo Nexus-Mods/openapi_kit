@@ -6,7 +6,9 @@ require "open3"
 # each one asserts on real `srb tc` output against a fixture built to violate it.
 RSpec.describe "static guarantees" do
   def typecheck(*paths)
-    Open3.capture2e("bundle", "exec", "srb", "tc", "./lib", "./sorbet/rbi", "./spec/golden", *paths).first
+    Open3.capture2e({ "SRB_SKIP_GEM_RBIS" => "1" },
+                    "bundle", "exec", "srb", "tc",
+                    "./lib", "./sorbet/rbi", "./spec/golden", *paths).first
   end
 
   def invalid(name) = typecheck("./spec/typecheck/invalid/#{name}.rb")

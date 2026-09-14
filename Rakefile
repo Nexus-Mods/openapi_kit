@@ -9,7 +9,7 @@ RSpec::Core::RakeTask.new(:spec)
 
 desc "Typecheck with Sorbet"
 task :typecheck do
-  sh "bundle exec srb tc"
+  sh({ "SRB_SKIP_GEM_RBIS" => "1" }, "bundle exec srb tc")
 end
 
 desc "Lint with RuboCop"
