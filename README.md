@@ -6,10 +6,10 @@ enforced where the document says it should be. Change the document and the build
 what no longer compiles.
 
 ```ruby
-gem "openapi_kit"          # what generated code calls
+gem "openapi_kit"            # what generated code calls
 
 group :development do
-  gem "openapi_kit-codegen"                # the generator
+  gem "openapi_kit-codegen"  # the generator
 end
 ```
 
