@@ -50,7 +50,7 @@ RSpec.describe "translating a document" do
             meta: { type: object, properties: { note: { type: string } } }
       YAML
 
-      expect(generated.paths).to include("api/types/mod_meta.rb")
+      expect(generated.paths).to include("types/mod_meta.rb")
       expect(generated.type("mod")).to include("const :meta, T.nilable(Api::Types::ModMeta)")
     end
 
@@ -173,7 +173,7 @@ RSpec.describe "translating a document" do
     it "follows a ref into another file" do
       dir = multi_file_document
 
-      expect(dir.join("generated/api/types/problem_details.rb")).to exist
+      expect(dir.join("generated/types/problem_details.rb")).to exist
     end
   end
 
@@ -253,7 +253,7 @@ RSpec.describe "translating a document" do
         "sig { override.params(parts: ::OpenAPIKit::Form::Parts).returns(Api::Types::PostFileBody) }",
         %(upload: ::OpenAPIKit::Decode.required(parts, "upload") { |v| ::OpenAPIKit::Decode.file(v) })
       )
-      expect(generated["api/controllers/files_controller.rb"]).to include(
+      expect(generated["controllers/files_controller.rb"]).to include(
         "Api::Types::PostFileBody::Form.from_parts(request.request_parameters)"
       )
     end
@@ -295,7 +295,7 @@ RSpec.describe "translating a document" do
       generated = generate_from(multipart_component("name" => "{ type: string }"))
 
       expect(generated.type("fields")).to include("module Codec", "def self.to_wire(value)")
-      expect(generated["api/controllers/files_controller.rb"]).to include(
+      expect(generated["controllers/files_controller.rb"]).to include(
         "Api::Types::Fields::Codec.from_wire(request.request_parameters)"
       )
     end
@@ -390,7 +390,7 @@ RSpec.describe "translating a document" do
                          "      tags: [mods]",
                          %(      responses: { "204": { description: done } }))
 
-    routes = generated["api/routes.rb"].lines.grep(/mapper\./).map(&:strip)
+    routes = generated["routes.rb"].lines.grep(/mapper\./).map(&:strip)
     expect(routes.first).to include("/mods/featured")
     expect(routes.last).to include("/mods/:id")
   end
@@ -401,13 +401,13 @@ RSpec.describe "translating a document" do
                          "  /health:", "    get:", "      operationId: getHealth", "      tags: [system]",
                          %(      responses: { "204": { description: done } }))
 
-    expect(generated["api/routes.rb"]).to include("format: false")
+    expect(generated["routes.rb"]).to include("format: false")
   end
 
   it "emits no routes, controllers or registry for a components-only document" do
     generated = schemas("Mod: { type: object, properties: { id: { type: integer } } }")
 
-    expect(generated.paths).to eq(["api/types/mod.rb"])
+    expect(generated.paths).to eq(["types/mod.rb"])
   end
 
   describe "shapes Rails hands over differently" do
@@ -424,13 +424,13 @@ RSpec.describe "translating a document" do
     it "reads a top-level array body from the key Rails wraps it under" do
       generated = body("{ type: array, items: { type: string } }")
 
-      expect(generated["api/controllers/things_controller.rb"]).to include(%(request.request_parameters["_json"]))
+      expect(generated["controllers/things_controller.rb"]).to include(%(request.request_parameters["_json"]))
     end
 
     it "reads an object body from request_parameters itself" do
       generated = body("{ type: object, properties: { a: { type: string } } }")
 
-      source = generated["api/controllers/things_controller.rb"]
+      source = generated["controllers/things_controller.rb"]
       expect(source).to include("from_wire(request.request_parameters)")
       expect(source).not_to include("_json")
     end
@@ -454,7 +454,7 @@ RSpec.describe "translating a document" do
     it "carries a custom http scheme name through" do
       generated = secured("customAuth: { type: http, scheme: HMAC-SHA256 }")
 
-      expect(generated["api/security.rb"]).to include(%(scheme: "hmac-sha256"))
+      expect(generated["security.rb"]).to include(%(scheme: "hmac-sha256"))
     end
 
     # x- is where anything the four types cannot express has to go, so it must survive.
@@ -466,13 +466,13 @@ RSpec.describe "translating a document" do
           x-signing-key: SIGNING_KEY
       YAML
 
-      expect(generated["api/security.rb"]).to include(%(extensions: {"x-signing-key" => "SIGNING_KEY"}))
+      expect(generated["security.rb"]).to include(%(extensions: {"x-signing-key" => "SIGNING_KEY"}))
     end
 
     it "gives each scheme an authenticator returning the configured principal" do
       generated = secured("customAuth: { type: http, scheme: bearer }")
 
-      expect(generated["api/security.rb"])
+      expect(generated["security.rb"])
         .to include("module CustomAuth", "abstract!", "returns(T.nilable(::SpecPrincipal))")
     end
 
@@ -481,7 +481,7 @@ RSpec.describe "translating a document" do
     it "implements credential extraction from the declaration" do
       generated = secured("customAuth: { type: apiKey, in: cookie, name: session }")
 
-      expect(generated["api/security.rb"])
+      expect(generated["security.rb"])
         .to include("def scheme = CUSTOM_AUTH",
                     "def credential(request) = ::OpenAPIKit::Security.credential(scheme, request)")
     end
@@ -489,23 +489,23 @@ RSpec.describe "translating a document" do
     it "decodes a basic scheme's credentials, since base64 is no use undecoded" do
       generated = secured("customAuth: { type: http, scheme: basic }")
 
-      expect(generated["api/security.rb"])
+      expect(generated["security.rb"])
         .to include("def basic_credential(request) = ::OpenAPIKit::Security.basic(scheme, request)")
     end
 
     it "offers no basic decoding for a scheme that is not basic" do
       generated = secured("customAuth: { type: http, scheme: bearer }")
 
-      expect(generated["api/security.rb"]).not_to include("basic_credential")
+      expect(generated["security.rb"]).not_to include("basic_credential")
     end
 
     it "puts the principal on the request and resolves it in the controller" do
       generated = secured("customAuth: { type: http, scheme: bearer }")
 
-      expect(generated["api/operations/get_a.rb"]).to include("const :principal, ::SpecPrincipal")
-      expect(generated["api/controllers/t_controller.rb"])
+      expect(generated["operations/get_a.rb"]).to include("const :principal, ::SpecPrincipal")
+      expect(generated["controllers/t_controller.rb"])
         .to include("principal = authenticate_get_a",
-                    "Api.registry.custom_auth.authenticate(request: request, scopes: [])",
+                    "Api::Registry.instance.custom_auth.authenticate(request: request, scopes: [])",
                     "raise(::OpenAPIKit::SecurityError)")
     end
 
@@ -515,7 +515,7 @@ RSpec.describe "translating a document" do
         requirement: "customAuth: [read] }, { keyAuth: []"
       )
 
-      attempts = generated["api/controllers/t_controller.rb"].lines.grep(/-> \{/).map(&:strip)
+      attempts = generated["controllers/t_controller.rb"].lines.grep(/-> \{/).map(&:strip)
       expect(attempts.first).to include("custom_auth", %(scopes: ["read"]))
       expect(attempts.last).to include("key_auth", "scopes: []")
     end
@@ -525,8 +525,8 @@ RSpec.describe "translating a document" do
       generated = secured("customAuth: { type: http, scheme: bearer }",
                           requirement: "customAuth: [] }, {")
 
-      expect(generated["api/operations/get_a.rb"]).to include("const :principal, T.nilable(::SpecPrincipal)")
-      expect(generated["api/controllers/t_controller.rb"]).not_to include("raise(::OpenAPIKit::SecurityError)")
+      expect(generated["operations/get_a.rb"]).to include("const :principal, T.nilable(::SpecPrincipal)")
+      expect(generated["controllers/t_controller.rb"]).not_to include("raise(::OpenAPIKit::SecurityError)")
     end
 
     it "refuses a document that declares security with no principal configured" do
@@ -557,7 +557,7 @@ RSpec.describe "translating a document" do
               scopes: { read: "Read as a machine", write: "Write" }
       YAML
 
-      expect(generated["api/security.rb"]).to include(%(scopes: {"read" => "Read as a user", "write" => "Write"}))
+      expect(generated["security.rb"]).to include(%(scopes: {"read" => "Read as a user", "write" => "Write"}))
       expect(generated.warnings.join).to include(%(The scope "read" of security scheme "oauth" is described two ways))
     end
 

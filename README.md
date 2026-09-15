@@ -28,7 +28,7 @@ end
 ```yaml
 # openapi_kit.yml
 spec: openapi/petstore.yaml
-output: app/api
+output: app/api/petstore/v1
 modules: [Petstore, V1]
 controller_base: Api::BaseController
 principal: "::Petstore::Principal"
@@ -37,8 +37,8 @@ principal: "::Petstore::Principal"
 | Option | Meaning |
 | --- | --- |
 | `spec` | root OpenAPI document, resolved relative to this file |
-| `output` | directory the tree is written to, which openapi_kit owns |
-| `modules` | namespace for every generated constant, so `Petstore::V1::Types::Pet` |
+| `output` | directory the tree is written into, which openapi_kit owns |
+| `modules` | namespace every generated constant is declared in, so `Petstore::V1::Types::Pet` |
 | `controller_base` | class the generated controllers inherit from |
 | `principal` | the class a successful authentication produces |
 | `type_mappings` | your Ruby type for a `type:format` pair |
@@ -57,13 +57,16 @@ app/api/petstore/v1/registry.rb
 app/api/petstore/v1/routes.rb
 ```
 
-One constant per file at the path that constant implies, so Rails autoloads it. Each run
-wipes `output`, but only after checking openapi_kit generated every `.rb` in it.
+Nothing is written outside `output`, and `modules` decides only what the files declare. One
+constant per file at the path that constant implies, counting from `output`, so laying the
+directory out to match the namespace is what lets Rails autoload it. Each run wipes
+`output`, but only after checking openapi_kit generated every `.rb` in it.
 
 ## Integrating with Rails
 
-**Autoload the output**, if it is not already under `app/`. An acronym in `modules`
-becomes a directory, so it needs an inflection like any other acronym constant.
+**Autoload the tree**, if it is not already under `app/`. The root is the directory
+`modules` counts from, not `output` itself. An acronym in `modules` is a directory like any
+other, so it needs an inflection.
 
 ```ruby
 # config/application.rb
@@ -125,15 +128,15 @@ module Api
 end
 ```
 
-**Assign the registry.** openapi_kit generates a `Registry` struct with one slot per handler and
-authenticator, and controllers read it from `Petstore::V1.registry`. Rails instantiates
-controllers itself, so they cannot be handed one. Omit a slot, or pass something that does
-not implement its interface, and it does not compile.
+**Assign the registry.** openapi_kit generates a `Registry` struct with one slot per handler
+and authenticator, and controllers read the one you assigned. Rails instantiates controllers
+itself, so they cannot be handed one. Omit a slot, or pass something that does not
+implement its interface, and it does not compile.
 
 ```ruby
 # config/initializers/openapi_kit.rb
 Rails.application.config.to_prepare do
-  Petstore::V1.registry = Petstore::V1::Registry.new(
+  Petstore::V1::Registry.instance = Petstore::V1::Registry.new(
     pets: PetsHandler.new(repo: PetRepo.new),
     system: SystemHandler.new,
     bearer_auth: BearerAuthenticator.new(decoder: TokenDecoder.new)

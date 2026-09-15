@@ -35,7 +35,7 @@ module OpenAPIKit
           return [] if @document.security_schemes.empty?
 
           [
-            Source.file(path: "#{@config.module_path}/security.rb",
+            Source.file(path: "security.rb",
                         modules: @config.modules + ["Security"]) { |buffer| emit_body(buffer) }
           ]
         end

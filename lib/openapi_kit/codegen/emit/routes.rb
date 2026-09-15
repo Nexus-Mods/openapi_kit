@@ -19,7 +19,7 @@ module OpenAPIKit
           return [] if @document.operations.empty?
 
           [
-            Source.file(path: "#{@config.module_path}/routes.rb",
+            Source.file(path: "routes.rb",
                         modules: @config.modules + ["Routes"]) { |buffer| emit_body(buffer) }
           ]
         end

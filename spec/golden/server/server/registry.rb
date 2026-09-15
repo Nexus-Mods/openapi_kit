@@ -4,10 +4,27 @@
 
 module Server
   class Registry < T::Struct
+    extend T::Sig
+
     const :mods, Server::Handlers::Mods
     const :files, Server::Handlers::Files
     const :system, Server::Handlers::System
     const :bearer_auth, Server::Security::BearerAuth
     const :api_key_auth, Server::Security::ApiKeyAuth
+
+    @instance = T.let(nil, T.nilable(Registry))
+
+    sig { params(registry: Registry).void }
+    def self.instance=(registry)
+      @instance = registry
+    end
+
+    sig { returns(Registry) }
+    def self.instance
+      @instance || raise(
+        "Server::Registry.instance has not been assigned. Build one in an " \
+        "initializer, e.g. Server::Registry.instance = Server::Registry.new(...)."
+      )
+    end
   end
 end

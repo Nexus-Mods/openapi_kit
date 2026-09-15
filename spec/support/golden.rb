@@ -15,9 +15,10 @@ module Golden
 
   def self.call
     FIXTURES.map do |name, options|
+      modules = options.fetch(:modules).map { |m| OpenAPIKit::Codegen::Naming.snake(m) }
       config = OpenAPIKit::Codegen::Config.new(
         spec: ROOT.join("../fixtures/schemas/#{name}.yaml").expand_path,
-        output: ROOT.join(name).expand_path,
+        output: ROOT.join(name, *modules).expand_path,
         controller_base: "ApiBaseController",
         **options
       )

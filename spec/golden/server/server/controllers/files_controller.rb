@@ -42,7 +42,7 @@ module Server
       private
 
       sig { returns(Server::Handlers::Files) }
-      def handler = Server.registry.files
+      def handler = Server::Registry.instance.files
     end
   end
 end

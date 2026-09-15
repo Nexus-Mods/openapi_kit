@@ -6,7 +6,7 @@ module OpenAPIKit
     module Emit
       # The typed boundary between openapi_kit's interfaces and an application's objects. Rails
       # instantiates controllers itself, so a controller cannot be handed the registry: it
-      # reads it from the accessor, which an application assigns at boot.
+      # reads the one an application assigned at boot.
       class Registry
         extend T::Sig
         include Emitter
@@ -28,10 +28,8 @@ module OpenAPIKit
           return [] if slots.empty?
 
           [
-            Source.file(path: "#{@config.module_path}/registry.rb",
-                        modules: @config.modules) { |buffer| emit_registry(buffer) },
-            Source.file(path: "#{@config.module_path}.rb",
-                        modules: @config.modules) { |buffer| emit_accessor(buffer) }
+            Source.file(path: "registry.rb",
+                        modules: @config.modules) { |buffer| emit_registry(buffer) }
           ]
         end
 
@@ -62,37 +60,39 @@ module OpenAPIKit
         sig { params(buffer: Buffer).void }
         def emit_registry(buffer)
           buffer.nest("class Registry < T::Struct") do
+            buffer.line("extend T::Sig")
+            buffer.blank
             slots.each { |slot| buffer.line("const :#{slot.reader}, #{slot.interface}") }
+            buffer.blank
+            emit_accessor(buffer)
           end
         end
 
         # Rails instantiates controllers itself, so a controller cannot be handed the
-        # registry. It reads it from here, and an application assigns it at boot.
+        # registry. It reads the one here, which an application assigns at boot.
         sig { params(buffer: Buffer).void }
         def emit_accessor(buffer)
-          buffer.line("extend T::Sig")
-          buffer.blank
-          buffer.line("@registry = T.let(nil, T.nilable(Registry))")
+          buffer.line("@instance = T.let(nil, T.nilable(Registry))")
           buffer.blank
           buffer.line("sig { params(registry: Registry).void }")
-          buffer.nest("def self.registry=(registry)") do
-            buffer.line("@registry = registry")
+          buffer.nest("def self.instance=(registry)") do
+            buffer.line("@instance = registry")
           end
           buffer.blank
           buffer.line("sig { returns(Registry) }")
-          buffer.nest("def self.registry") do
-            buffer.line("@registry || raise(")
-            buffer.indent { unset_message.each { |line| buffer.line(line) } }
+          buffer.nest("def self.instance") do
+            buffer.line("@instance || raise(")
+            buffer.indent { unassigned_message.each { |line| buffer.line(line) } }
             buffer.line(")")
           end
         end
 
         sig { returns(T::Array[String]) }
-        def unset_message
+        def unassigned_message
           namespace = @config.namespace
           [
-            %("#{namespace}.registry has not been assigned. Build one in an initializer, " \\),
-            %("e.g. #{namespace}.registry = #{namespace}::Registry.new(...).")
+            %("#{namespace}::Registry.instance has not been assigned. Build one in an " \\),
+            %("initializer, e.g. #{namespace}::Registry.instance = #{namespace}::Registry.new(...).")
           ]
         end
       end

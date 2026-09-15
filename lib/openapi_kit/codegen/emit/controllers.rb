@@ -28,7 +28,7 @@ module OpenAPIKit
         sig { override.returns(T::Array[SourceFile]) }
         def render
           @document.operations.group_by(&:tag).map do |tag, operations|
-            Source.file(path: "#{@config.module_path}/controllers/#{Naming.snake(tag)}_controller.rb",
+            Source.file(path: "controllers/#{Naming.snake(tag)}_controller.rb",
                         modules: @config.modules + ["Controllers"]) do |buffer|
               emit_controller(buffer, tag, operations)
             end
@@ -71,7 +71,7 @@ module OpenAPIKit
           interface = "#{@config.namespace}::Handlers::#{Handlers.module_name(tag)}"
 
           buffer.line("sig { returns(#{interface}) }")
-          buffer.line("def handler = #{@config.namespace}.registry.#{Naming.snake(tag)}")
+          buffer.line("def handler = #{@config.namespace}::Registry.instance.#{Naming.snake(tag)}")
         end
 
         sig { params(buffer: Buffer, operation: Model::Operation).void }
@@ -126,7 +126,7 @@ module OpenAPIKit
         def attempt(requirement)
           name = T.must(requirement.schemes.keys.first)
           scopes = T.must(requirement.schemes[name])
-          reader = "#{@config.namespace}.registry.#{Naming.snake(name)}"
+          reader = "#{@config.namespace}::Registry.instance.#{Naming.snake(name)}"
 
           "-> { #{reader}.authenticate(request: request, scopes: #{scopes.inspect}) }"
         end
