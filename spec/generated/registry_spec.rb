@@ -41,17 +41,17 @@ RSpec.describe "a generated registry" do
   end
 
   it "is what a generated controller reads from" do
-    expect(Dummy::V1.registry).to be_a(Dummy::V1::Registry)
-    expect(Dummy::V1.registry.mods).to be_a(Dummy::V1::Handlers::Mods)
+    expect(Dummy::V1::Registry.instance).to be_a(Dummy::V1::Registry)
+    expect(Dummy::V1::Registry.instance.mods).to be_a(Dummy::V1::Handlers::Mods)
   end
 
   it "says what to do when nothing has been assigned" do
-    original = Dummy::V1.registry
-    Dummy::V1.instance_variable_set(:@registry, nil)
+    original = Dummy::V1::Registry.instance
+    Dummy::V1::Registry.instance_variable_set(:@instance, nil)
 
-    expect { Dummy::V1.registry }
-      .to raise_error(/Dummy::V1.registry has not been assigned.*Dummy::V1::Registry.new/m)
+    expect { Dummy::V1::Registry.instance }
+      .to raise_error(/Dummy::V1::Registry.instance has not been assigned.*Dummy::V1::Registry.new/m)
   ensure
-    Dummy::V1.registry = original
+    Dummy::V1::Registry.instance = original
   end
 end

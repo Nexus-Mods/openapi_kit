@@ -10,7 +10,7 @@ RSpec.describe "Zeitwerk compatibility" do
     result = generate("server.yaml", modules: %w[Loaded])
 
     loader = Zeitwerk::Loader.new
-    loader.push_dir(result[:dir].to_s)
+    loader.push_dir(result[:root].to_s)
     loader.setup
 
     expect { loader.eager_load }.not_to raise_error
@@ -22,7 +22,7 @@ RSpec.describe "Zeitwerk compatibility" do
     result = generate("server.yaml", modules: %w[Resolved])
 
     loader = Zeitwerk::Loader.new
-    loader.push_dir(result[:dir].to_s)
+    loader.push_dir(result[:root].to_s)
     loader.setup
     loader.eager_load
 
@@ -43,7 +43,7 @@ RSpec.describe "Zeitwerk compatibility" do
 
     loader = Zeitwerk::Loader.new
     loader.inflector.inflect("api" => "API")
-    loader.push_dir(result[:dir].to_s)
+    loader.push_dir(result[:root].to_s)
     loader.setup
     loader.eager_load
 
@@ -60,7 +60,7 @@ RSpec.describe "Zeitwerk compatibility" do
     result = generate("cyclic.yaml", modules: %w[Cyclic])
 
     loader = Zeitwerk::Loader.new
-    loader.push_dir(result[:dir].to_s)
+    loader.push_dir(result[:root].to_s)
     loader.setup
     loader.eager_load
 

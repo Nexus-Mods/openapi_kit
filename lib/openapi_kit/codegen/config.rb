@@ -104,11 +104,13 @@ module OpenAPIKit
         (value || {}).to_h { |k, v| [k.to_s, v.to_s] }
       end
 
-      sig { returns(String) }
-      def namespace = modules.join("::")
-
+      # The namespace as a path, which is what Rails routing wants in `to:`. File paths
+      # come from `output` instead, so this no longer decides where anything is written.
       sig { returns(String) }
       def module_path = modules.map { |name| Naming.snake(name) }.join("/")
+
+      sig { returns(String) }
+      def namespace = modules.join("::")
     end
   end
 end

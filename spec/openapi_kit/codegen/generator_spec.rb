@@ -9,36 +9,34 @@ RSpec.describe OpenAPIKit::Codegen::Generator do
     it "writes one file per constant, at the path the constant implies" do
       expect(relative_paths(result[:dir])).to eq(
         %w[
-          server.rb
-          server/controllers/files_controller.rb server/controllers/mods_controller.rb
-          server/controllers/system_controller.rb
-          server/handlers/files.rb server/handlers/mods.rb server/handlers/system.rb
-          server/operations/create_mod.rb server/operations/download_mod_file.rb
-          server/operations/get_health.rb
-          server/operations/list_mods.rb server/operations/upload_mod_file.rb
-          server/registry.rb server/routes.rb server/security.rb
-          server/types/mod.rb server/types/mod_status.rb server/types/new_mod.rb
-          server/types/problem_details.rb server/types/upload_mod_file_body.rb
+          controllers/files_controller.rb controllers/mods_controller.rb
+          controllers/system_controller.rb
+          handlers/files.rb handlers/mods.rb handlers/system.rb
+          operations/create_mod.rb operations/download_mod_file.rb operations/get_health.rb
+          operations/list_mods.rb operations/upload_mod_file.rb
+          registry.rb routes.rb security.rb
+          types/mod.rb types/mod_status.rb types/new_mod.rb
+          types/problem_details.rb types/upload_mod_file_body.rb
         ]
       )
     end
 
     it "matches the golden files" do
       relative_paths(result[:dir]).each do |path|
-        expect(result[:dir].join(path).read).to eq(golden("server/#{path}").read), path
+        expect(result[:dir].join(path).read).to eq(golden("server", %w[Server]).join(path).read), path
       end
     end
 
     it "gives each tag one interface file and one registry slot" do
-      expect(result[:dir].join("server/handlers/mods.rb").read).to include("module Mods")
-      expect(result[:dir].join("server/handlers/system.rb").read).to include("module System")
-      expect(result[:dir].join("server/registry.rb").read)
+      expect(result[:dir].join("handlers/mods.rb").read).to include("module Mods")
+      expect(result[:dir].join("handlers/system.rb").read).to include("module System")
+      expect(result[:dir].join("registry.rb").read)
         .to include("const :mods, Server::Handlers::Mods",
                     "const :system, Server::Handlers::System")
     end
 
     it "hands the handler Rails' own request rather than a wrapper of openapi_kit's" do
-      expect(result[:dir].join("server/operations/list_mods.rb").read)
+      expect(result[:dir].join("operations/list_mods.rb").read)
         .to include("const :http_request, ::ActionDispatch::Request")
     end
   end
@@ -53,17 +51,17 @@ RSpec.describe OpenAPIKit::Codegen::Generator do
 
     it "matches the golden files" do
       relative_paths(result[:dir]).each do |path|
-        expect(result[:dir].join(path).read).to eq(golden("kitchen_sink/#{path}").read), path
+        expect(result[:dir].join(path).read).to eq(golden("kitchen_sink", %w[KitchenSink]).join(path).read), path
       end
     end
 
     it "generates no operation or handler files for a components-only document" do
-      expect(relative_paths(result[:dir]).grep(%r{/operations/|/handlers/})).to be_empty
+      expect(relative_paths(result[:dir]).grep(%r{\Aoperations/|\Ahandlers/})).to be_empty
     end
 
     it "typechecks, and round trips every construct at runtime" do
       output, status = Open3.capture2e(
-        "bundle", "exec", "ruby", "-Ilib", "spec/scripts/round_trip.rb", result[:dir].to_s
+        "bundle", "exec", "ruby", "-Ilib", "spec/scripts/round_trip.rb", result[:root].to_s
       )
 
       expect(output).to include("round trip ok"), output
@@ -77,7 +75,7 @@ RSpec.describe OpenAPIKit::Codegen::Generator do
     it "generates a file for each side" do
       paths = relative_paths(generate("cyclic.yaml", modules: %w[Cyc])[:dir])
 
-      expect(paths).to include("cyc/types/author.rb", "cyc/types/book.rb")
+      expect(paths).to include("types/author.rb", "types/book.rb")
     end
   end
 end

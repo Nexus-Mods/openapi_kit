@@ -55,13 +55,13 @@ module Server
       private
 
       sig { returns(Server::Handlers::Mods) }
-      def handler = Server.registry.mods
+      def handler = Server::Registry.instance.mods
 
       sig { returns(::Demo::Principal) }
       def authenticate_list_mods
         ::OpenAPIKit::Security.first_of(
           [
-            -> { Server.registry.bearer_auth.authenticate(request: request, scopes: []) },
+            -> { Server::Registry.instance.bearer_auth.authenticate(request: request, scopes: []) },
           ]
         ) || raise(::OpenAPIKit::SecurityError)
       end
@@ -70,8 +70,8 @@ module Server
       def authenticate_create_mod
         ::OpenAPIKit::Security.first_of(
           [
-            -> { Server.registry.bearer_auth.authenticate(request: request, scopes: ["mods:write"]) },
-            -> { Server.registry.api_key_auth.authenticate(request: request, scopes: []) },
+            -> { Server::Registry.instance.bearer_auth.authenticate(request: request, scopes: ["mods:write"]) },
+            -> { Server::Registry.instance.api_key_auth.authenticate(request: request, scopes: []) },
           ]
         ) || raise(::OpenAPIKit::SecurityError)
       end
