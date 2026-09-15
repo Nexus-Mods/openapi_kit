@@ -18,7 +18,7 @@ module OpenAPIKit
         sig { override.returns(T::Array[SourceFile]) }
         def render
           @document.operations.map do |operation|
-            Source.file(path: "#{@config.module_path}/operations/#{Naming.snake(operation.id)}.rb",
+            Source.file(path: "operations/#{Naming.snake(operation.id)}.rb",
                         modules: @config.modules + ["Operations"]) do |buffer|
               emit_operation(buffer, operation)
             end

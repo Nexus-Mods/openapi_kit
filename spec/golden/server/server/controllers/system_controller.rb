@@ -20,7 +20,7 @@ module Server
       private
 
       sig { returns(Server::Handlers::System) }
-      def handler = Server.registry.system
+      def handler = Server::Registry.instance.system
     end
   end
 end

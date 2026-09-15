@@ -21,7 +21,7 @@ module OpenAPIKit
         def render
           declared_types.map do |type|
             name = Model::TypeDef.name_of(type)
-            Source.file(path: "#{@config.module_path}/types/#{Naming.snake(name)}.rb",
+            Source.file(path: "types/#{Naming.snake(name)}.rb",
                         modules: @config.modules + ["Types"]) do |buffer|
               emit_declaration(buffer, type)
             end
