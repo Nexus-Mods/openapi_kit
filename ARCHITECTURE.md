@@ -21,10 +21,15 @@ why `Model::FormDef` exists rather than a predicate, and why a response answers 
 
 ## The layers
 
-**`Loader`** turns an OpenAPI document into the `Model`. It is the only place that
-touches `openapi3_parser`, whose node types are declared in
-`sorbet/rbi/shims/openapi3_parser.rbi`. It also hoists inline schemas into named types,
-flattens `allOf`, and refuses documents openapi_kit cannot generate from.
+**`Source`** is what the Loader reads a document through, one per schema dialect, picked
+by the document's `openapi` field. `Source::Openapi30` wraps `openapi3_parser`, whose node
+types are declared in `sorbet/rbi/shims/openapi3_parser.rbi`. `Source::Openapi31` reads
+3.1 and 3.2 documents itself, under JSON Schema 2020-12, and adds 3.2's `query` operation.
+Each answers the same questions, such as whether a schema is nullable, in its own dialect.
+
+**`Loader`** turns a `Source` into the `Model`, whichever version it came from. It hoists
+inline schemas into named types, flattens `allOf`, and refuses documents openapi_kit cannot
+generate from.
 
 **`Model`** is sealed structs: `Schema`, `TypeDef`, `Operation`, `Parameter`, `Status`.
 Adding a variant makes every `case` over it fail to typecheck until handled, which is the
@@ -57,6 +62,7 @@ then wipes and writes. Nothing is deleted until everything is known good.
 | the security scheme catalogue and authenticator interfaces | `Emit::Security` |
 | how an application supplies handlers and authenticators | `Emit::Registry` |
 | what a document must contain | `Loader`, which raises `SchemaError` |
+| how a 3.1+ schema keyword is read | `Source::Openapi31::Schema` |
 | a new built-in codec | `lib/openapi_kit/codec/`, then the mappings table |
 | how a request field is read out of a hash | `OpenAPIKit::Decode`, one method per required/nullable case |
 | where `format: binary` may appear | `Loader#reject_misplaced_binary!` |

@@ -1,0 +1,120 @@
+openapi: 3.2.0
+info: { title: Demo, version: "1.0" }
+paths:
+  /games/{gameDomain}/mods:
+    get:
+      operationId: list_mods
+      tags: [mods]
+      parameters:
+        - { name: gameDomain, in: path, required: true, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/ModStatus" } }
+        - { name: Application-Name, in: header, schema: { type: string } }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Mod" } }
+        "400":
+          description: bad request
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetails" }
+    post:
+      operationId: create_mod
+      tags: [mods]
+      security:
+        - bearerAuth: [mods:write]
+        - apiKeyAuth: []
+      parameters:
+        - { name: gameDomain, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NewMod" }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Mod" }
+        "204": { description: nothing to do }
+        default:
+          description: fallback
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetails" }
+  /games/{gameDomain}/mods/{modId}/file:
+    get:
+      operationId: download_mod_file
+      tags: [files]
+      security: []
+      parameters:
+        - { name: gameDomain, in: path, required: true, schema: { type: string } }
+        - { name: modId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        "200":
+          description: the file
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "404":
+          description: no such file
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetails" }
+    put:
+      operationId: upload_mod_file
+      tags: [files]
+      security: []
+      parameters:
+        - { name: gameDomain, in: path, required: true, schema: { type: string } }
+        - { name: modId, in: path, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [upload]
+              properties:
+                upload: { type: string, format: binary }
+                thumbnail: { type: string, format: binary }
+                description: { type: string }
+      responses:
+        "204": { description: stored }
+  /health:
+    get:
+      operationId: get_health
+      tags: [system]
+      security: []
+      responses:
+        "200": { description: ok }
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+    apiKeyAuth: { type: apiKey, in: header, name: X-Api-Key }
+  schemas:
+    ModStatus: { type: string, enum: [live, hidden] }
+    ProblemDetails:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        detail: { type: string }
+    Mod:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        status: { $ref: "#/components/schemas/ModStatus" }
+    NewMod:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }

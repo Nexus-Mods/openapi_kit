@@ -6,7 +6,8 @@ require "yaml"
 module OpenAPIKit
   module Codegen
     # What the Loader reads from a document. Each OpenAPI version is read by its own source,
-    # under its own schema dialect: Source::Openapi30 through openapi3_parser.
+    # under its own schema dialect: Source::Openapi30 through openapi3_parser, and
+    # Source::Openapi31 for 3.1 and 3.2, whose schemas are JSON Schema 2020-12.
     module Source
       extend T::Sig
 
@@ -17,8 +18,9 @@ module OpenAPIKit
 
         case version
         when /\A3\.0\./ then Openapi30.load(path)
+        when /\A3\.[12]\./ then Openapi31.load(path, T.cast(data, T::Hash[String, T.untyped]))
         else
-          raise SchemaError, "#{path} declares openapi: #{version.inspect}. openapi_kit reads OpenAPI 3.0."
+          raise SchemaError, "#{path} declares openapi: #{version.inspect}. openapi_kit reads OpenAPI 3.0, 3.1 and 3.2."
         end
       end
 

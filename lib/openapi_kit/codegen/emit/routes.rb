@@ -50,13 +50,20 @@ module OpenAPIKit
           operation.path.split("/").reject(&:empty?).map { |segment| segment.start_with?("{") ? 1 : 0 }
         end
 
+        # Rails has no Mapper helper for QUERY. The application registers the method with
+        # ActionDispatch::Request.
         sig { params(operation: Model::Operation).returns(String) }
         def route_for(operation)
           verb = operation.http_method.serialize
           controller = "#{@config.module_path}/controllers/#{Naming.snake(operation.tag)}"
           target = "#{controller}##{Naming.identifier(operation.id)}"
+          path = path_for(operation).inspect
 
-          "mapper.#{verb}(#{path_for(operation).inspect}, to: #{target.inspect}, format: false)"
+          if operation.http_method == Model::HttpMethod::Query
+            return "mapper.match(#{path}, to: #{target.inspect}, via: :query, format: false)"
+          end
+
+          "mapper.#{verb}(#{path}, to: #{target.inspect}, format: false)"
         end
 
         sig { params(operation: Model::Operation).returns(String) }

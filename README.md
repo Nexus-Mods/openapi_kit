@@ -16,6 +16,7 @@ end
 ## Contents
 
 - [Generating](#generating)
+- [OpenAPI versions](#openapi-versions)
 - [Integrating with Rails](#integrating-with-rails)
 - [Security](#security)
 - [Custom types](#custom-types)
@@ -347,6 +348,18 @@ Every response variant answers `to_body`, a sealed `OpenAPIKit::Body` of `Empty`
 `Stream` or `File`. `string:binary` takes no [`type_mappings`](#custom-types) entry, since a
 file has nothing for a codec to convert.
 
+## OpenAPI versions
+
+openapi_kit reads OpenAPI 3.0, 3.1 and 3.2 documents, each under its own schema dialect, chosen by the document's `openapi` field.
+
+- **3.0** is read through openapi3_parser. A nullable schema says `nullable: true`.
+- **3.1 and 3.2** schemas are JSON Schema 2020-12. A nullable schema lists `"null"` in `type`, as `type: [string, "null"]`, or has a `{type: "null"}` member in `oneOf` or `anyOf`. A `$ref` may sit beside other keywords, and `exclusiveMinimum` and `exclusiveMaximum` are the bounds themselves. 3.0's `nullable` and boolean exclusive bounds are refused rather than read.
+- **3.2's `query` operation** generates a `QUERY` route, as `match ..., via: :query`. Rails and Puma accept only the methods they know, so the application registers QUERY with `ActionDispatch::Request` and Puma's `supported_http_methods`.
+
+The same API written in either dialect generates the same code.
+
+No Ruby library validates 3.1+ documents. openapi_kit checks the shape of each value it reads, but doesn't validate the whole document, so lint it with a tool that reads 3.1+, such as Redocly CLI.
+
 ## Not supported yet
 
 Refused at generation time, rather than mis-generated:
@@ -358,6 +371,7 @@ Refused at generation time, rather than mis-generated:
 - Two security schemes required together in one alternative (`{a: [], b: []}`). One scheme
   per alternative.
 - A path template Rails cannot route, such as `{pet-id}`.
+- In 3.1+ documents: a `type` listing more than one type besides `"null"`, `prefixItems`, `$dynamicRef`, references into other files, and 3.2's `additionalOperations`.
 
 Documented behaviour to know about:
 

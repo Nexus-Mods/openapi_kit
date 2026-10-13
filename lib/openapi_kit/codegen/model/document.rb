@@ -14,6 +14,7 @@ module OpenAPIKit
           Head    = new("head")
           Patch   = new("patch")
           Trace   = new("trace")
+          Query   = new("query")
         end
       end
 
